@@ -1,17 +1,23 @@
 package com.adm.ms_security.Controllers;
 
-import com.adm.ms_security.Models.User;
-import com.adm.ms_security.Services.SecurityService;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
-
 import java.io.IOException;
 import java.util.HashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.adm.ms_security.Models.User;
+import com.adm.ms_security.Services.SecurityService;
+
+import jakarta.servlet.http.HttpServletResponse;
+
 @CrossOrigin
 @RestController
-@RequestMapping("/security")
+@RequestMapping("/api/public/security")
 public class SecurityController {
 
     @Autowired
