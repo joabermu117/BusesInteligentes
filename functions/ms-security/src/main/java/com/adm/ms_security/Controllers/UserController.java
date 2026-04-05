@@ -3,6 +3,7 @@ package com.adm.ms_security.Controllers;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,12 +39,12 @@ public class UserController {
     }
 
     @PostMapping
-    public User create(@RequestBody User newUser) {
+    public User create(@Valid @RequestBody User newUser) {
         return this.theUserService.create(newUser);
     }
 
     @PutMapping("{id}")
-    public User update(@PathVariable String id, @RequestBody User newUser) {
+    public User update(@PathVariable String id, @Valid @RequestBody User newUser) {
         return this.theUserService.update(id, newUser);
     }
 
@@ -98,6 +99,7 @@ public class UserController {
                     .body(Map.of("message", "User or Session not found"));
         }
     }
+
     @DeleteMapping("{userId}/session/{sessionId}")
     public ResponseEntity<Map<String, String>> deleteUserSession(
             @PathVariable String userId,
@@ -113,4 +115,3 @@ public class UserController {
         }
     }
 }
-
