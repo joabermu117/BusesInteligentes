@@ -41,7 +41,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Role } from "../../models/Role";
 import { useRoleStore } from "../../stores/useRoleStore";
 import { useScopeStore } from "../../stores/useScopeStore";
@@ -53,40 +53,12 @@ import RoleFormModal from "./Form";
  * Maneja la visualización y gestión de roles
  */
 const RoleList = () => {
-  // Store para manejo de roles
-  const {
-    roles, // Lista de roles
-    loading, // Estado de carga
-    fetchRoles, // Función para obtener roles
-    createRole, // Función para crear rol
-    updateRole, // Función para actualizar rol
-    deleteRole, // Función para eliminar rol
-  } = useRoleStore();
+  const { roles, loading, createRole, updateRole, deleteRole } = useRoleStore();
 
   // Store para manejo de scopes/permisos
   const { fetchScopes, scopes } = useScopeStore();
 
-  // Estados locales del componente
-  const [isCreating, setIsCreating] = useState(false); // Controla modal de creación
-  const [editingRole, setEditingRole] = useState<Role | null>(null); // Rol en edición
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false); // Controla modal de eliminación
-  const [roleToDelete, setRoleToDelete] = useState<string | null>(null); // Key del rol a eliminar
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null); // Elemento anchor para popover
-  const [selectedRoleScopes, setSelectedRoleScopes] = useState<string[]>([]); // Scopes del rol seleccionado
-  /**
-   * Efecto para cargar datos iniciales
-   * Se ejecuta al montar el componente
-   */
-  useEffect(() => {
-    fetchRoles();
-    fetchScopes();
-  }, [fetchRoles, fetchScopes]);
-
-  /**
-   * Maneja la creación de un nuevo rol
-   * @param roleData - Datos del nuevo rol (sin key)
-   */
-  const handleCreate = async (roleData: Omit<Role, "key">) => {
+  const handleCreate = async (roleData: Omit<Role, "id">) => {
     await createRole(roleData);
     setIsCreating(false);
   };

@@ -5,7 +5,6 @@ import com.adm.ms_security.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-
 @Service
 public class SecurityService {
     @Autowired
@@ -15,23 +14,26 @@ public class SecurityService {
     @Autowired
     private JwtService theJwtService;
 
-    public String login(User theNewUser){
-        String token=null;
-        User theActualUser=this.theUserRepository.getUserByEmail(theNewUser.getEmail());
-        if(theActualUser!=null &&
-                theActualUser.getPassword().equals(theEncryptionService.convertSHA256(theNewUser.getPassword()))){
-            token=theJwtService.generateToken(theActualUser);
+    public String login(User theNewUser) {
+        String token = null;
+        String email = theNewUser.getEmail() == null ? null : theNewUser.getEmail().trim().toLowerCase();
+        User theActualUser = this.theUserRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (theActualUser != null &&
+                theActualUser.getPassword().equals(theEncryptionService.convertSHA256(theNewUser.getPassword()))) {
+            token = theJwtService.generateToken(theActualUser);
             return token;
-        }else{
-            return  token;
+        } else {
+            return token;
         }
     }
     /*
-    public boolean permissionsValidation(final HttpServletRequest request,
-                                         @RequestBody Permission thePermission) {
-        boolean success=this.theValidatorsService.validationRolePermission(request,thePermission.getUrl(),thePermission.getMethod());
-        return success;
-    }
-    */
+     * public boolean permissionsValidation(final HttpServletRequest request,
+     * 
+     * @RequestBody Permission thePermission) {
+     * boolean success=this.theValidatorsService.validationRolePermission(request,
+     * thePermission.getUrl(),thePermission.getMethod());
+     * return success;
+     * }
+     */
 
 }

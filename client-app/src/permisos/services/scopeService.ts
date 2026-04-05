@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import axios from "axios";
-import type { Scope } from "../models/Scope.ts";
+import { API_CONFIG } from "../../config/apiConfig";
+import httpClient from "../../config/httpClient";
+import type { Scope } from "../models/Scope";
 
-const API_URL = `${import.meta.env.VITE_API_URL_PERMISOS}/scopes`;
+const API_URL = `${API_CONFIG.permisosBaseUrl}/permissions`;
 
 interface ApiResponse<T = Scope[]> {
   success: boolean;
@@ -24,105 +24,46 @@ class ScopeServiceClass {
    * @throws {Error} Si la solicitud falla
    */
   async getScopes(): Promise<Scope[]> {
-    try {
-      const response = await axios.get<ApiResponse<Scope[]>>(API_URL);
-
-      if (!response.data.success) throw new Error(response.data.message);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("Error details:", {
-        message: error.message,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers,
-        },
-      });
-      throw error;
-    }
+    const response =
+      await httpClient.get<Array<Partial<Scope> & { _id?: string }>>(API_URL);
+    return response.data.map(normalizePermission);
   }
 
-  /**
-   * Obtiene un scope por su key
-   * @async
-   * @param {string} key - Identificador del scope
-   * @returns {Promise<Scope>} Scope encontrado
-   * @throws {Error} Si la solicitud falla
-   */
-  async getScopeByKey(key: string): Promise<Scope> {
-    const response = await axios.get<SingleItemResponse>(`${API_URL}/${key}`);
-    if (!response.data.success) throw new Error(response.data.message);
-    return response.data.data;
-  }
-
-  /**
-   * Crea un nuevo scope
-   * @async
-   * @param {Omit<Scope, 'key'>} scope - Datos del nuevo scope (sin el campo key)
-   * @returns {Promise<Scope>} Scope creado
-   * @throws {Error} Si la creación falla
-   */
-  async createScope(
-    scope: Omit<Scope, "key" | "deprecated" | "categoryName">,
-  ): Promise<Scope> {
-    const response = await axios.post<SingleItemResponse>(API_URL, scope);
-
-    if (!response.data.success) throw new Error(response.data.message);
-    return response.data.data;
-  }
-
-  /**
-   * Actualiza un scope existente
-   * @async
-   * @param {string} key - Identificador único del scope
-   * @param {Partial<Scope>} changes - Campos a actualizar
-   * @returns {Promise<Scope>} Scope actualizado
-   * @throws {Error} Si la actualización falla
-   */
-  async updateScope(key: string, changes: Partial<Scope>): Promise<Scope> {
-    // Eliminar la propiedad "key" del objeto changes
-    delete changes.key;
-    const response = await axios.put<SingleItemResponse>(
-      `${API_URL}/${key}`,
-      changes,
+  async getScopeById(id: string): Promise<Scope> {
+    const response = await httpClient.get<Partial<Scope> & { _id?: string }>(
+      `${API_URL}/${id}`,
     );
 
     if (!response.data.success) throw new Error(response.data.message);
     return response.data.data;
   }
 
-  /**
-   * Elimina un scope
-   * @async
-   * @param {string} key - ID del scope a eliminar
-   * @returns {Promise<{success: boolean, message: string}>} Resultado de la operación
-   */
-  async deleteScope(
-    key: string,
-  ): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await axios.delete<{
-        success: boolean;
-        message: string;
-        data: null;
-      }>(`${API_URL}/${key}`);
+  async createScope(scope: Omit<Scope, "id">): Promise<Scope> {
+    const response = await httpClient.post<Partial<Scope> & { _id?: string }>(
+      API_URL,
+      {
+        url: scope.url,
+        method: scope.method,
+        model: scope.model,
+      },
+    );
+    return normalizePermission(response.data);
+  }
 
-      return {
-        success: response.data.success,
-        message: response.data.message,
-      };
-    } catch (error) {
-      // Manejo de errores HTTP (400, 500, etc.)
-      const err = error as any;
-      const backendMessage = err.response?.data?.message || err.message;
-      return {
-        success: false,
-        message: backendMessage,
-      };
-    }
+  async updateScope(id: string, changes: Partial<Scope>): Promise<Scope> {
+    const response = await httpClient.put<Partial<Scope> & { _id?: string }>(
+      `${API_URL}/${id}`,
+      {
+        url: changes.url,
+        method: changes.method,
+        model: changes.model,
+      },
+    );
+    return normalizePermission(response.data);
+  }
+
+  async deleteScope(id: string): Promise<void> {
+    await httpClient.delete(`${API_URL}/${id}`);
   }
 }
 

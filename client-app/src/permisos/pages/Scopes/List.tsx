@@ -39,7 +39,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import type { Scope } from "../../models/Scope";
 import type { ScopeCategory } from "../../models/ScopeCategory";
 import { useCategoryStore } from "../../stores/useScopeCategoryStore";
@@ -67,54 +67,6 @@ const ScopesTable = () => {
     new Set(),
   ); // Categorías expandidas
 
-  /**
-   * Efecto para cargar datos iniciales
-   * Se ejecuta al montar el componente
-   */
-  useEffect(() => {
-    scopeStore.fetchScopes();
-    categoryStore.fetchCategories();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  /**
-   * Agrupa scopes por categoría aplicando el filtro seleccionado
-   * @returns Objeto con scopes agrupados por categoría
-   */
-  const groupedScopes = useMemo(() => {
-    const groups: Record<string, Scope[]> = {};
-
-    scopeStore.scopes.forEach((scope) => {
-      // Filtrar por categoría seleccionada
-      if (selectedCategory && scope.categoryName !== selectedCategory) return;
-
-      const categoryName = scope.categoryName || "Sin categoría";
-      if (!groups[categoryName]) {
-        groups[categoryName] = [];
-      }
-      groups[categoryName].push(scope);
-    });
-
-    return groups;
-  }, [scopeStore.scopes, selectedCategory]);
-
-  /**
-   * Maneja la expansión/colapso de categorías
-   */
-  const toggleCategory = (categoryName: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(categoryName)) {
-      newExpanded.delete(categoryName);
-    } else {
-      newExpanded.add(categoryName);
-    }
-    setExpandedCategories(newExpanded);
-  };
-
-  /**
-   * Maneja la creación de un nuevo scope
-   * @param values - Datos del nuevo scope
-   */
   const handleCreate = async (values: Partial<Scope>) => {
     await scopeStore.createScope(
       values as Omit<Scope, "key" | "deprecated" | "categoryName">,

@@ -36,9 +36,13 @@ public class UserService {
     }
 
     public User create(User newUser) {
+        if (newUser.getEmail() != null) {
+            newUser.setEmail(newUser.getEmail().trim().toLowerCase());
+        }
+
         // Hacer una validación de que antes de crear un usuario este no exista en la
         // base de datos (usar getUserByEmail de UserRepository)
-        User existingUser = this.theUserRepository.getUserByEmail(newUser.getEmail());
+        User existingUser = this.theUserRepository.findByEmailIgnoreCase(newUser.getEmail()).orElse(null);
         if (existingUser != null) {
             return existingUser;
         }
@@ -52,7 +56,9 @@ public class UserService {
 
         if (actualUser != null) {
             actualUser.setName(newUser.getName());
-            actualUser.setEmail(newUser.getEmail());
+            if (newUser.getEmail() != null) {
+                actualUser.setEmail(newUser.getEmail().trim().toLowerCase());
+            }
             actualUser.setPassword(theEncryptionService.convertSHA256(newUser.getPassword()));
             this.theUserRepository.save(actualUser);
             return actualUser;

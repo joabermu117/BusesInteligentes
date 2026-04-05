@@ -1,24 +1,35 @@
 package com.adm.ms_security.Services;
+
 import com.adm.ms_security.Models.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.SignatureException;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+
 @Service
 public class JwtService {
     @Value("${jwt.secret}")
-    private String secret; // Esta es la clave secreta que se utiliza para firmar el token. Debe mantenerse segura.
+    private String secret; // Esta es la clave secreta que se utiliza para firmar el token. Debe mantenerse
+                           // segura.
     @Value("${jwt.expiration}")
     private Long expiration; // Tiempo de expiración del token en milisegundos.
-    private Key secretKey = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+    private Key secretKey;
+
+    @PostConstruct
+    public void init() {
+        this.secretKey = Keys.hmacShaKeyFor(this.secret.getBytes(StandardCharsets.UTF_8));
+    }
+
     public String generateToken(User theUser) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
@@ -34,6 +45,7 @@ public class JwtService {
                 .signWith(secretKey)
                 .compact();
     }
+
     public boolean validateToken(String token) {
         try {
             Jws<Claims> claimsJws = Jwts.parserBuilder()
@@ -54,6 +66,7 @@ public class JwtService {
             return false;
         }
     }
+
     public User getUserFromToken(String token) {
         try {
             Jws<Claims> claimsJws = Jwts.parserBuilder()

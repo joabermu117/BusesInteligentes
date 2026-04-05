@@ -26,7 +26,7 @@ import {
   Typography,
 } from "@mui/material";
 import IconButton from "@mui/material/IconButton";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { User } from "../../models/user";
 import { useRoleStore } from "../../stores/useRoleStore";
 import { useScopeStore } from "../../stores/useScopeStore";
@@ -34,18 +34,8 @@ import { useUserStore } from "../../stores/useUserStore";
 import UserFormModal from "./Form";
 
 const UserList = () => {
-  const {
-    users,
-    loading,
-    fetchUsers,
-    createUser,
-    updateUser,
-    deleteUser,
-    userPermissions,
-  } = useUserStore();
-
-  const { roles, fetchRoles } = useRoleStore();
-  const { scopes, fetchScopes } = useScopeStore();
+  const { users, loading, createUser, updateUser, deleteUser } = useUserStore();
+  const { roles } = useRoleStore();
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -62,12 +52,6 @@ const UserList = () => {
   const [actionsAnchor, setActionsAnchor] = useState<null | HTMLElement>(null);
   const [selectedUserForActions, setSelectedUserForActions] =
     useState<User | null>(null);
-
-  useEffect(() => {
-    void fetchUsers();
-    void fetchRoles();
-    void fetchScopes();
-  }, [fetchUsers, fetchRoles, fetchScopes]);
 
   const filteredUsers = useMemo(() => {
     const safeUsers = Array.isArray(users) ? users : [];
