@@ -4,17 +4,12 @@ import type { Role } from "../models/Role";
 
 const API_URL = `${API_CONFIG.permisosBaseUrl}/roles`;
 
-interface ApiResponse<T = Role[]> {
-  success: boolean;
-  data: T;
-  message: string;
-}
-
-interface SingleItemResponse {
-  success: boolean;
-  data: Role;
-  message: string;
-}
+const normalizeRole = (role: Partial<Role> & { _id?: string }): Role => ({
+  key: role.key ?? role._id ?? "",
+  name: role.name ?? "",
+  description: role.description ?? "",
+  scopes: Array.isArray(role.scopes) ? role.scopes : [],
+});
 
 class RoleServiceClass {
   /**
@@ -29,37 +24,56 @@ class RoleServiceClass {
     return response.data.map(normalizeRole);
   }
 
-  async getRoleById(id: string): Promise<Role> {
+  async getRoleByKey(key: string): Promise<Role> {
     const response = await httpClient.get<Partial<Role> & { _id?: string }>(
-      `${API_URL}/${id}`,
+      `${API_URL}/${key}`,
     );
     return normalizeRole(response.data);
   }
 
-  async createRole(role: Omit<Role, "id">): Promise<Role> {
+  async createRole(role: Omit<Role, "key">): Promise<Role> {
     const response = await httpClient.post<Partial<Role> & { _id?: string }>(
       API_URL,
       {
         name: role.name,
         description: role.description,
+        scopes: role.scopes,
       },
     );
     return normalizeRole(response.data);
   }
 
-  async updateRole(id: string, changes: Partial<Role>): Promise<Role> {
+  async updateRole(key: string, changes: Partial<Role>): Promise<Role> {
     const response = await httpClient.put<Partial<Role> & { _id?: string }>(
-      `${API_URL}/${id}`,
+      `${API_URL}/${key}`,
       {
         name: changes.name,
         description: changes.description,
+        scopes: changes.scopes,
       },
     );
     return normalizeRole(response.data);
   }
 
-  async deleteRole(id: string): Promise<void> {
-    await httpClient.delete(`${API_URL}/${id}`);
+  async deleteRole(
+    key: string,
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await httpClient.delete<{
+        success?: boolean;
+        message?: string;
+      }>(`${API_URL}/${key}`);
+      return {
+        success: response.data?.success ?? true,
+        message: response.data?.message ?? "Rol eliminado correctamente",
+      };
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return {
+        success: false,
+        message: err.response?.data?.message ?? "No se pudo eliminar el rol",
+      };
+    }
   }
 }
 

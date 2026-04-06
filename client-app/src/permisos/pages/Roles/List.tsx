@@ -56,9 +56,16 @@ const RoleList = () => {
   const { roles, loading, createRole, updateRole, deleteRole } = useRoleStore();
 
   // Store para manejo de scopes/permisos
-  const { fetchScopes, scopes } = useScopeStore();
+  const { scopes } = useScopeStore();
 
-  const handleCreate = async (roleData: Omit<Role, "id">) => {
+  const [isCreating, setIsCreating] = useState(false);
+  const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const [selectedRoleScopes, setSelectedRoleScopes] = useState<string[]>([]);
+
+  const handleCreate = async (roleData: Omit<Role, "key">) => {
     await createRole(roleData);
     setIsCreating(false);
   };

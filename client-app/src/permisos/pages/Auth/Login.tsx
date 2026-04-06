@@ -34,10 +34,6 @@ const LoginPage = () => {
     }
   };
 
-  const handleMicrosoftLogin = () => {
-    window.location.href = SecurityService.getMicrosoftAuthorizeUrl();
-  };
-
   return (
     <Box
       sx={{
@@ -59,7 +55,7 @@ const LoginPage = () => {
               Iniciar sesion
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Accede con email y contrasena o con Microsoft.
+              Accede con email y contrasena.
             </Typography>
           </Box>
 
@@ -89,23 +85,10 @@ const LoginPage = () => {
                 disabled={isSubmitting}
                 size="large"
               >
-                {isSubmitting ? "Ingresando..." : "Iniciar con email"}
+                {isSubmitting ? "Ingresando..." : "Iniciar sesion"}
               </Button>
             </Stack>
           </Box>
-
-          <Typography variant="caption" align="center" color="text.secondary">
-            o
-          </Typography>
-
-          <Button
-            variant="outlined"
-            size="large"
-            onClick={handleMicrosoftLogin}
-            sx={{ textTransform: "none", fontWeight: 600 }}
-          >
-            Iniciar con Microsoft
-          </Button>
         </Stack>
       </Paper>
     </Box>

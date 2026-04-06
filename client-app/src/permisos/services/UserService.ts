@@ -3,39 +3,16 @@ import httpClient from "../../config/httpClient";
 import type { User } from "../models/user";
 
 const USERS_API_URL = `${API_CONFIG.permisosBaseUrl}/users`;
-const USER_ROLE_API_URL = `${API_CONFIG.permisosBaseUrl}/user-role`;
 
-interface ApiResponse<T = User[]> {
-  success: boolean;
-  data: T;
-  message: string;
-}
-
-interface SingleItemResponse {
-  success: boolean;
-  data: User;
-  message: string;
-}
-
-interface PermissionsResponse {
-  success: boolean;
-  data: string[];
-  message: string;
-}
-
-interface BatchPermissionsResponse {
-  success: boolean;
-  data: Record<string, string[]>;
-  message: string;
-}
+const normalizeUser = (user: Partial<User> & { _id?: string }): User => ({
+  uid: user.uid ?? user._id ?? "",
+  name: user.name ?? "",
+  email: user.email ?? "",
+  roles: Array.isArray(user.roles) ? user.roles : [],
+  customScopes: Array.isArray(user.customScopes) ? user.customScopes : [],
+});
 
 class UserServiceClass {
-  // Caches simples por sesión para reducir llamadas redundantes
-  private userByUidCache = new Map<string, User>();
-  private usersListCache: User[] | null = null;
-  private userByEmailCache = new Map<string, User | null>();
-  private inflightValidations = new Map<string, Promise<User | null>>();
-
   /**
    * Obtiene todos los usuarios disponibles
    * @async
@@ -57,13 +34,21 @@ class UserServiceClass {
     return normalizeUser(response.data);
   }
 
-  async createUser(user: Omit<User, "id">): Promise<User> {
+  async getUserByEmail(email: string): Promise<User> {
+    const response = await httpClient.get<Partial<User> & { _id?: string }>(
+      `${USERS_API_URL}/email/${encodeURIComponent(email)}`,
+    );
+    return normalizeUser(response.data);
+  }
+
+  async createUser(user: Omit<User, "uid">): Promise<User> {
     const response = await httpClient.post<Partial<User> & { _id?: string }>(
       USERS_API_URL,
       {
         name: user.name,
         email: user.email,
-        password: user.password,
+        roles: user.roles,
+        customScopes: user.customScopes,
       },
     );
     return normalizeUser(response.data);
@@ -75,18 +60,60 @@ class UserServiceClass {
       {
         name: changes.name,
         email: changes.email,
-        password: changes.password,
+        roles: changes.roles,
+        customScopes: changes.customScopes,
       },
     );
     return normalizeUser(response.data);
   }
 
-  async deleteUser(id: string): Promise<void> {
-    await httpClient.delete(`${USERS_API_URL}/${id}`);
+  async deleteUser(id: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await httpClient.delete<{
+        success?: boolean;
+        message?: string;
+      }>(`${USERS_API_URL}/${id}`);
+
+      return {
+        success: response.data?.success ?? true,
+        message: response.data?.message ?? "Usuario eliminado correctamente",
+      };
+    } catch (error) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return {
+        success: false,
+        message:
+          err.response?.data?.message ?? "No se pudo eliminar el usuario",
+      };
+    }
   }
 
-  async addRoleToUser(userId: string, roleId: string): Promise<void> {
-    await httpClient.post(`${USER_ROLE_API_URL}/user/${userId}/role/${roleId}`);
+  async getUserPermissions(uid: string): Promise<string[]> {
+    const response = await httpClient.get<string[]>(
+      `${USERS_API_URL}/${uid}/permissions`,
+    );
+    return Array.isArray(response.data) ? response.data : [];
+  }
+
+  async getManyUsersPermissions(
+    uids: string[],
+  ): Promise<Record<string, string[]>> {
+    if (uids.length === 0) {
+      return {};
+    }
+
+    const results = await Promise.all(
+      uids.map(async (uid) => {
+        try {
+          const permissions = await this.getUserPermissions(uid);
+          return [uid, permissions] as const;
+        } catch {
+          return [uid, []] as const;
+        }
+      }),
+    );
+
+    return Object.fromEntries(results);
   }
 }
 

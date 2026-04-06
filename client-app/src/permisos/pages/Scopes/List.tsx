@@ -39,7 +39,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Scope } from "../../models/Scope";
 import type { ScopeCategory } from "../../models/ScopeCategory";
 import { useCategoryStore } from "../../stores/useScopeCategoryStore";
@@ -101,6 +101,35 @@ const ScopesTable = () => {
   const toggleDeprecated = async (key: string) => {
     await scopeStore.toggleDeprecatedStatus(key);
   };
+
+  const toggleCategory = (category: string) => {
+    setExpandedCategories((current) => {
+      const next = new Set(current);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
+
+  const groupedScopes = useMemo<Record<string, Scope[]>>(() => {
+    const filteredScopes = selectedCategory
+      ? scopeStore.scopes.filter(
+          (scope) => scope.categoryName === selectedCategory,
+        )
+      : scopeStore.scopes;
+
+    return filteredScopes.reduce<Record<string, Scope[]>>((acc, scope) => {
+      const category = scope.categoryName || "Sin categoría";
+      if (!acc[category]) {
+        acc[category] = [];
+      }
+      acc[category].push(scope);
+      return acc;
+    }, {});
+  }, [scopeStore.scopes, selectedCategory]);
 
   // Mostrar estado de carga mientras se obtienen los datos
   if (scopeStore.loading && scopeStore.scopes.length === 0) {

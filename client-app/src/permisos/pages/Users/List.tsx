@@ -34,8 +34,16 @@ import { useUserStore } from "../../stores/useUserStore";
 import UserFormModal from "./Form";
 
 const UserList = () => {
-  const { users, loading, createUser, updateUser, deleteUser } = useUserStore();
+  const {
+    users,
+    loading,
+    createUser,
+    updateUser,
+    deleteUser,
+    userPermissions,
+  } = useUserStore();
   const { roles } = useRoleStore();
+  const { scopes } = useScopeStore();
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
