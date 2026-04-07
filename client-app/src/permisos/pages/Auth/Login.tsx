@@ -1,3 +1,6 @@
+import DirectionsBusFilledRounded from "@mui/icons-material/DirectionsBusFilledRounded";
+import GoogleIcon from "@mui/icons-material/Google";
+import WindowRoundedIcon from "@mui/icons-material/WindowRounded";
 import {
   Alert, Box, Button, Chip, Divider,
   Paper, Stack, TextField, Typography,
@@ -6,8 +9,6 @@ import axios from "axios";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import GoogleIcon from "@mui/icons-material/Google";
-import DirectionsBusFilledRounded from "@mui/icons-material/DirectionsBusFilledRounded";
 import { FirebaseAuthService } from "../../services/FirebaseAuthService";
 import { SecurityService } from "../../services/SecurityService";
 
@@ -24,16 +25,36 @@ const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getLoginErrorMessage = (error: unknown, provider: "email" | "google" | "github") => {
+  const getLoginErrorMessage = (
+    error: unknown,
+    provider: "email" | "google" | "microsoft" | "github",
+  ) => {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
-        if (provider === "github") return "No fue posible validar tu cuenta de GitHub.";
-        if (provider === "google") return "No fue posible validar tu cuenta de Google.";
+        if (provider === "google") {
+          return "No fue posible validar tu cuenta de Google.";
+        }
+
+        if (provider === "microsoft") {
+          return "No fue posible validar tu cuenta de Microsoft.";
+        }
+
+        if (provider === "github") {
+          return "No fue posible validar tu cuenta de GitHub.";
+        }
+
         return "Credenciales invalidas. Verifica email y contrasena.";
       }
     }
-    if (provider === "github") return "No fue posible iniciar sesion con GitHub.";
-    if (provider === "google") return "No fue posible iniciar sesion con Google.";
+
+    if (provider === "google") {
+      return "No fue posible iniciar sesion con Google.";
+    }
+
+    if (provider === "microsoft") {
+      return "No fue posible iniciar sesion con Microsoft.";
+    }
+
     return "Credenciales invalidas. Verifica email y contrasena.";
   };
 
@@ -82,6 +103,22 @@ const LoginPage = () => {
     }
   };
 
+  const handleMicrosoftLogin = async () => {
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const credential = await FirebaseAuthService.signInWithMicrosoft();
+      const idToken = await FirebaseAuthService.getIdToken(credential);
+      await SecurityService.exchangeFirebaseToken(idToken);
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      setErrorMessage(getLoginErrorMessage(error, "microsoft"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <Box sx={{
       minHeight: "100vh",
@@ -125,13 +162,21 @@ const LoginPage = () => {
             validaciones y comunicacion del servicio con una vista operativa unificada.
           </Typography>
           <Stack spacing={1.2} sx={{ mt: 4 }}>
-            <Typography variant="body2">• Control de rutas y paraderos</Typography>
-            <Typography variant="body2">• Trazabilidad de ciudadanos y viajes</Typography>
-            <Typography variant="body2">• Acceso con Google, GitHub y cuenta local</Typography>
+            <Typography variant="body2">
+              • Control de rutas y paraderos
+            </Typography>
+            <Typography variant="body2">
+              • Trazabilidad de ciudadanos y viajes
+            </Typography>
+            <Typography variant="body2">
+              • Acceso con Google, Microsoft, GitHub y cuenta local
+            </Typography>
           </Stack>
         </Box>
 
-        <Box sx={{ p: { xs: 3, md: 5 }, display: "flex", alignItems: "center" }}>
+        <Box
+          sx={{ p: { xs: 3, md: 5 }, display: "flex", alignItems: "center" }}
+        >
           <Stack spacing={2.5} sx={{ width: "100%" }}>
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 700 }}>Iniciar sesión</Typography>
@@ -194,6 +239,27 @@ const LoginPage = () => {
               }}
             >
               Continuar con GitHub
+            </Button>
+            
+            <Button
+              type="button"
+              variant="outlined"
+              startIcon={<WindowRoundedIcon />}
+              onClick={handleMicrosoftLogin}
+              disabled={isSubmitting}
+              size="large"
+            >
+              Continuar con Microsoft
+            </Button>
+
+            <Button
+              type="button"
+              variant="text"
+              onClick={() => navigate("/register")}
+              disabled={isSubmitting}
+              size="small"
+            >
+              Crear cuenta nueva
             </Button>
           </Stack>
         </Box>

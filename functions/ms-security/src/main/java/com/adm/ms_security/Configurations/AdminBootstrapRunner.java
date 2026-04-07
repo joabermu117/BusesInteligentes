@@ -47,6 +47,9 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     @Value("${admin.bootstrap.role-name:administrador}")
     private String adminRoleName;
 
+    @Value("${admin.bootstrap.citizen-role-name:ciudadano}")
+    private String citizenRoleName;
+
     public AdminBootstrapRunner(
             UserRepository userRepository,
             RoleRepository roleRepository,
@@ -76,6 +79,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         }
 
         User adminUser = upsertAdminUser(normalizedEmail);
+        upsertCitizenRole();
         Role adminRole = upsertAdminRole();
         syncRolePermissions(adminRole);
         ensureUserRole(adminUser, adminRole);
@@ -114,11 +118,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     }
 
     private Role upsertAdminRole() {
-        List<Role> roles = this.roleRepository.findAll();
-        Role existing = roles.stream()
-                .filter(role -> role.getName() != null && role.getName().equalsIgnoreCase(adminRoleName))
-                .findFirst()
-                .orElse(null);
+        Role existing = this.roleRepository.findByNameIgnoreCase(adminRoleName).orElse(null);
 
         if (existing != null) {
             return existing;
@@ -130,12 +130,25 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         return this.roleRepository.save(role);
     }
 
+    private Role upsertCitizenRole() {
+        Role existing = this.roleRepository.findByNameIgnoreCase(citizenRoleName).orElse(null);
+        if (existing != null) {
+            return existing;
+        }
+
+        Role role = new Role();
+        role.setName(citizenRoleName);
+        role.setDescription("Rol ciudadano por defecto para nuevos usuarios");
+        return this.roleRepository.save(role);
+    }
+
     private void syncRolePermissions(Role adminRole) {
         List<Permission> permissions = this.permissionRepository.findAll();
         int created = 0;
 
         for (Permission permission : permissions) {
-            RolePermission relation = this.rolePermissionRepository.getRolePermission(adminRole.getId(), permission.getId());
+            RolePermission relation = this.rolePermissionRepository.getRolePermission(adminRole.getId(),
+                    permission.getId());
             if (relation == null) {
                 this.rolePermissionRepository.save(new RolePermission(adminRole, permission));
                 created++;

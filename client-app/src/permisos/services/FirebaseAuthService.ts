@@ -3,7 +3,12 @@ import {
   signInWithPopup,
   type UserCredential,
 } from "firebase/auth";
-import { firebaseAuth, googleProvider, githubProvider } from "../../config/firebase";
+import {
+  firebaseAuth,
+  googleProvider,
+  microsoftProvider,
+  githubProvider,
+} from "../../config/firebase";
 
 class FirebaseAuthServiceClass {
   async signInWithEmailPassword(
@@ -19,6 +24,10 @@ class FirebaseAuthServiceClass {
 
   async signInWithGithub(): Promise<UserCredential> {
     return signInWithPopup(firebaseAuth, githubProvider);
+  }
+  
+  async signInWithMicrosoft(): Promise<UserCredential> {
+    return signInWithPopup(firebaseAuth, microsoftProvider);
   }
 
   async getIdToken(userCredential: UserCredential): Promise<string> {

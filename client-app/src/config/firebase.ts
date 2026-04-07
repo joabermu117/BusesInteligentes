@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { GoogleAuthProvider, GithubAuthProvider, getAuth } from "firebase/auth";
+import { GoogleAuthProvider, OAuthProvider, GithubAuthProvider, getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -16,8 +16,16 @@ const firebaseApp = initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
 
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({ prompt: "select_account" });
-
+export const microsoftProvider = new OAuthProvider("microsoft.com");
 export const githubProvider = new GithubAuthProvider();
+
+googleProvider.setCustomParameters({
+  prompt: "select_account",
+});
+
+microsoftProvider.setCustomParameters({
+  prompt: "select_account",
+});
+
 githubProvider.addScope("user:email");
 githubProvider.addScope("read:user");
