@@ -23,6 +23,9 @@ public class User {
     @Indexed(unique = true)
     private String email;
 
+    @Indexed(unique = true, sparse = true)
+    private String firebaseUid;
+
     @NotBlank(message = "La contraseña es obligatoria")
     @Size(min = 8, message = "La contraseña debe tener mínimo 8 caracteres")
     private String password;

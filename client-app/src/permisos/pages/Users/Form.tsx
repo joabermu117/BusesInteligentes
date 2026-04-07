@@ -15,23 +15,11 @@
  * - Interfaz responsiva con Material-UI
  */
 
-import { Close as CloseIcon } from "@mui/icons-material";
-import {
-  Box,
-  Button,
-  Checkbox,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  IconButton,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, TextField } from "@mui/material";
 import { useFormik } from "formik";
 import { useState } from "react";
+import FormDialog from "../../common/components/forms/FormDialog";
+import SelectableChecklist from "../../common/components/forms/SelectableChecklist";
 import type { Role } from "../../models/Role";
 import type { Scope } from "../../models/Scope";
 import type { User } from "../../models/user";
@@ -77,7 +65,6 @@ const UserFormModal = ({
   onCancel,
   isOpen,
 }: UserFormProps) => {
-  // Estados para búsqueda de roles y scopes
   const [roleSearch, setRoleSearch] = useState("");
   const [scopeSearch, setScopeSearch] = useState("");
 
@@ -106,21 +93,12 @@ const UserFormModal = ({
     enableReinitialize: true,
   });
 
-  /**
-   * Filtra roles basados en el término de búsqueda
-   * Busca coincidencias en nombre o key del rol
-   */
   const filteredRoles = availableRoles.filter(
     (role) =>
       role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
       role.key.toLowerCase().includes(roleSearch.toLowerCase()),
   );
 
-  /**
-   * Filtra scopes basados en el término de búsqueda
-   * Busca coincidencias en nombre o key del scope
-   * Excluye scopes marcados como deprecated
-   */
   const filteredScopes = availableScopes.filter(
     (scope) =>
       (scope.name.toLowerCase().includes(scopeSearch.toLowerCase()) ||
@@ -128,10 +106,6 @@ const UserFormModal = ({
       !scope.deprecated,
   );
 
-  /**
-   * Obtiene todos los scopes de los roles seleccionados
-   * @returns Array de keys de scopes
-   */
   const getScopesFromSelectedRoles = (): string[] => {
     return formik.values.roles.flatMap((roleKey) => {
       const role = availableRoles.find((r) => r.key === roleKey);
@@ -139,20 +113,11 @@ const UserFormModal = ({
     });
   };
 
-  /**
-   * Verifica si un scope está incluido en los roles seleccionados
-   * @param scopeKey - Key del scope a verificar
-   * @returns Booleano indicando si está incluido
-   */
   const isScopeInSelectedRoles = (scopeKey: string): boolean => {
     const roleScopes = getScopesFromSelectedRoles();
     return roleScopes.includes(scopeKey);
   };
 
-  /**
-   * Maneja la selección/deselección de roles
-   * @param roleKey - Key del rol a togglear
-   */
   const handleRoleToggle = (roleKey: string) => {
     const newRoles = formik.values.roles.includes(roleKey)
       ? formik.values.roles.filter((key) => key !== roleKey)
@@ -160,10 +125,6 @@ const UserFormModal = ({
     formik.setFieldValue("roles", newRoles);
   };
 
-  /**
-   * Maneja la selección/deselección de scopes adicionales
-   * @param scopeKey - Key del scope a togglear
-   */
   const handleScopeToggle = (scopeKey: string) => {
     const newScopes = formik.values.customScopes.includes(scopeKey)
       ? formik.values.customScopes.filter((key) => key !== scopeKey)
@@ -171,17 +132,10 @@ const UserFormModal = ({
     formik.setFieldValue("customScopes", newScopes);
   };
 
-  /**
-   * Limpia todos los roles seleccionados
-   */
   const clearAllRoles = () => {
     formik.setFieldValue("roles", []);
   };
 
-  /**
-   * Maneja la selección/deselección de todos los roles filtrados
-   * @param selectAll - Indica si se deben seleccionar todos (true) o ninguno (false)
-   */
   const toggleAllRoles = (selectAll: boolean) => {
     if (selectAll) {
       // Agregar solo los roles filtrados que no estén ya seleccionados
@@ -200,17 +154,10 @@ const UserFormModal = ({
     }
   };
 
-  /**
-   * Limpia todos los scopes adicionales seleccionados
-   */
   const clearAllScopes = () => {
     formik.setFieldValue("customScopes", []);
   };
 
-  /**
-   * Maneja la selección/deselección de todos los scopes filtrados
-   * @param selectAll - Indica si se deben seleccionar todos (true) o ninguno (false)
-   */
   const toggleAllScopes = (selectAll: boolean) => {
     if (selectAll) {
       // Agregar solo los scopes filtrados no deprecated y que no estén en roles que no estén ya seleccionados
@@ -232,9 +179,30 @@ const UserFormModal = ({
     }
   };
 
-  // Textos dinámicos según el modo
   const title = mode === "create" ? "Nuevo Usuario" : "Editar Usuario";
   const submitText = mode === "create" ? "Crear" : "Actualizar";
+
+  const filteredRoleKeys = filteredRoles.map((item) => item.key);
+  const filteredScopeKeys = filteredScopes.map((item) => item.key);
+
+  const roleItems = filteredRoles.map((role) => ({
+    key: role.key,
+    title: role.name,
+    description: role.description,
+    checked: formik.values.roles.includes(role.key),
+  }));
+
+  const scopeItems = filteredScopes.map((scope) => {
+    const includedByRole = isScopeInSelectedRoles(scope.key);
+    return {
+      key: scope.key,
+      title: scope.name,
+      description: scope.description,
+      checked: formik.values.customScopes.includes(scope.key),
+      disabled: includedByRole,
+      caption: includedByRole ? "(incluido en roles)" : undefined,
+    };
+  });
 
   const handleClose = () => {
     formik.resetForm();
@@ -244,503 +212,95 @@ const UserFormModal = ({
   };
 
   return (
-    <Dialog
+    <FormDialog
       open={isOpen}
+      title={title}
       onClose={handleClose}
+      onSubmit={() => void formik.submitForm()}
+      submitLabel={submitText}
+      submitting={formik.isSubmitting}
+      canSubmit={formik.isValid}
       maxWidth="md"
-      fullWidth
-      aria-labelledby="user-form-title"
     >
-      {/* Header del modal */}
-      <DialogTitle id="user-form-title">
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h4" component="div" sx={{ fontWeight: "bold" }}>
-            {title}
-          </Typography>
-          <IconButton
-            onClick={handleClose}
-            disabled={formik.isSubmitting}
-            sx={{
-              color: "#E52320",
-              "&:hover": { backgroundColor: "#fce4e4" },
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </Box>
-      </DialogTitle>
+      <Box display="grid" gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr" }} gap={3} mb={4}>
+        <TextField
+          fullWidth
+          id="name"
+          name="name"
+          label="Nombre"
+          placeholder="Nombre del usuario"
+          value={formik.values.name}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.touched.name && Boolean(formik.errors.name)}
+          helperText={formik.touched.name && formik.errors.name}
+          disabled={formik.isSubmitting}
+        />
 
-      {/* Formulario principal */}
-      <form onSubmit={formik.handleSubmit}>
-        <DialogContent>
-          <Box sx={{ pt: 1 }}>
-            {/* Campos básicos - Nombre y Email */}
-            <Box
-              display="grid"
-              gridTemplateColumns={{ xs: "1fr", md: "1fr 1fr" }}
-              gap={3}
-              mb={4}
-            >
-              {/* Campo de nombre */}
-              <TextField
-                fullWidth
-                id="name"
-                name="name"
-                label="Nombre"
-                placeholder="Nombre del usuario"
-                value={formik.values.name}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={formik.touched.name && Boolean(formik.errors.name)}
-                helperText={formik.touched.name && formik.errors.name}
-                disabled={formik.isSubmitting}
-                InputLabelProps={{
-                  sx: { fontSize: "0.875rem", fontWeight: 500 },
-                }}
-                InputProps={{
-                  sx: {
-                    fontSize: "0.875rem",
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#E52320",
-                    },
-                  },
-                }}
-              />
+        <TextField
+          fullWidth
+          id="email"
+          name="email"
+          label="Email"
+          placeholder="Email del usuario"
+          type="email"
+          value={formik.values.email}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          error={formik.touched.email && Boolean(formik.errors.email)}
+          helperText={formik.touched.email && formik.errors.email}
+          disabled={formik.isSubmitting || mode === "edit"}
+        />
+      </Box>
 
-              {/* Campo de email */}
-              <TextField
-                fullWidth
-                id="email"
-                name="email"
-                label="Email"
-                placeholder="Email del usuario"
-                type="email"
-                value={formik.values.email}
-                onChange={formik.handleChange}
-                onBlur={formik.handleBlur}
-                error={formik.touched.email && Boolean(formik.errors.email)}
-                helperText={formik.touched.email && formik.errors.email}
-                disabled={formik.isSubmitting || mode === "edit"}
-                InputLabelProps={{
-                  sx: { fontSize: "0.875rem", fontWeight: 500 },
-                }}
-                InputProps={{
-                  sx: {
-                    fontSize: "0.875rem",
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#E52320",
-                    },
-                  },
-                }}
-              />
-            </Box>
+      <Box mb={4}>
+        <SelectableChecklist
+          title="Roles asignados"
+          searchPlaceholder="Buscar roles..."
+          searchValue={roleSearch}
+          onSearchChange={setRoleSearch}
+          onSelectAll={() => toggleAllRoles(true)}
+          onUnselectFiltered={() => toggleAllRoles(false)}
+          onClearAll={clearAllRoles}
+          disableSelectAll={filteredRoles.length === 0}
+          disableUnselectFiltered={
+            filteredRoles.length === 0 ||
+            formik.values.roles.filter((key) => filteredRoleKeys.includes(key)).length === 0
+          }
+          disableClearAll={formik.values.roles.length === 0}
+          selectAllLabel={roleSearch ? "Seleccionar filtrados" : "Seleccionar todos"}
+          unselectLabel={roleSearch ? "Desmarcar filtrados" : "Desmarcar todos"}
+          items={roleItems}
+          onToggle={handleRoleToggle}
+          emptyMessage="No se encontraron roles"
+        />
+      </Box>
 
-            {/* Sección de Roles */}
-            <Box mb={4}>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={2}
-              >
-                <Typography
-                  variant="body1"
-                  sx={{ fontWeight: 500, fontSize: "0.875rem" }}
-                >
-                  Roles asignados
-                </Typography>
-                <Box display="flex" gap={1}>
-                  <Button
-                    type="button"
-                    onClick={() => toggleAllRoles(true)}
-                    size="small"
-                    disabled={filteredRoles.length === 0}
-                    sx={{
-                      color: "#E52320",
-                      textDecoration: "underline",
-                      textTransform: "none",
-                      minWidth: "auto",
-                      padding: "2px 4px",
-                      fontSize: "0.75rem",
-                      "&:hover": {
-                        backgroundColor: "transparent",
-                        textDecoration: "underline",
-                      },
-                    }}
-                  >
-                    {roleSearch ? "Seleccionar filtrados" : "Seleccionar todos"}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => toggleAllRoles(false)}
-                    size="small"
-                    disabled={
-                      filteredRoles.length === 0 ||
-                      formik.values.roles.filter((key) =>
-                        filteredRoles.map((r) => r.key).includes(key),
-                      ).length === 0
-                    }
-                    sx={{
-                      color: "#E52320",
-                      textDecoration: "underline",
-                      textTransform: "none",
-                      minWidth: "auto",
-                      padding: "2px 4px",
-                      fontSize: "0.75rem",
-                      "&:hover": {
-                        backgroundColor: "transparent",
-                        textDecoration: "underline",
-                      },
-                    }}
-                  >
-                    {roleSearch ? "Desmarcar filtrados" : "Desmarcar todos"}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={clearAllRoles}
-                    size="small"
-                    disabled={formik.values.roles.length === 0}
-                    sx={{
-                      color: "#E52320",
-                      textDecoration: "underline",
-                      textTransform: "none",
-                      minWidth: "auto",
-                      padding: "2px 4px",
-                      fontSize: "0.75rem",
-                      "&:hover": {
-                        backgroundColor: "transparent",
-                        textDecoration: "underline",
-                      },
-                    }}
-                  >
-                    Limpiar todos
-                  </Button>
-                </Box>
-              </Box>
-
-              {/* Buscador de roles */}
-              <TextField
-                fullWidth
-                placeholder="Buscar roles..."
-                value={roleSearch}
-                onChange={(e) => setRoleSearch(e.target.value)}
-                size="small"
-                sx={{ mb: 2 }}
-                InputProps={{
-                  sx: {
-                    fontSize: "0.875rem",
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#E52320",
-                    },
-                  },
-                }}
-              />
-
-              {/* Lista de roles seleccionables */}
-              <Box
-                sx={{
-                  border: "1px solid #ddd",
-                  borderRadius: 1,
-                  p: 2,
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  backgroundColor: "#fafafa",
-                }}
-              >
-                {filteredRoles.length === 0 ? (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ textAlign: "center", py: 2 }}
-                  >
-                    No se encontraron roles
-                  </Typography>
-                ) : (
-                  <Box sx={{ display: "grid", gap: 1 }}>
-                    {filteredRoles.map((role) => (
-                      <FormControlLabel
-                        key={role.key}
-                        control={
-                          <Checkbox
-                            checked={formik.values.roles.includes(role.key)}
-                            onChange={() => handleRoleToggle(role.key)}
-                            size="small"
-                            sx={{
-                              color: "#E52320",
-                              "&.Mui-checked": {
-                                color: "#E52320",
-                              },
-                            }}
-                          />
-                        }
-                        label={
-                          <Box>
-                            <Typography
-                              variant="body2"
-                              sx={{ fontSize: "0.875rem", fontWeight: 500 }}
-                            >
-                              {role.name}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                color: "text.secondary",
-                                fontSize: "0.75rem",
-                              }}
-                            >
-                              {role.description}
-                            </Typography>
-                          </Box>
-                        }
-                        sx={{ alignItems: "flex-start", m: 0 }}
-                      />
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            </Box>
-
-            {/* Sección de Scopes adicionales */}
-            <Box>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={2}
-              >
-                <Typography
-                  variant="body1"
-                  sx={{ fontWeight: 500, fontSize: "0.875rem" }}
-                >
-                  Scopes adicionales
-                </Typography>
-                <Box display="flex" gap={1}>
-                  <Button
-                    type="button"
-                    onClick={() => toggleAllScopes(true)}
-                    size="small"
-                    disabled={
-                      filteredScopes.filter(
-                        (s) => !s.deprecated && !isScopeInSelectedRoles(s.key),
-                      ).length === 0
-                    }
-                    sx={{
-                      color: "#E52320",
-                      textDecoration: "underline",
-                      textTransform: "none",
-                      minWidth: "auto",
-                      padding: "2px 4px",
-                      fontSize: "0.75rem",
-                      "&:hover": {
-                        backgroundColor: "transparent",
-                        textDecoration: "underline",
-                      },
-                    }}
-                  >
-                    {scopeSearch
-                      ? "Seleccionar filtrados"
-                      : "Seleccionar todos"}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => toggleAllScopes(false)}
-                    size="small"
-                    disabled={
-                      filteredScopes.length === 0 ||
-                      formik.values.customScopes.filter((key) =>
-                        filteredScopes.map((s) => s.key).includes(key),
-                      ).length === 0
-                    }
-                    sx={{
-                      color: "#E52320",
-                      textDecoration: "underline",
-                      textTransform: "none",
-                      minWidth: "auto",
-                      padding: "2px 4px",
-                      fontSize: "0.75rem",
-                      "&:hover": {
-                        backgroundColor: "transparent",
-                        textDecoration: "underline",
-                      },
-                    }}
-                  >
-                    {scopeSearch ? "Desmarcar filtrados" : "Desmarcar todos"}
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={clearAllScopes}
-                    size="small"
-                    disabled={formik.values.customScopes.length === 0}
-                    sx={{
-                      color: "#E52320",
-                      textDecoration: "underline",
-                      textTransform: "none",
-                      minWidth: "auto",
-                      padding: "2px 4px",
-                      fontSize: "0.75rem",
-                      "&:hover": {
-                        backgroundColor: "transparent",
-                        textDecoration: "underline",
-                      },
-                    }}
-                  >
-                    Limpiar todos
-                  </Button>
-                </Box>
-              </Box>
-
-              {/* Buscador de scopes */}
-              <TextField
-                fullWidth
-                placeholder="Buscar scopes..."
-                value={scopeSearch}
-                onChange={(e) => setScopeSearch(e.target.value)}
-                size="small"
-                sx={{ mb: 2 }}
-                InputProps={{
-                  sx: {
-                    fontSize: "0.875rem",
-                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                      borderColor: "#E52320",
-                    },
-                  },
-                }}
-              />
-
-              {/* Lista de scopes seleccionables */}
-              <Box
-                sx={{
-                  border: "1px solid #ddd",
-                  borderRadius: 1,
-                  p: 2,
-                  maxHeight: 200,
-                  overflowY: "auto",
-                  backgroundColor: "#fafafa",
-                }}
-              >
-                {filteredScopes.length === 0 ? (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ textAlign: "center", py: 2 }}
-                  >
-                    No se encontraron scopes
-                  </Typography>
-                ) : (
-                  <Box sx={{ display: "grid", gap: 1 }}>
-                    {filteredScopes.map((scope) => {
-                      const isInRoles = isScopeInSelectedRoles(scope.key);
-                      const isChecked = formik.values.customScopes.includes(
-                        scope.key,
-                      );
-
-                      return (
-                        <FormControlLabel
-                          key={scope.key}
-                          control={
-                            <Checkbox
-                              checked={isChecked}
-                              onChange={() =>
-                                !isInRoles && handleScopeToggle(scope.key)
-                              }
-                              disabled={isInRoles}
-                              size="small"
-                              sx={{
-                                color: "#E52320",
-                                "&.Mui-checked": {
-                                  color: "#E52320",
-                                },
-                              }}
-                            />
-                          }
-                          label={
-                            <Box sx={{ opacity: isInRoles ? 0.6 : 1 }}>
-                              <Typography
-                                variant="body2"
-                                sx={{ fontSize: "0.875rem", fontWeight: 500 }}
-                              >
-                                {scope.name}
-                                {isInRoles && (
-                                  <Typography
-                                    component="span"
-                                    variant="caption"
-                                    sx={{ ml: 1, color: "text.secondary" }}
-                                  >
-                                    (incluido en roles)
-                                  </Typography>
-                                )}
-                              </Typography>
-                              {scope.description && (
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    color: "text.secondary",
-                                    fontSize: "0.75rem",
-                                  }}
-                                >
-                                  {scope.description}
-                                </Typography>
-                              )}
-                            </Box>
-                          }
-                          sx={{ alignItems: "flex-start", m: 0 }}
-                        />
-                      );
-                    })}
-                  </Box>
-                )}
-              </Box>
-            </Box>
-          </Box>
-        </DialogContent>
-
-        {/* Botones de acción */}
-        <DialogActions sx={{ p: 3, pt: 1 }}>
-          <Button
-            onClick={handleClose}
-            disabled={formik.isSubmitting}
-            sx={{
-              color: "#E52320",
-              borderColor: "#E52320",
-              textTransform: "none",
-              fontWeight: 600,
-              "&:hover": {
-                backgroundColor: "#fce4e4",
-                borderColor: "#C71A17",
-              },
-            }}
-            variant="outlined"
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            disabled={formik.isSubmitting || !formik.isValid}
-            sx={{
-              backgroundColor: "#E52320",
-              color: "white",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": {
-                backgroundColor: "#c21e1b",
-                boxShadow: "none",
-              },
-              "&:disabled": {
-                backgroundColor: "#ccc",
-              },
-            }}
-            variant="contained"
-            startIcon={
-              formik.isSubmitting ? (
-                <CircularProgress size={16} color="inherit" />
-              ) : null
-            }
-          >
-            {formik.isSubmitting ? "Procesando..." : submitText}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+      <SelectableChecklist
+        title="Scopes adicionales"
+        searchPlaceholder="Buscar scopes..."
+        searchValue={scopeSearch}
+        onSearchChange={setScopeSearch}
+        onSelectAll={() => toggleAllScopes(true)}
+        onUnselectFiltered={() => toggleAllScopes(false)}
+        onClearAll={clearAllScopes}
+        disableSelectAll={filteredScopes.filter((scope) => !isScopeInSelectedRoles(scope.key)).length === 0}
+        disableUnselectFiltered={
+          filteredScopes.length === 0 ||
+          formik.values.customScopes.filter((key) => filteredScopeKeys.includes(key)).length === 0
+        }
+        disableClearAll={formik.values.customScopes.length === 0}
+        selectAllLabel={scopeSearch ? "Seleccionar filtrados" : "Seleccionar todos"}
+        unselectLabel={scopeSearch ? "Desmarcar filtrados" : "Desmarcar todos"}
+        items={scopeItems}
+        onToggle={(key) => {
+          if (!isScopeInSelectedRoles(key)) {
+            handleScopeToggle(key);
+          }
+        }}
+        emptyMessage="No se encontraron scopes"
+      />
+    </FormDialog>
   );
 };
 

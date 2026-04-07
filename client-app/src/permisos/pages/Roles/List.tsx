@@ -1,61 +1,28 @@
-/**
- * Componente List.tsx - Gestión de Roles
- *
- * Este componente proporciona una interfaz para administrar roles:
- * - Visualización de roles en una tabla Material-UI
- * - Creación, edición y eliminación de roles
- * - Asignación de permisos (scopes) a roles
- * - Confirmación de acciones críticas
- * - Sistema de notificaciones para feedback al usuario
- *
- * Características principales:
- * - Tabla Material-UI con lista de roles
- * - Modales para formularios de creación/edición
- * - Modal de confirmación para eliminación
- * - Visualización de permisos como dropdown con nombres
- * - Estados de carga
- * - Estilo consistente con el resto de la aplicación
- */
-
 import { ExpandMore } from "@mui/icons-material";
 import {
   Box,
   Button,
   Chip,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   List,
   ListItem,
   ListItemText,
-  Paper,
   Popover,
-  Table,
-  TableBody,
   TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  Typography,
 } from "@mui/material";
 import { useState } from "react";
+import DataTable from "../../common/components/DataTable";
+import ConfirmActionDialog from "../../common/components/ConfirmActionDialog";
+import PageHeader from "../../common/components/PageHeader";
+import TextActionButton from "../../common/components/TextActionButton";
+import Loader from "../../common/loader";
 import type { Role } from "../../models/Role";
 import { useRoleStore } from "../../stores/useRoleStore";
 import { useScopeStore } from "../../stores/useScopeStore";
 import RoleFormModal from "./Form";
 
-/**
- * Componente principal RoleList
- *
- * Maneja la visualización y gestión de roles
- */
 const RoleList = () => {
   const { roles, loading, createRole, updateRole, deleteRole } = useRoleStore();
-
-  // Store para manejo de scopes/permisos
   const { scopes } = useScopeStore();
 
   const [isCreating, setIsCreating] = useState(false);
@@ -70,10 +37,6 @@ const RoleList = () => {
     setIsCreating(false);
   };
 
-  /**
-   * Maneja la actualización de un rol existente
-   * @param roleData - Datos del rol a actualizar
-   */
   const handleUpdate = async (roleData: Role | Omit<Role, "key">) => {
     if ("key" in roleData) {
       await updateRole(roleData.key, roleData);
@@ -81,28 +44,20 @@ const RoleList = () => {
     }
   };
 
-  /**
-   * Prepara la eliminación de un rol mostrando modal de confirmación
-   * @param key - Key del rol a eliminar
-   */
   const confirmDelete = (key: string) => {
     setRoleToDelete(key);
     setIsDeleteModalOpen(true);
   };
 
-  /**
-   * Ejecuta la eliminación del rol confirmada
-   */
   const handleDelete = async () => {
-    if (!roleToDelete) return;
+    if (!roleToDelete) {
+      return;
+    }
     await deleteRole(roleToDelete);
     setIsDeleteModalOpen(false);
     setRoleToDelete(null);
   };
 
-  /**
-   * Maneja el click en el chip de scopes para mostrar el popover
-   */
   const handleScopesClick = (
     event: React.MouseEvent<HTMLDivElement>,
     roleScopes: string[],
@@ -111,131 +66,47 @@ const RoleList = () => {
     setSelectedRoleScopes(roleScopes);
   };
 
-  /**
-   * Cierra el popover de scopes
-   */
   const handleScopesClose = () => {
     setAnchorEl(null);
     setSelectedRoleScopes([]);
   };
 
-  /**
-   * Obtiene nombres de scopes a partir de sus keys
-   * @param scopeKeys - Array de keys de scopes
-   * @returns Array de nombres de scopes
-   */
   const getScopeNames = (scopeKeys: string[]): string[] => {
     return scopeKeys
-      .map((key) => scopes.find((s) => s.key === key)?.name || key)
+      .map((key) => scopes.find((scope) => scope.key === key)?.name || key)
       .filter(Boolean);
   };
 
-  // Mostrar estado de carga mientras se obtienen los datos
   if (loading && roles.length === 0) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        minHeight="200px"
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <Loader message="Cargando empresas y flotas..." />;
   }
 
-  const open = Boolean(anchorEl);
-
   return (
-    <Box>
-      {/* Modal de Confirmación para Eliminación */}
-      <Dialog
+    <Box className="page-enter">
+      <ConfirmActionDialog
         open={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        aria-labelledby="delete-dialog-title"
-        aria-describedby="delete-dialog-description"
-      >
-        <DialogTitle
-          id="delete-dialog-title"
-          sx={{ color: "#E52320", fontWeight: 700 }}
-        >
-          Confirmar eliminación
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="delete-dialog-description">
-            ¿Estás seguro de eliminar el rol{" "}
-            <span style={{ fontWeight: "bold" }}>"{roleToDelete}"</span>? Esta
-            acción no se puede deshacer.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setIsDeleteModalOpen(false)}
-            sx={{
-              color: "#E52320",
-              borderColor: "#E52320",
-              "&:hover": {
-                backgroundColor: "#fce4e4",
-                borderColor: "#C71A17",
-              },
-            }}
-            variant="outlined"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleDelete}
-            sx={{
-              backgroundColor: "#E52320",
-              color: "white",
-              fontWeight: 600,
-              "&:hover": {
-                backgroundColor: "#c21e1b",
-                boxShadow: "none",
-              },
-            }}
-            variant="contained"
-            disabled={loading}
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        title="Confirmar eliminacion"
+        description={`Estas seguro de eliminar el registro "${roleToDelete ?? ""}"? Esta accion no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        confirmDisabled={loading}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+      />
 
-      {/* Header con título y botón de creación */}
-      <Box sx={{ maxWidth: "90%", margin: "0 auto", mb: 3, mt: 5 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography
-            variant="h4"
-            sx={{ fontWeight: "bold", color: "#1D1D1B" }}
-          >
-            Gestión de Roles
-          </Typography>
-
+      <PageHeader
+        title="Empresas y Flotas"
+        subtitle="Administra las empresas operadoras y su configuracion de cobertura." 
+        actions={
           <Button
             onClick={() => setIsCreating(true)}
             variant="contained"
             disabled={loading}
-            sx={{
-              backgroundColor: "#E52320",
-              color: "white",
-              fontWeight: 600,
-              textTransform: "none",
-              "&:hover": {
-                backgroundColor: "#c21e1b",
-                boxShadow: "none",
-              },
-              "&:disabled": {
-                backgroundColor: "#ccc",
-              },
-            }}
           >
-            Crear Rol
+            Registrar flota
           </Button>
-        </Box>
-      </Box>
+        }
+      />
 
-      {/* Modal para creación de rol */}
       <RoleFormModal
         isOpen={isCreating}
         mode="create"
@@ -244,7 +115,6 @@ const RoleList = () => {
         onCancel={() => setIsCreating(false)}
       />
 
-      {/* Modal para edición de rol */}
       <RoleFormModal
         isOpen={!!editingRole}
         mode="edit"
@@ -254,190 +124,78 @@ const RoleList = () => {
         onCancel={() => setEditingRole(null)}
       />
 
-      {/* Popover para mostrar scopes */}
       <Popover
-        open={open}
+        open={Boolean(anchorEl)}
         anchorEl={anchorEl}
         onClose={handleScopesClose}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "left",
-        }}
-        PaperProps={{
-          sx: {
-            maxHeight: 300,
-            minWidth: 250,
-            boxShadow: 3,
-          },
-        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        PaperProps={{ sx: { maxHeight: 300, minWidth: 250, boxShadow: 3 } }}
       >
         <Box sx={{ p: 1 }}>
-          <Typography
-            variant="subtitle2"
-            sx={{ px: 2, py: 1, fontWeight: 600, color: "#1D1D1B" }}
-          >
-            Permisos asignados
-          </Typography>
           <List dense>
             {getScopeNames(selectedRoleScopes).length > 0 ? (
-              getScopeNames(selectedRoleScopes).map((scopeName, index) => (
-                <ListItem key={index} sx={{ py: 0.5 }}>
-                  <ListItemText
-                    primary={scopeName}
-                    primaryTypographyProps={{
-                      variant: "body2",
-                      sx: { fontSize: "0.875rem" },
-                    }}
-                  />
+              getScopeNames(selectedRoleScopes).map((scopeName) => (
+                <ListItem key={scopeName} sx={{ py: 0.5 }}>
+                  <ListItemText primary={scopeName} />
                 </ListItem>
               ))
             ) : (
               <ListItem>
-                <ListItemText
-                  primary="Sin permisos asignados"
-                  primaryTypographyProps={{
-                    variant: "body2",
-                    sx: { fontSize: "0.875rem", color: "text.secondary" },
-                  }}
-                />
+                <ListItemText primary="Sin atributos operativos" />
               </ListItem>
             )}
           </List>
         </Box>
       </Popover>
 
-      {/* Tabla de roles */}
-      <TableContainer
-        component={Paper}
-        sx={{
-          boxShadow: 0,
-          maxWidth: "90%",
-          margin: "0 auto",
-        }}
+      <DataTable
+        columns={["Nombre", "Descripcion", "Permisos", "Acciones"]}
+        hasData={roles.length > 0}
+        emptyMessage="No hay empresas o flotas registradas"
       >
-        <Table
-          size="small"
-          sx={{
-            "& .MuiTableRow-root": {
-              "& .MuiTableCell-root": {
-                borderBottom: "1px solid rgba(0, 0, 0, 0.3)",
-                height: "56px",
-              },
-            },
-          }}
-        >
-          <TableHead sx={{ backgroundColor: "#f5f5f5" }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 600, height: 60 }}>Nombre</TableCell>
-              <TableCell sx={{ fontWeight: 600, height: 60 }}>
-                Descripción
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, height: 60 }}>
-                Permisos / Scopes
-              </TableCell>
-              <TableCell sx={{ fontWeight: 600, height: 60 }}>
-                Acciones
-              </TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {roles.length > 0 ? (
-              roles.map((role) => (
-                <TableRow key={role.key} hover>
-                  <TableCell sx={{ py: 2 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {role.name}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ py: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      {role.description}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ py: 2 }}>
-                    <Chip
-                      label={
-                        <Box display="flex" alignItems="center" gap={0.5}>
-                          <ExpandMore sx={{ fontSize: "1rem" }} />
-                          {`${role.scopes?.length || 0} permisos`}
-                        </Box>
-                      }
-                      size="small"
-                      onClick={(event) =>
-                        handleScopesClick(event, role.scopes || [])
-                      }
-                      sx={{
-                        backgroundColor: "#e8f5e8",
-                        color: "#2e7d32",
-                        cursor: "pointer",
-                        "&:hover": {
-                          backgroundColor: "#d4edda",
-                        },
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ py: 2 }}>
-                    <Box display="flex" gap={2}>
-                      <Button
-                        onClick={() => setEditingRole(role)}
-                        disabled={loading}
-                        sx={{
-                          color: "#E52320",
-                          textDecoration: "underline",
-                          textTransform: "none",
-                          minWidth: "auto",
-                          padding: 0,
-                          fontSize: "0.875rem",
-                          "&:hover": {
-                            backgroundColor: "transparent",
-                            textDecoration: "underline",
-                          },
-                        }}
-                      >
-                        Editar
-                      </Button>
-                      {role.key !== "administrador" &&
-                        role.key !== "metrologo" && (
-                          <Button
-                            onClick={() => confirmDelete(role.key)}
-                            disabled={loading}
-                            sx={{
-                              color: "#E52320",
-                              textDecoration: "underline",
-                              textTransform: "none",
-                              minWidth: "auto",
-                              padding: 0,
-                              fontSize: "0.875rem",
-                              "&:hover": {
-                                backgroundColor: "transparent",
-                                textDecoration: "underline",
-                              },
-                            }}
-                          >
-                            Eliminar
-                          </Button>
-                        )}
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              // Mensaje cuando no hay roles
-              <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No hay roles disponibles
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+        {roles.map((role) => (
+          <TableRow key={role.key} hover>
+            <TableCell>{role.name}</TableCell>
+            <TableCell>{role.description}</TableCell>
+            <TableCell>
+              <Chip
+                label={
+                  <Box display="flex" alignItems="center" gap={0.5}>
+                    <ExpandMore sx={{ fontSize: "1rem" }} />
+                    {`${role.scopes?.length || 0} atributos`}
+                  </Box>
+                }
+                size="small"
+                onClick={(event) => handleScopesClick(event, role.scopes || [])}
+                sx={{
+                  backgroundColor: "#e8f5e8",
+                  color: "#2e7d32",
+                  cursor: "pointer",
+                  "&:hover": { backgroundColor: "#d4edda" },
+                }}
+              />
+            </TableCell>
+            <TableCell>
+              <Box display="flex" gap={2}>
+                <TextActionButton
+                  label="Editar"
+                  onClick={() => setEditingRole(role)}
+                  disabled={loading}
+                />
+                {role.key !== "administrador" && role.key !== "metrologo" ? (
+                  <TextActionButton
+                    label="Eliminar"
+                    onClick={() => confirmDelete(role.key)}
+                    disabled={loading}
+                    color="error"
+                  />
+                ) : null}
+              </Box>
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
     </Box>
   );
 };

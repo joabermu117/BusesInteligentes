@@ -11,9 +11,6 @@ export const scopeSchema = yup.object().shape({
     .string()
     .max(500, 'La descripción no puede exceder los 500 caracteres')
     .required('La descripción es requerida'),
-  categoryId: yup
-    .string()
-    .required('La categoría es requerida'),
   deprecated: yup
     .boolean()
 });

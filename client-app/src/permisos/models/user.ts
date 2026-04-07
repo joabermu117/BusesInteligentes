@@ -4,4 +4,5 @@ export interface User {
   email: string;
   roles: string[];
   customScopes: string[];
+  password?: string;
 }

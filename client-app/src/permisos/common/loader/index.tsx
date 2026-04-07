@@ -1,10 +1,25 @@
-const Loader = () => {
-    return (
-      <div className="flex h-screen items-center justify-center bg-white">
-        <div className="h-16 w-16 animate-spin rounded-full border-4 border-solid border-primary border-t-transparent"></div>
-      </div>
-    );
-  };
-  
-  export default Loader;
+import { Box, CircularProgress, Typography } from "@mui/material";
+
+const Loader = ({ message = "Cargando información..." }: { message?: string }) => {
+  return (
+    <Box
+      sx={{
+        minHeight: 240,
+        display: "grid",
+        placeItems: "center",
+        textAlign: "center",
+        py: 6,
+      }}
+    >
+      <Box>
+        <CircularProgress size={42} thickness={4.2} />
+        <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+          {message}
+        </Typography>
+      </Box>
+    </Box>
+  );
+};
+
+export default Loader;
   

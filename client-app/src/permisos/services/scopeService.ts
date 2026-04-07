@@ -10,8 +10,6 @@ const normalizePermission = (
   key: scope.key ?? scope._id ?? "",
   name: scope.name ?? "",
   description: scope.description ?? "",
-  categoryId: scope.categoryId ?? "",
-  categoryName: scope.categoryName ?? "",
   deprecated: Boolean(scope.deprecated),
 });
 
@@ -36,14 +34,13 @@ class ScopeServiceClass {
   }
 
   async createScope(
-    scope: Omit<Scope, "key" | "deprecated" | "categoryName">,
+    scope: Omit<Scope, "key" | "deprecated">,
   ): Promise<Scope> {
     const response = await httpClient.post<Partial<Scope> & { _id?: string }>(
       API_URL,
       {
         name: scope.name,
         description: scope.description,
-        categoryId: scope.categoryId,
       },
     );
     return normalizePermission(response.data);
@@ -55,7 +52,6 @@ class ScopeServiceClass {
       {
         name: changes.name,
         description: changes.description,
-        categoryId: changes.categoryId,
         deprecated: changes.deprecated,
       },
     );

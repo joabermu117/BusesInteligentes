@@ -16,7 +16,7 @@ export const useScopeStore = () => {
 
   const createMutation = useMutation({
     mutationFn: (
-      scopeData: Omit<Scope, "key" | "deprecated" | "categoryName">,
+      scopeData: Omit<Scope, "key" | "deprecated">,
     ) => ScopeService.createScope(scopeData),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SCOPES_QUERY_KEY });
@@ -81,7 +81,7 @@ export const useScopeStore = () => {
   };
 
   const createScope = async (
-    scopeData: Omit<Scope, "key" | "deprecated" | "categoryName">,
+    scopeData: Omit<Scope, "key" | "deprecated">,
   ): Promise<Scope> => {
     return createMutation.mutateAsync(scopeData);
   };
@@ -111,10 +111,6 @@ export const useScopeStore = () => {
     return scopes.find((scope: Scope) => scope.key === key);
   };
 
-  const getScopesByCategory = (categoryId: string): Scope[] => {
-    return scopes.filter((scope: Scope) => scope.categoryId === categoryId);
-  };
-
   const resetCurrentScope = () => {
     setCurrentScope(null);
   };
@@ -131,7 +127,6 @@ export const useScopeStore = () => {
     deleteScope,
     toggleDeprecatedStatus,
     getScopeByKey,
-    getScopesByCategory,
     resetCurrentScope,
   };
 };

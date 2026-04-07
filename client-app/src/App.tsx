@@ -1,4 +1,3 @@
-import { CssBaseline } from "@mui/material";
 import {
   BrowserRouter,
   Navigate,
@@ -7,6 +6,7 @@ import {
   Routes,
 } from "react-router-dom";
 import { AUTH_TOKEN_STORAGE_KEY } from "./config/httpClient";
+import AppShell from "./permisos/common/layout/AppShell";
 import LoginPage from "./permisos/pages/Auth/Login";
 import PermisosRoutes from "./permisos/routes/Permisos.routes";
 
@@ -22,20 +22,21 @@ const RequireAuth = () => {
 function App() {
   return (
     <BrowserRouter>
-      <CssBaseline />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
         <Route element={<RequireAuth />}>
-          {PermisosRoutes}
-          <Route
-            path="/dashboard"
-            element={<Navigate to="/roles/list" replace />}
-          />
-          <Route path="*" element={<Navigate to="/roles/list" replace />} />
+          <Route element={<AppShell />}>
+            {PermisosRoutes}
+            <Route
+              path="/dashboard"
+              element={<Navigate to="/users/list" replace />}
+            />
+            <Route path="*" element={<Navigate to="/users/list" replace />} />
+          </Route>
         </Route>
 
-        <Route path="/" element={<Navigate to="/roles/list" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

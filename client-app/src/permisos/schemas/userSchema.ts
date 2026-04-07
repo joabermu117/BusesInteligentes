@@ -1,20 +1,20 @@
-// schemas/userSchema.ts
-import * as yup from 'yup';
+import * as yup from "yup";
 
-export const userSchema = yup.object().shape({
+export const userSchema = yup.object({
   name: yup
     .string()
-    .required('El nombre es requerido')
-    .min(3, 'El nombre debe tener al menos 3 caracteres')
-    .max(50, 'El nombre no puede exceder los 50 caracteres'),
+    .required("El nombre es requerido")
+    .min(2, "El nombre debe tener al menos 2 caracteres")
+    .max(100, "El nombre no puede exceder los 100 caracteres"),
   email: yup
     .string()
-    .required('El email es requerido')
-    .email('Ingrese un email válido'),
-  roles: yup
-    .array()
-    .of(yup.string().required()),
-  customScopes: yup
-    .array()
-    .of(yup.string().required())
+    .required("El email es requerido")
+    .email("Ingrese un email valido"),
+  password: yup
+    .string()
+    .nullable()
+    .transform((value) => (value === "" ? null : value))
+    .min(8, "La contrasena debe tener al menos 8 caracteres"),
+  roles: yup.array().of(yup.string().required()).default([]),
+  customScopes: yup.array().of(yup.string().required()).default([]),
 });
