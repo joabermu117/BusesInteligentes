@@ -59,4 +59,22 @@ public class SecurityController {
 
         return ResponseEntity.ok(new AuthTokenResponse(this.theSecurityService.generateToken(user)));
     }
+
+    @PostMapping("github-login")
+    public ResponseEntity<AuthTokenResponse> githubLogin(@Valid @RequestBody FirebaseLoginRequest request)
+            throws IOException {
+        FirebaseToken decodedToken;
+        try {
+            decodedToken = FirebaseAuth.getInstance().verifyIdToken(request.getIdToken().trim());
+        } catch (FirebaseAuthException | IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        User user = this.theSecurityService.findOrCreateFromGithub(decodedToken);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        return ResponseEntity.ok(new AuthTokenResponse(this.theSecurityService.generateToken(user)));
+    }
 }

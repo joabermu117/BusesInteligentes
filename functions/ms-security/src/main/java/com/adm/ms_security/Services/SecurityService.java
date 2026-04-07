@@ -1,12 +1,13 @@
 package com.adm.ms_security.Services;
 
-import com.adm.ms_security.Models.User;
-import com.adm.ms_security.Repositories.UserRepository;
-import com.google.firebase.auth.FirebaseToken;
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Optional;
+import com.adm.ms_security.Models.User;
+import com.adm.ms_security.Repositories.UserRepository;
+import com.google.firebase.auth.FirebaseToken;
 
 @Service
 public class SecurityService {
@@ -143,4 +144,30 @@ public class SecurityService {
      * }
      */
 
+     public User findOrCreateFromGithub(FirebaseToken firebaseToken) {
+        if (firebaseToken == null) return null;
+
+        String firebaseUid = firebaseToken.getUid();
+        if (firebaseUid == null || firebaseUid.isBlank()) return null;
+
+        String email = normalizeEmail(firebaseToken.getEmail());
+        if (email == null) return null;
+
+        User byUid = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
+        if (byUid != null) {
+            return syncFirebaseFields(byUid, firebaseUid, email, firebaseToken.getName());
+        }
+
+        User byEmail = this.theUserRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (byEmail != null) {
+            return syncFirebaseFields(byEmail, firebaseUid, email, firebaseToken.getName());
+        }
+
+        User newUser = new User();
+        newUser.setEmail(email);
+        newUser.setFirebaseUid(firebaseUid);
+        newUser.setName(resolveDisplayName(firebaseToken.getName(), email));
+        newUser.setPassword(generateFirebasePassword(firebaseUid));
+        return this.theUserRepository.save(newUser);
+    }
 }
