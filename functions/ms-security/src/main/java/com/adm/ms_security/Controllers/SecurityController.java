@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.adm.ms_security.Dtos.AuthTokenResponse;
 import com.adm.ms_security.Dtos.FirebaseLoginRequest;
+import com.adm.ms_security.Dtos.RegisterRequest;
 import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Services.SecurityService;
 import com.google.firebase.auth.FirebaseAuth;
@@ -40,6 +41,21 @@ public class SecurityController {
         }
 
         return ResponseEntity.ok(new AuthTokenResponse(token));
+    }
+
+    @PostMapping("register")
+    public ResponseEntity<AuthTokenResponse> register(@Valid @RequestBody RegisterRequest request) {
+        User user = this.theSecurityService.registerWithEmailPassword(
+                request.getName(),
+                request.getEmail(),
+                request.getPassword());
+
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new AuthTokenResponse(this.theSecurityService.generateToken(user)));
     }
 
     @PostMapping("firebase-login")

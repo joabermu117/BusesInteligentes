@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { GoogleAuthProvider, getAuth } from "firebase/auth";
+import { GoogleAuthProvider, OAuthProvider, getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,7 +15,12 @@ const firebaseApp = initializeApp(firebaseConfig);
 
 export const firebaseAuth = getAuth(firebaseApp);
 export const googleProvider = new GoogleAuthProvider();
+export const microsoftProvider = new OAuthProvider("microsoft.com");
 
 googleProvider.setCustomParameters({
+  prompt: "select_account",
+});
+
+microsoftProvider.setCustomParameters({
   prompt: "select_account",
 });

@@ -8,6 +8,7 @@ import {
 import { AUTH_TOKEN_STORAGE_KEY } from "./config/httpClient";
 import AppShell from "./permisos/common/layout/AppShell";
 import LoginPage from "./permisos/pages/Auth/Login";
+import RegisterPage from "./permisos/pages/Auth/Register";
 import PermisosRoutes from "./permisos/routes/Permisos.routes";
 
 const RequireAuth = () => {
@@ -24,6 +25,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>

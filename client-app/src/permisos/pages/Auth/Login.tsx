@@ -1,3 +1,6 @@
+import DirectionsBusFilledRounded from "@mui/icons-material/DirectionsBusFilledRounded";
+import GoogleIcon from "@mui/icons-material/Google";
+import WindowRoundedIcon from "@mui/icons-material/WindowRounded";
 import {
   Alert,
   Box,
@@ -13,8 +16,6 @@ import axios from "axios";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import GoogleIcon from "@mui/icons-material/Google";
-import DirectionsBusFilledRounded from "@mui/icons-material/DirectionsBusFilledRounded";
 import { FirebaseAuthService } from "../../services/FirebaseAuthService";
 import { SecurityService } from "../../services/SecurityService";
 
@@ -25,18 +26,33 @@ const LoginPage = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const getLoginErrorMessage = (error: unknown, provider: "email" | "google") => {
+  const getLoginErrorMessage = (
+    error: unknown,
+    provider: "email" | "google" | "microsoft",
+  ) => {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
-        return provider === "google"
-          ? "No fue posible validar tu cuenta de Google."
-          : "Credenciales invalidas. Verifica email y contrasena.";
+        if (provider === "google") {
+          return "No fue posible validar tu cuenta de Google.";
+        }
+
+        if (provider === "microsoft") {
+          return "No fue posible validar tu cuenta de Microsoft.";
+        }
+
+        return "Credenciales invalidas. Verifica email y contrasena.";
       }
     }
 
-    return provider === "google"
-      ? "No fue posible iniciar sesion con Google."
-      : "Credenciales invalidas. Verifica email y contrasena.";
+    if (provider === "google") {
+      return "No fue posible iniciar sesion con Google.";
+    }
+
+    if (provider === "microsoft") {
+      return "No fue posible iniciar sesion con Microsoft.";
+    }
+
+    return "Credenciales invalidas. Verifica email y contrasena.";
   };
 
   const handleEmailLogin = async (event: FormEvent<HTMLFormElement>) => {
@@ -65,6 +81,22 @@ const LoginPage = () => {
       navigate("/dashboard", { replace: true });
     } catch (error) {
       setErrorMessage(getLoginErrorMessage(error, "google"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    setErrorMessage(null);
+    setIsSubmitting(true);
+
+    try {
+      const credential = await FirebaseAuthService.signInWithMicrosoft();
+      const idToken = await FirebaseAuthService.getIdToken(credential);
+      await SecurityService.exchangeFirebaseToken(idToken);
+      navigate("/dashboard", { replace: true });
+    } catch (error) {
+      setErrorMessage(getLoginErrorMessage(error, "microsoft"));
     } finally {
       setIsSubmitting(false);
     }
@@ -128,13 +160,21 @@ const LoginPage = () => {
             unificada.
           </Typography>
           <Stack spacing={1.2} sx={{ mt: 4 }}>
-            <Typography variant="body2">• Control de rutas y paraderos</Typography>
-            <Typography variant="body2">• Trazabilidad de ciudadanos y viajes</Typography>
-            <Typography variant="body2">• Acceso con Google y cuenta local</Typography>
+            <Typography variant="body2">
+              • Control de rutas y paraderos
+            </Typography>
+            <Typography variant="body2">
+              • Trazabilidad de ciudadanos y viajes
+            </Typography>
+            <Typography variant="body2">
+              • Acceso con Google y cuenta local
+            </Typography>
           </Stack>
         </Box>
 
-        <Box sx={{ p: { xs: 3, md: 5 }, display: "flex", alignItems: "center" }}>
+        <Box
+          sx={{ p: { xs: 3, md: 5 }, display: "flex", alignItems: "center" }}
+        >
           <Stack spacing={2.5} sx={{ width: "100%" }}>
             <Box>
               <Typography variant="h4" sx={{ fontWeight: 700 }}>
@@ -187,6 +227,27 @@ const LoginPage = () => {
               size="large"
             >
               Continuar con Google
+            </Button>
+
+            <Button
+              type="button"
+              variant="outlined"
+              startIcon={<WindowRoundedIcon />}
+              onClick={handleMicrosoftLogin}
+              disabled={isSubmitting}
+              size="large"
+            >
+              Continuar con Microsoft
+            </Button>
+
+            <Button
+              type="button"
+              variant="text"
+              onClick={() => navigate("/register")}
+              disabled={isSubmitting}
+              size="small"
+            >
+              Crear cuenta nueva
             </Button>
           </Stack>
         </Box>
