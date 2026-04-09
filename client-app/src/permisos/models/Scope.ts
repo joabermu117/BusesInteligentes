@@ -1,6 +1,6 @@
 export interface Scope {
-  key: string;
-  name: string;
-  description: string;
-  deprecated: boolean;
+  id: string;
+  url: string;
+  method: string;
+  model: string;
 }

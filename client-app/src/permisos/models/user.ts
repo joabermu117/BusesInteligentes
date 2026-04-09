@@ -1,8 +1,7 @@
 export interface User {
-  uid: string;
+  id: string;
   name: string;
   email: string;
-  roles: string[];
-  customScopes: string[];
+  roleIds: string[];
   password?: string;
 }

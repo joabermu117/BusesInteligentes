@@ -1,12 +1,15 @@
 package com.adm.ms_security.Controllers;
 
 import java.util.Map;
+import java.util.List;
 
+import com.adm.ms_security.Models.RolePermission;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -20,6 +23,11 @@ import com.adm.ms_security.Services.RolePermissionService;
 public class RolePermissionController {
     @Autowired
     private RolePermissionService theRolePermissionService;
+
+    @GetMapping("role/{roleId}")
+    public List<RolePermission> getPermissionsByRole(@PathVariable String roleId) {
+        return this.theRolePermissionService.getPermissionsByRole(roleId);
+    }
 
     @PostMapping("role/{roleId}/permission/{permissionId}")
     public ResponseEntity<Map<String, String>> addRolePermission(

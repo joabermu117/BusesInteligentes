@@ -5,7 +5,11 @@ import {
   Route,
   Routes,
 } from "react-router-dom";
-import { AUTH_TOKEN_STORAGE_KEY } from "./config/httpClient";
+import {
+  AUTH_TOKEN_STORAGE_KEY,
+  isAuthTokenExpired,
+  setAuthToken,
+} from "./config/httpClient";
 import AppShell from "./permisos/common/layout/AppShell";
 import LoginPage from "./permisos/pages/Auth/Login";
 import RegisterPage from "./permisos/pages/Auth/Register";
@@ -13,7 +17,9 @@ import PermisosRoutes from "./permisos/routes/Permisos.routes";
 
 const RequireAuth = () => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
-  if (!token) {
+
+  if (!token || isAuthTokenExpired(token)) {
+    setAuthToken(null);
     return <Navigate to="/login" replace />;
   }
 

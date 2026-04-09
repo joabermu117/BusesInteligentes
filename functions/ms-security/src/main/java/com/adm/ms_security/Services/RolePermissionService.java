@@ -9,6 +9,8 @@ import com.adm.ms_security.Repositories.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class RolePermissionService {
     @Autowired
@@ -41,5 +43,9 @@ public class RolePermissionService {
         } else {
             return false;
         }
+    }
+
+    public List<RolePermission> getPermissionsByRole(String roleId) {
+        return this.theRolePermissionRepository.getPermissionsByRole(roleId);
     }
 }

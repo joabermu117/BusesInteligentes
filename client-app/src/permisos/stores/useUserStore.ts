@@ -17,15 +17,16 @@ export const useUserStore = () => {
   const users = usersQuery.data ?? [];
 
   const createMutation = useMutation({
-    mutationFn: (userData: Omit<User, "uid">) => UserService.createUser(userData),
+    mutationFn: (userData: Omit<User, "id">) =>
+      UserService.createUser(userData),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ uid, userData }: { uid: string; userData: Partial<User> }) =>
-      UserService.updateUser(uid, userData),
+    mutationFn: ({ id, userData }: { id: string; userData: Partial<User> }) =>
+      UserService.updateUser(id, userData),
     onSuccess: async (user: User) => {
       setCurrentUser(user);
       await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
@@ -33,7 +34,7 @@ export const useUserStore = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (uid: string) => UserService.deleteUser(uid),
+    mutationFn: (id: string) => UserService.deleteUser(id),
     onSuccess: async (result: { success: boolean; message: string }) => {
       if (result.success) {
         await queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
@@ -68,25 +69,30 @@ export const useUserStore = () => {
     await usersQuery.refetch();
   };
 
-  const fetchUser = async (uid: string): Promise<User> => {
-    const user = await UserService.getUser(uid);
+  const fetchUser = async (id: string): Promise<User> => {
+    const user = await UserService.getUser(id);
     setCurrentUser(user);
     return user;
   };
 
-  const createUser = async (userData: Omit<User, "uid">): Promise<User> => {
+  const createUser = async (userData: Omit<User, "id">): Promise<User> => {
     return createMutation.mutateAsync(userData);
   };
 
-  const updateUser = async (uid: string, userData: Partial<User>): Promise<User> => {
-    return updateMutation.mutateAsync({ uid, userData });
+  const updateUser = async (
+    id: string,
+    userData: Partial<User>,
+  ): Promise<User> => {
+    return updateMutation.mutateAsync({ id, userData });
   };
 
-  const deleteUser = async (uid: string): Promise<{ success: boolean; message: string }> => {
-    if (currentUser?.uid === uid) {
+  const deleteUser = async (
+    id: string,
+  ): Promise<{ success: boolean; message: string }> => {
+    if (currentUser?.id === id) {
       setCurrentUser(null);
     }
-    return deleteMutation.mutateAsync(uid);
+    return deleteMutation.mutateAsync(id);
   };
 
   const resetCurrentUser = () => {

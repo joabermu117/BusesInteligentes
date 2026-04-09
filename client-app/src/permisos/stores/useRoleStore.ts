@@ -15,7 +15,7 @@ export const useRoleStore = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: (roleData: Omit<Role, "key">) =>
+    mutationFn: (roleData: Omit<Role, "id">) =>
       RoleService.createRole(roleData),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ROLES_QUERY_KEY });
@@ -23,8 +23,8 @@ export const useRoleStore = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ key, roleData }: { key: string; roleData: Partial<Role> }) =>
-      RoleService.updateRole(key, roleData),
+    mutationFn: ({ id, roleData }: { id: string; roleData: Partial<Role> }) =>
+      RoleService.updateRole(id, roleData),
     onSuccess: async (role: Role) => {
       setCurrentRole(role);
       await queryClient.invalidateQueries({ queryKey: ROLES_QUERY_KEY });
@@ -32,7 +32,7 @@ export const useRoleStore = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (key: string) => RoleService.deleteRole(key),
+    mutationFn: (id: string) => RoleService.deleteRole(id),
     onSuccess: async (result: { success: boolean; message: string }) => {
       if (result.success) {
         await queryClient.invalidateQueries({ queryKey: ROLES_QUERY_KEY });
@@ -69,31 +69,31 @@ export const useRoleStore = () => {
     await rolesQuery.refetch();
   };
 
-  const fetchRoleByKey = async (key: string): Promise<Role> => {
-    const role = await RoleService.getRoleByKey(key);
+  const fetchRoleById = async (id: string): Promise<Role> => {
+    const role = await RoleService.getRoleById(id);
     setCurrentRole(role);
     return role;
   };
 
-  const createRole = async (roleData: Omit<Role, "key">): Promise<Role> => {
+  const createRole = async (roleData: Omit<Role, "id">): Promise<Role> => {
     return createMutation.mutateAsync(roleData);
   };
 
   const updateRole = async (
-    key: string,
+    id: string,
     roleData: Partial<Role>,
   ): Promise<Role> => {
-    return updateMutation.mutateAsync({ key, roleData });
+    return updateMutation.mutateAsync({ id, roleData });
   };
 
   const deleteRole = async (
-    key: string,
+    id: string,
   ): Promise<{ success: boolean; message: string }> => {
-    return deleteMutation.mutateAsync(key);
+    return deleteMutation.mutateAsync(id);
   };
 
-  const getRoleByKey = (key: string): Role | undefined => {
-    return roles.find((role: Role) => role.key === key);
+  const getRoleById = (id: string): Role | undefined => {
+    return roles.find((role: Role) => role.id === id);
   };
 
   const resetCurrentRole = () => {
@@ -106,11 +106,11 @@ export const useRoleStore = () => {
     loading,
     error,
     fetchRoles,
-    fetchRoleByKey,
+    fetchRoleById,
     createRole,
     updateRole,
     deleteRole,
-    getRoleByKey,
+    getRoleById,
     resetCurrentRole,
   };
 };

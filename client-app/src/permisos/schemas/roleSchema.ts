@@ -11,8 +11,5 @@ export const roleSchema = yup.object().shape({
     .string()
     .required("La descripción es requerida")
     .max(500, "La descripción no puede exceder los 500 caracteres"),
-  scopes: yup
-    .array()
-    .of(yup.string().required())
-    .min(1, "Debe seleccionar al menos un permiso"),
+  permissionIds: yup.array().of(yup.string().required()).default([]),
 });

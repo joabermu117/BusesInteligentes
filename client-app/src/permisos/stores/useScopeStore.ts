@@ -15,9 +15,8 @@ export const useScopeStore = () => {
   });
 
   const createMutation = useMutation({
-    mutationFn: (
-      scopeData: Omit<Scope, "key" | "deprecated">,
-    ) => ScopeService.createScope(scopeData),
+    mutationFn: (scopeData: Omit<Scope, "id">) =>
+      ScopeService.createScope(scopeData),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: SCOPES_QUERY_KEY });
     },
@@ -25,12 +24,12 @@ export const useScopeStore = () => {
 
   const updateMutation = useMutation({
     mutationFn: ({
-      key,
+      id,
       scopeData,
     }: {
-      key: string;
+      id: string;
       scopeData: Partial<Scope>;
-    }) => ScopeService.updateScope(key, scopeData),
+    }) => ScopeService.updateScope(id, scopeData),
     onSuccess: async (scope: Scope) => {
       setCurrentScope(scope);
       await queryClient.invalidateQueries({ queryKey: SCOPES_QUERY_KEY });
@@ -38,7 +37,7 @@ export const useScopeStore = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (key: string) => ScopeService.deleteScope(key),
+    mutationFn: (id: string) => ScopeService.deleteScope(id),
     onSuccess: async (result: { success: boolean; message: string }) => {
       if (result.success) {
         await queryClient.invalidateQueries({ queryKey: SCOPES_QUERY_KEY });
@@ -75,40 +74,30 @@ export const useScopeStore = () => {
     await scopesQuery.refetch();
   };
 
-  const fetchScopeByKey = async (key: string): Promise<void> => {
-    const scope = await ScopeService.getScopeByKey(key);
+  const fetchScopeById = async (id: string): Promise<void> => {
+    const scope = await ScopeService.getScopeById(id);
     setCurrentScope(scope);
   };
 
-  const createScope = async (
-    scopeData: Omit<Scope, "key" | "deprecated">,
-  ): Promise<Scope> => {
+  const createScope = async (scopeData: Omit<Scope, "id">): Promise<Scope> => {
     return createMutation.mutateAsync(scopeData);
   };
 
   const updateScope = async (
-    key: string,
+    id: string,
     scopeData: Partial<Scope>,
   ): Promise<Scope> => {
-    return updateMutation.mutateAsync({ key, scopeData });
+    return updateMutation.mutateAsync({ id, scopeData });
   };
 
   const deleteScope = async (
-    key: string,
+    id: string,
   ): Promise<{ success: boolean; message: string }> => {
-    return deleteMutation.mutateAsync(key);
+    return deleteMutation.mutateAsync(id);
   };
 
-  const toggleDeprecatedStatus = async (key: string): Promise<void> => {
-    const scope = scopes.find((item: Scope) => item.key === key);
-    if (!scope) {
-      return;
-    }
-    await updateScope(key, { deprecated: !scope.deprecated });
-  };
-
-  const getScopeByKey = (key: string): Scope | undefined => {
-    return scopes.find((scope: Scope) => scope.key === key);
+  const getScopeById = (id: string): Scope | undefined => {
+    return scopes.find((scope: Scope) => scope.id === id);
   };
 
   const resetCurrentScope = () => {
@@ -121,12 +110,11 @@ export const useScopeStore = () => {
     loading,
     error,
     fetchScopes,
-    fetchScopeByKey,
+    fetchScopeById,
     createScope,
     updateScope,
     deleteScope,
-    toggleDeprecatedStatus,
-    getScopeByKey,
+    getScopeById,
     resetCurrentScope,
   };
 };

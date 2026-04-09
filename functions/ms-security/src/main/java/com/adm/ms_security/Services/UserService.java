@@ -55,11 +55,22 @@ public class UserService {
         User actualUser = this.theUserRepository.findById(id).orElse(null);
 
         if (actualUser != null) {
-            actualUser.setName(newUser.getName());
-            if (newUser.getEmail() != null) {
+            if (newUser.getName() != null && !newUser.getName().isBlank()) {
+                actualUser.setName(newUser.getName());
+            }
+
+            if (newUser.getEmail() != null && !newUser.getEmail().isBlank()) {
                 actualUser.setEmail(newUser.getEmail().trim().toLowerCase());
             }
-            actualUser.setPassword(theEncryptionService.convertSHA256(newUser.getPassword()));
+
+            if (newUser.getFirebaseUid() != null && !newUser.getFirebaseUid().isBlank()) {
+                actualUser.setFirebaseUid(newUser.getFirebaseUid());
+            }
+
+            if (newUser.getPassword() != null && !newUser.getPassword().isBlank()) {
+                actualUser.setPassword(theEncryptionService.convertSHA256(newUser.getPassword()));
+            }
+
             this.theUserRepository.save(actualUser);
             return actualUser;
         } else {

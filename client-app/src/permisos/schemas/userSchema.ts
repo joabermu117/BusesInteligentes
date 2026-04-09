@@ -10,11 +10,10 @@ export const userSchema = yup.object({
     .string()
     .required("El email es requerido")
     .email("Ingrese un email valido"),
+  roleIds: yup.array().of(yup.string().required()).default([]),
   password: yup
     .string()
     .nullable()
     .transform((value) => (value === "" ? null : value))
     .min(8, "La contrasena debe tener al menos 8 caracteres"),
-  roles: yup.array().of(yup.string().required()).default([]),
-  customScopes: yup.array().of(yup.string().required()).default([]),
 });

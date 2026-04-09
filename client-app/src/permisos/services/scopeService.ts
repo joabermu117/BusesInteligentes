@@ -5,12 +5,12 @@ import type { Scope } from "../models/Scope";
 const API_URL = `${API_CONFIG.permisosBaseUrl}/permissions`;
 
 const normalizePermission = (
-  scope: Partial<Scope> & { _id?: string },
+  scope: Partial<Scope> & { _id?: string; id?: string },
 ): Scope => ({
-  key: scope.key ?? scope._id ?? "",
-  name: scope.name ?? "",
-  description: scope.description ?? "",
-  deprecated: Boolean(scope.deprecated),
+  id: scope.id ?? scope._id ?? "",
+  url: scope.url ?? "",
+  method: scope.method ?? "",
+  model: scope.model ?? "",
 });
 
 class ScopeServiceClass {
@@ -22,59 +22,59 @@ class ScopeServiceClass {
    */
   async getScopes(): Promise<Scope[]> {
     const response =
-      await httpClient.get<Array<Partial<Scope> & { _id?: string }>>(API_URL);
+      await httpClient.get<
+        Array<Partial<Scope> & { _id?: string; id?: string }>
+      >(API_URL);
     return response.data.map(normalizePermission);
   }
 
-  async getScopeByKey(key: string): Promise<Scope> {
-    const response = await httpClient.get<Partial<Scope> & { _id?: string }>(
-      `${API_URL}/${key}`,
-    );
+  async getScopeById(id: string): Promise<Scope> {
+    const response = await httpClient.get<
+      Partial<Scope> & { _id?: string; id?: string }
+    >(`${API_URL}/${id}`);
     return normalizePermission(response.data);
   }
 
-  async createScope(
-    scope: Omit<Scope, "key" | "deprecated">,
-  ): Promise<Scope> {
-    const response = await httpClient.post<Partial<Scope> & { _id?: string }>(
-      API_URL,
-      {
-        name: scope.name,
-        description: scope.description,
-      },
-    );
+  async createScope(scope: Omit<Scope, "id">): Promise<Scope> {
+    const response = await httpClient.post<
+      Partial<Scope> & { _id?: string; id?: string }
+    >(API_URL, {
+      url: scope.url,
+      method: scope.method,
+      model: scope.model,
+    });
     return normalizePermission(response.data);
   }
 
-  async updateScope(key: string, changes: Partial<Scope>): Promise<Scope> {
-    const response = await httpClient.put<Partial<Scope> & { _id?: string }>(
-      `${API_URL}/${key}`,
-      {
-        name: changes.name,
-        description: changes.description,
-        deprecated: changes.deprecated,
-      },
-    );
+  async updateScope(id: string, changes: Partial<Scope>): Promise<Scope> {
+    const response = await httpClient.put<
+      Partial<Scope> & { _id?: string; id?: string }
+    >(`${API_URL}/${id}`, {
+      url: changes.url,
+      method: changes.method,
+      model: changes.model,
+    });
     return normalizePermission(response.data);
   }
 
   async deleteScope(
-    key: string,
+    id: string,
   ): Promise<{ success: boolean; message: string }> {
     try {
       const response = await httpClient.delete<{
         success?: boolean;
         message?: string;
-      }>(`${API_URL}/${key}`);
+      }>(`${API_URL}/${id}`);
       return {
         success: response.data?.success ?? true,
-        message: response.data?.message ?? "Scope eliminado correctamente",
+        message: response.data?.message ?? "Permiso eliminado correctamente",
       };
     } catch (error) {
       const err = error as { response?: { data?: { message?: string } } };
       return {
         success: false,
-        message: err.response?.data?.message ?? "No se pudo eliminar el scope",
+        message:
+          err.response?.data?.message ?? "No se pudo eliminar el permiso",
       };
     }
   }

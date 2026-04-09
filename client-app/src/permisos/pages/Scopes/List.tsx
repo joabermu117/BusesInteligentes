@@ -1,4 +1,4 @@
-import { Box, Button, Chip, TableCell, TableRow, Typography } from "@mui/material";
+import { Box, Button, TableCell, TableRow } from "@mui/material";
 import { useState } from "react";
 import ConfirmActionDialog from "../../common/components/ConfirmActionDialog";
 import DataTable from "../../common/components/DataTable";
@@ -18,20 +18,21 @@ const ScopesTable = () => {
   const [scopeToDelete, setScopeToDelete] = useState<string | null>(null);
 
   const handleCreate = async (values: Partial<Scope>) => {
-    await scopeStore.createScope(values as Omit<Scope, "key" | "deprecated">);
+    await scopeStore.createScope(values as Omit<Scope, "id">);
     setIsCreating(false);
   };
 
   const handleUpdate = async (values: Partial<Scope>) => {
-    if (!values.key) {
+    if (!values.id) {
       return;
     }
-    await scopeStore.updateScope(values.key, values);
+
+    await scopeStore.updateScope(values.id, values);
     setEditingScope(null);
   };
 
-  const confirmDelete = (key: string) => {
-    setScopeToDelete(key);
+  const confirmDelete = (id: string) => {
+    setScopeToDelete(id);
     setIsDeleteModalOpen(true);
   };
 
@@ -39,17 +40,14 @@ const ScopesTable = () => {
     if (!scopeToDelete) {
       return;
     }
+
     await scopeStore.deleteScope(scopeToDelete);
     setIsDeleteModalOpen(false);
     setScopeToDelete(null);
   };
 
-  const toggleDeprecated = async (key: string) => {
-    await scopeStore.toggleDeprecatedStatus(key);
-  };
-
   if (scopeStore.loading && scopeStore.scopes.length === 0) {
-    return <Loader message="Cargando paraderos y cobertura..." />;
+    return <Loader message="Cargando permisos del sistema..." />;
   }
 
   return (
@@ -65,11 +63,15 @@ const ScopesTable = () => {
       />
 
       <PageHeader
-        title="Paraderos"
-        subtitle="Configura paraderos por ruta y controla su estado operativo."
+        title="Permisos"
+        subtitle="Administra el catalogo de permisos operativos del sistema."
         actions={
-          <Button onClick={() => setIsCreating(true)} variant="contained" disabled={scopeStore.loading}>
-            Crear paradero
+          <Button
+            onClick={() => setIsCreating(true)}
+            variant="contained"
+            disabled={scopeStore.loading}
+          >
+            Crear permiso
           </Button>
         }
       />
@@ -77,7 +79,7 @@ const ScopesTable = () => {
       <ScopeFormModal
         isOpen={isCreating}
         mode="create"
-        initialData={{ name: "", description: "" }}
+        initialData={{ url: "", method: "GET", model: "" }}
         onCancel={() => setIsCreating(false)}
         onSubmit={handleCreate}
         isLoading={scopeStore.loading}
@@ -93,24 +95,15 @@ const ScopesTable = () => {
       />
 
       <DataTable
-        columns={["Nombre", "Descripcion", "Estado", "Acciones"]}
+        columns={["URL", "Metodo", "Modelo", "Acciones"]}
         hasData={scopeStore.scopes.length > 0}
-        emptyMessage="No hay paraderos disponibles"
+        emptyMessage="No hay permisos disponibles"
       >
         {scopeStore.scopes.map((scope) => (
-          <TableRow key={scope.key} hover>
-            <TableCell>{scope.name}</TableCell>
-            <TableCell>{scope.description}</TableCell>
-            <TableCell>
-              <Chip
-                label={scope.deprecated ? "Obsoleto" : "Activo"}
-                size="small"
-                sx={{
-                  backgroundColor: scope.deprecated ? "#ffebee" : "#e8f5e8",
-                  color: scope.deprecated ? "#d32f2f" : "#1b5e20",
-                }}
-              />
-            </TableCell>
+          <TableRow key={scope.id} hover>
+            <TableCell>{scope.url}</TableCell>
+            <TableCell>{scope.method}</TableCell>
+            <TableCell>{scope.model}</TableCell>
             <TableCell>
               <Box display="flex" gap={2}>
                 <TextActionButton
@@ -120,28 +113,15 @@ const ScopesTable = () => {
                 />
                 <TextActionButton
                   label="Eliminar"
-                  onClick={() => confirmDelete(scope.key)}
+                  onClick={() => confirmDelete(scope.id)}
                   disabled={scopeStore.loading}
                   color="error"
-                />
-                <TextActionButton
-                  label={scope.deprecated ? "Activar" : "Desactivar"}
-                  onClick={() => toggleDeprecated(scope.key)}
-                  disabled={scopeStore.loading}
                 />
               </Box>
             </TableCell>
           </TableRow>
         ))}
       </DataTable>
-
-      {scopeStore.scopes.length === 0 ? (
-        <Box textAlign="center" py={4}>
-          <Typography variant="body2" color="text.secondary">
-            No hay permisos disponibles
-          </Typography>
-        </Box>
-      ) : null}
     </Box>
   );
 };

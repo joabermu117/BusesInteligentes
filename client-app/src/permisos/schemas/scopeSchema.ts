@@ -1,16 +1,18 @@
-// schemas/scopeSchema.ts
-import * as yup from 'yup';
+import * as yup from "yup";
 
 export const scopeSchema = yup.object().shape({
-  name: yup
+  url: yup
     .string()
-    .required('El nombre es requerido')
-    .min(3, 'El nombre debe tener al menos 3 caracteres')
-    .max(50, 'El nombre no puede exceder los 50 caracteres'),
-  description: yup
+    .required("La URL es requerida")
+    .min(2, "La URL debe tener al menos 2 caracteres")
+    .max(200, "La URL no puede exceder los 200 caracteres"),
+  method: yup
     .string()
-    .max(500, 'La descripción no puede exceder los 500 caracteres')
-    .required('La descripción es requerida'),
-  deprecated: yup
-    .boolean()
+    .required("El metodo es requerido")
+    .oneOf(["GET", "POST", "PUT", "PATCH", "DELETE"], "Metodo no valido"),
+  model: yup
+    .string()
+    .required("El modelo es requerido")
+    .min(2, "El modelo debe tener al menos 2 caracteres")
+    .max(100, "El modelo no puede exceder los 100 caracteres"),
 });
