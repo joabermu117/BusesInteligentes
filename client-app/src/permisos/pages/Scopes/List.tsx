@@ -7,6 +7,7 @@ import TextActionButton from "../../common/components/TextActionButton";
 import Loader from "../../common/loader";
 import type { Scope } from "../../models/Scope";
 import { useScopeStore } from "../../stores/useScopeStore";
+// import { CargaMasivaButton } from "../../utils/autocrear";
 import { ScopeFormModal } from "./Form";
 
 const ScopesTable = () => {
@@ -66,13 +67,16 @@ const ScopesTable = () => {
         title="Permisos"
         subtitle="Administra el catalogo de permisos operativos del sistema."
         actions={
-          <Button
-            onClick={() => setIsCreating(true)}
-            variant="contained"
-            disabled={scopeStore.loading}
-          >
-            Crear permiso
-          </Button>
+          <Box display="flex" gap={1.5} flexWrap="wrap">
+            {/* <CargaMasivaButton /> */}
+            <Button
+              onClick={() => setIsCreating(true)}
+              variant="contained"
+              disabled={scopeStore.loading}
+            >
+              Crear permiso
+            </Button>
+          </Box>
         }
       />
 

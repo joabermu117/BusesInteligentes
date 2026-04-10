@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-
+import java.util.Locale;
 
 @Service
 public class PermissionService {
@@ -14,37 +14,66 @@ public class PermissionService {
     @Autowired
     private PermissionRepository thePermissionRepository;
 
-    public List<Permission> find(){
+    public List<Permission> find() {
         return this.thePermissionRepository.findAll();
     }
 
-    public Permission findById(String id){
-        Permission thePermission=this.thePermissionRepository.findById(id).orElse(null);
+    public Permission findById(String id) {
+        Permission thePermission = this.thePermissionRepository.findById(id).orElse(null);
         return thePermission;
     }
 
-    public Permission create(Permission newPermission){
+    public Permission create(Permission newPermission) {
+        if (newPermission == null) {
+            return null;
+        }
+
+        String normalizedUrl = normalizeUrl(newPermission.getUrl());
+        String normalizedMethod = normalizeMethod(newPermission.getMethod());
+
+        Permission existingPermission = this.thePermissionRepository.getPermission(normalizedUrl, normalizedMethod);
+        if (existingPermission != null) {
+            if (newPermission.getModel() != null && !newPermission.getModel().isBlank()) {
+                existingPermission.setModel(newPermission.getModel().trim());
+                return this.thePermissionRepository.save(existingPermission);
+            }
+            return existingPermission;
+        }
+
+        newPermission.setUrl(normalizedUrl);
+        newPermission.setMethod(normalizedMethod);
+        if (newPermission.getModel() != null) {
+            newPermission.setModel(newPermission.getModel().trim());
+        }
         return this.thePermissionRepository.save(newPermission);
     }
 
-    public Permission update(String id, Permission newPermission){
-        Permission actualPermission=this.thePermissionRepository.findById(id).orElse(null);
-        if(actualPermission!=null){
+    public Permission update(String id, Permission newPermission) {
+        Permission actualPermission = this.thePermissionRepository.findById(id).orElse(null);
+        if (actualPermission != null) {
             actualPermission.setUrl(newPermission.getUrl());
             actualPermission.setMethod(newPermission.getMethod());
             actualPermission.setModel(newPermission.getModel());
             this.thePermissionRepository.save(actualPermission);
             return actualPermission;
-        }else{
+        } else {
             return null;
         }
     }
 
-    public void delete(String id){
-        Permission thePermission=this.thePermissionRepository.findById(id).orElse(null);
-        if (thePermission!=null){
+    public void delete(String id) {
+        Permission thePermission = this.thePermissionRepository.findById(id).orElse(null);
+        if (thePermission != null) {
             this.thePermissionRepository.delete(thePermission);
         }
+    }
+
+    private String normalizeUrl(String url) {
+        return url == null ? "" : url.trim();
+    }
+
+    private String normalizeMethod(String method) {
+        return method == null ? "" : method.trim().toUpperCase(Locale.ROOT);
     }
 
 }

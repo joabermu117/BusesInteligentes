@@ -1,0 +1,87 @@
+[
+  { "url": "/api/users", "method": "GET", "model": "usuarios" },
+  { "url": "/api/users/?", "method": "GET", "model": "usuarios" },
+  { "url": "/api/users", "method": "POST", "model": "usuarios" },
+  { "url": "/api/users/?", "method": "PUT", "model": "usuarios" },
+  { "url": "/api/users/?", "method": "DELETE", "model": "usuarios" },
+
+  { "url": "/api/roles", "method": "GET", "model": "roles" },
+  { "url": "/api/roles/?", "method": "GET", "model": "roles" },
+  { "url": "/api/roles", "method": "POST", "model": "roles" },
+  { "url": "/api/roles/?", "method": "PUT", "model": "roles" },
+  { "url": "/api/roles/?", "method": "DELETE", "model": "roles" },
+
+  { "url": "/api/permissions", "method": "GET", "model": "permisos" },
+  { "url": "/api/permissions/?", "method": "GET", "model": "permisos" },
+  { "url": "/api/permissions", "method": "POST", "model": "permisos" },
+  { "url": "/api/permissions/?", "method": "PUT", "model": "permisos" },
+  { "url": "/api/permissions/?", "method": "DELETE", "model": "permisos" },
+
+  { "url": "/api/buses", "method": "GET", "model": "buses" },
+  { "url": "/api/buses/?", "method": "GET", "model": "buses" },
+  { "url": "/api/buses", "method": "POST", "model": "buses" },
+  { "url": "/api/buses/?", "method": "PUT", "model": "buses" },
+  { "url": "/api/buses/?", "method": "DELETE", "model": "buses" },
+
+  { "url": "/api/rutas", "method": "GET", "model": "rutas" },
+  { "url": "/api/rutas/?", "method": "GET", "model": "rutas" },
+  { "url": "/api/rutas", "method": "POST", "model": "rutas" },
+  { "url": "/api/rutas/?", "method": "PUT", "model": "rutas" },
+  { "url": "/api/rutas/?", "method": "DELETE", "model": "rutas" },
+
+  { "url": "/api/programaciones", "method": "GET", "model": "programaciones" },
+  {
+    "url": "/api/programaciones/?",
+    "method": "GET",
+    "model": "programaciones"
+  },
+  { "url": "/api/programaciones", "method": "POST", "model": "programaciones" },
+  {
+    "url": "/api/programaciones/?",
+    "method": "PUT",
+    "model": "programaciones"
+  },
+  {
+    "url": "/api/programaciones/?",
+    "method": "DELETE",
+    "model": "programaciones"
+  },
+
+  { "url": "/api/reportes", "method": "GET", "model": "reportes" },
+  { "url": "/api/reportes/?", "method": "GET", "model": "reportes" },
+  { "url": "/api/reportes", "method": "POST", "model": "reportes" },
+  { "url": "/api/reportes/?", "method": "PUT", "model": "reportes" },
+  { "url": "/api/reportes/?", "method": "DELETE", "model": "reportes" },
+
+  { "url": "/api/incidentes", "method": "GET", "model": "incidentes" },
+  { "url": "/api/incidentes/?", "method": "GET", "model": "incidentes" },
+  { "url": "/api/incidentes", "method": "POST", "model": "incidentes" },
+  { "url": "/api/incidentes/?", "method": "PUT", "model": "incidentes" },
+  { "url": "/api/incidentes/?", "method": "DELETE", "model": "incidentes" },
+
+  {
+    "url": "/api/mensajes-masivos",
+    "method": "GET",
+    "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/mensajes-masivos/?",
+    "method": "GET",
+    "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/mensajes-masivos",
+    "method": "POST",
+    "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/mensajes-masivos/?",
+    "method": "PUT",
+    "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/mensajes-masivos/?",
+    "method": "DELETE",
+    "model": "mensajes masivos"
+  }
+]
