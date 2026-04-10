@@ -35,7 +35,7 @@ interface SelectableChecklistProps {
 }
 
 const actionButtonSx = {
-  color: "#E52320",
+  color: "primary.main",
   textDecoration: "underline",
   textTransform: "none",
   minWidth: "auto",
@@ -66,12 +66,26 @@ const SelectableChecklist = ({
 }: SelectableChecklistProps) => {
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="body1" sx={{ fontWeight: 500, fontSize: "0.875rem" }}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+      >
+        <Typography
+          variant="body1"
+          sx={{ fontWeight: 500, fontSize: "0.875rem" }}
+        >
           {title}
         </Typography>
         <Box display="flex" gap={1}>
-          <Button type="button" onClick={onSelectAll} size="small" disabled={disableSelectAll} sx={actionButtonSx}>
+          <Button
+            type="button"
+            onClick={onSelectAll}
+            size="small"
+            disabled={disableSelectAll}
+            sx={actionButtonSx}
+          >
             {selectAllLabel}
           </Button>
           <Button
@@ -84,7 +98,13 @@ const SelectableChecklist = ({
             {unselectLabel}
           </Button>
           {onClearAll ? (
-            <Button type="button" onClick={onClearAll} size="small" disabled={disableClearAll} sx={actionButtonSx}>
+            <Button
+              type="button"
+              onClick={onClearAll}
+              size="small"
+              disabled={disableClearAll}
+              sx={actionButtonSx}
+            >
               Limpiar todos
             </Button>
           ) : null}
@@ -101,7 +121,9 @@ const SelectableChecklist = ({
         InputProps={{
           sx: {
             fontSize: "0.875rem",
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#E52320" },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+              borderColor: "primary.main",
+            },
           },
         }}
       />
@@ -117,7 +139,11 @@ const SelectableChecklist = ({
         }}
       >
         {items.length === 0 ? (
-          <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 2 }}>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ textAlign: "center", py: 2 }}
+          >
             {emptyMessage}
           </Typography>
         ) : (
@@ -132,23 +158,33 @@ const SelectableChecklist = ({
                     disabled={Boolean(item.disabled)}
                     size="small"
                     sx={{
-                      color: "#E52320",
-                      "&.Mui-checked": { color: "#E52320" },
+                      color: "primary.main",
+                      "&.Mui-checked": { color: "primary.main" },
                     }}
                   />
                 }
                 label={
                   <Box sx={{ opacity: item.disabled ? 0.6 : 1 }}>
-                    <Typography variant="body2" sx={{ fontSize: "0.875rem", fontWeight: 500 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontSize: "0.875rem", fontWeight: 500 }}
+                    >
                       {item.title}
                       {item.caption ? (
-                        <Typography component="span" variant="caption" sx={{ ml: 1, color: "text.secondary" }}>
+                        <Typography
+                          component="span"
+                          variant="caption"
+                          sx={{ ml: 1, color: "text.secondary" }}
+                        >
                           {item.caption}
                         </Typography>
                       ) : null}
                     </Typography>
                     {item.description ? (
-                      <Typography variant="caption" sx={{ color: "text.secondary", fontSize: "0.75rem" }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: "text.secondary", fontSize: "0.75rem" }}
+                      >
                         {item.description}
                       </Typography>
                     ) : null}

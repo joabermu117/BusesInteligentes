@@ -147,8 +147,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
         int created = 0;
 
         for (Permission permission : permissions) {
-            RolePermission relation = this.rolePermissionRepository.getRolePermission(adminRole.getId(),
-                    permission.getId());
+            RolePermission relation = this.rolePermissionRepository.findByRoleAndPermission(adminRole, permission);
             if (relation == null) {
                 this.rolePermissionRepository.save(new RolePermission(adminRole, permission));
                 created++;
@@ -159,7 +158,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     }
 
     private void ensureUserRole(User user, Role role) {
-        List<UserRole> userRoles = this.userRoleRepository.getRolesByUser(user.getId());
+        List<UserRole> userRoles = this.userRoleRepository.findAllByUser(user);
         boolean hasRole = userRoles.stream()
                 .map(UserRole::getRole)
                 .anyMatch(existingRole -> existingRole != null && existingRole.getId().equals(role.getId()));

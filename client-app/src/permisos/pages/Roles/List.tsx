@@ -11,6 +11,7 @@ import { useScopeStore } from "../../stores/useScopeStore";
 import RoleFormModal from "./Form";
 
 const RoleList = () => {
+  const INITIAL_VISIBLE_PERMISSIONS = 6;
   const { roles, loading, createRole, updateRole, deleteRole } = useRoleStore();
   const { scopes } = useScopeStore();
 
@@ -18,6 +19,9 @@ const RoleList = () => {
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
+  const [expandedPermissionsByRole, setExpandedPermissionsByRole] = useState<
+    Record<string, boolean>
+  >({});
 
   const handleCreate = async (roleData: Omit<Role, "id">) => {
     await createRole(roleData);
@@ -46,6 +50,13 @@ const RoleList = () => {
     await deleteRole(roleToDelete);
     setIsDeleteModalOpen(false);
     setRoleToDelete(null);
+  };
+
+  const togglePermissionsVisibility = (roleId: string) => {
+    setExpandedPermissionsByRole((previousState) => ({
+      ...previousState,
+      [roleId]: !previousState[roleId],
+    }));
   };
 
   if (loading && roles.length === 0) {
@@ -105,28 +116,57 @@ const RoleList = () => {
             <TableCell>{role.name}</TableCell>
             <TableCell>{role.description}</TableCell>
             <TableCell>
-              <Box display="flex" flexWrap="wrap" gap={0.5}>
+              <Box display="flex" flexDirection="column" gap={1}>
                 {role.permissionIds.length > 0 ? (
-                  role.permissionIds.map((permissionId) => {
-                    const permission = scopes.find(
-                      (scope) => scope.id === permissionId,
-                    );
-                    const label = permission
-                      ? `${permission.method} ${permission.url}`
-                      : permissionId;
-                    return (
-                      <Chip
-                        key={permissionId}
-                        label={label}
+                  <>
+                    <Box display="flex" flexWrap="wrap" gap={0.5}>
+                      {(expandedPermissionsByRole[role.id]
+                        ? role.permissionIds
+                        : role.permissionIds.slice(
+                            0,
+                            INITIAL_VISIBLE_PERMISSIONS,
+                          )
+                      ).map((permissionId) => {
+                        const permission = scopes.find(
+                          (scope) => scope.id === permissionId,
+                        );
+                        const label = permission
+                          ? `${permission.method} ${permission.url}`
+                          : permissionId;
+                        return (
+                          <Chip
+                            key={permissionId}
+                            label={label}
+                            size="small"
+                            sx={{
+                              backgroundColor: "#e8f5e8",
+                              color: "#2e7d32",
+                              fontSize: "0.75rem",
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
+
+                    {role.permissionIds.length >
+                      INITIAL_VISIBLE_PERMISSIONS && (
+                      <Button
                         size="small"
+                        onClick={() => togglePermissionsVisibility(role.id)}
                         sx={{
-                          backgroundColor: "#e8f5e8",
-                          color: "#2e7d32",
-                          fontSize: "0.75rem",
+                          textTransform: "none",
+                          alignSelf: "flex-start",
+                          px: 0,
+                          minWidth: "auto",
+                          fontWeight: 600,
                         }}
-                      />
-                    );
-                  })
+                      >
+                        {expandedPermissionsByRole[role.id]
+                          ? "Mostrar menos"
+                          : `Mostrar ${role.permissionIds.length - INITIAL_VISIBLE_PERMISSIONS} mas`}
+                      </Button>
+                    )}
+                  </>
                 ) : (
                   <Chip
                     label="Sin permisos"

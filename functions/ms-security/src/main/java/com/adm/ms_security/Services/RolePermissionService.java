@@ -27,6 +27,10 @@ public class RolePermissionService {
         Role role = this.theRoleRepository.findById(roleId).orElse(null);
         Permission permission = this.thePermissionRepository.findById(permissionId).orElse(null);
         if (role != null && permission != null) {
+            RolePermission existing = this.theRolePermissionRepository.findByRoleAndPermission(role, permission);
+            if (existing != null) {
+                return true;
+            }
             RolePermission theRolePermission = new RolePermission(role, permission);
             this.theRolePermissionRepository.save(theRolePermission);
             return true;

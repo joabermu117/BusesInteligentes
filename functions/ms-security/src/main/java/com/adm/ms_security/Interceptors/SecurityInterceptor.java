@@ -1,5 +1,6 @@
 package com.adm.ms_security.Interceptors;
 
+import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Services.ValidatorService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,13 +25,19 @@ public class SecurityInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        User authenticatedUser = this.validatorService.getUser(request);
+        if (authenticatedUser == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+            return false;
+        }
+
         boolean success = this.validatorService.validationRolePermission(
                 request,
                 request.getRequestURI(),
                 request.getMethod());
 
         if (!success) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
             return false; // Detener la ejecución del controlador
         }
 

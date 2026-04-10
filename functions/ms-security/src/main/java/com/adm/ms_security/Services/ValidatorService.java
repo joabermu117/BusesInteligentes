@@ -7,12 +7,21 @@ import com.adm.ms_security.Repositories.UserRepository;
 import com.adm.ms_security.Repositories.UserRoleRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class ValidatorService {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ValidatorService.class);
+
+    @Value("${security.authorization.enabled:false}")
+    private boolean authorizationEnabled;
+
     @Autowired
     private JwtService jwtService;
 
@@ -33,7 +42,14 @@ public class ValidatorService {
             String method) {
         User theUser = this.getUser(request);
         if (theUser == null) {
+            LOGGER.warn("ACL deny: no authenticated user. method={}, url={}", method, url);
             return false;
+        }
+
+        if (!authorizationEnabled) {
+            LOGGER.warn("ACL bypass enabled. userId={}, email={}, method={}, url={}",
+                    theUser.getId(), theUser.getEmail(), method, url);
+            return true;
         }
 
         // Bootstrap mode: while ACL tables are empty, let authenticated users in.
@@ -42,11 +58,30 @@ public class ValidatorService {
         }
 
         boolean success = false;
-        List<UserRole> roles = this.theUserRoleRepository.getRolesByUser(theUser.getId());
+        List<UserRole> roles = this.theUserRoleRepository.findAllByUser(theUser);
 
-        // Buscar al permiso solicitado
-        url = url.replaceAll("[0-9a-fA-F]{24}|\\d+", "?");
-        Permission thePermission = this.thePermissionRepository.getPermission(url, method);
+        String normalizedMethod = normalizeMethod(method);
+        String normalizedUrl = normalizeRequestUrl(url);
+
+        // Buscar al permiso solicitado con y sin slash final para evitar falsos
+        // negativos por formato de URL.
+        Permission thePermission = this.thePermissionRepository.getPermission(normalizedUrl, normalizedMethod);
+        if (thePermission == null) {
+            String alternateUrl = normalizedUrl.endsWith("/")
+                    ? normalizedUrl.substring(0, normalizedUrl.length() - 1)
+                    : normalizedUrl + "/";
+            thePermission = this.thePermissionRepository.getPermission(alternateUrl, normalizedMethod);
+        }
+
+        if (thePermission == null) {
+            LOGGER.warn(
+                    "ACL deny: permission not found for userId={}, email={}, method={}, normalizedUrl={}, rolesCount={}",
+                    theUser.getId(),
+                    theUser.getEmail(),
+                    normalizedMethod,
+                    normalizedUrl,
+                    roles.size());
+        }
 
         int i = 0;
         while (i < roles.size() && success == false) {
@@ -54,7 +89,7 @@ public class ValidatorService {
             Role theRole = actual.getRole();
             if (theRole != null && thePermission != null) {
                 RolePermission theRolePermission = this.theRolePermissionRepository
-                        .getRolePermission(theRole.getId(), thePermission.getId());
+                        .findByRoleAndPermission(theRole, thePermission);
                 if (theRolePermission != null) {
                     success = true;
                 }
@@ -62,6 +97,26 @@ public class ValidatorService {
                 success = false;
             }
             i += 1;
+        }
+
+        if (!success && thePermission != null) {
+            LOGGER.warn(
+                    "ACL deny: missing role-permission mapping. userId={}, email={}, permissionId={}, method={}, normalizedUrl={}, roleIds={}",
+                    theUser.getId(),
+                    theUser.getEmail(),
+                    thePermission.getId(),
+                    normalizedMethod,
+                    normalizedUrl,
+                    roles.stream()
+                            .map(UserRole::getRole)
+                            .filter(role -> role != null)
+                            .map(Role::getId)
+                            .toList());
+        }
+
+        if (success) {
+            LOGGER.debug("ACL allow: userId={}, method={}, normalizedUrl={}", theUser.getId(), normalizedMethod,
+                    normalizedUrl);
         }
 
         return success;
@@ -86,5 +141,29 @@ public class ValidatorService {
             }
         }
         return theUser;
+    }
+
+    private String normalizeMethod(String method) {
+        return method == null ? "" : method.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeRequestUrl(String url) {
+        if (url == null) {
+            return "";
+        }
+
+        String normalizedUrl = url.trim();
+        int queryStartIndex = normalizedUrl.indexOf('?');
+        if (queryStartIndex >= 0) {
+            normalizedUrl = normalizedUrl.substring(0, queryStartIndex);
+        }
+
+        normalizedUrl = normalizedUrl.replaceAll("[0-9a-fA-F]{24}|\\d+", "?");
+
+        if (normalizedUrl.length() > 1 && normalizedUrl.endsWith("/")) {
+            normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length() - 1);
+        }
+
+        return normalizedUrl;
     }
 }

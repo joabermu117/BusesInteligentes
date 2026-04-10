@@ -1,4 +1,13 @@
-import { TextField } from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import {
+  Accordion,
+  AccordionDetails,
+  AccordionSummary,
+  Box,
+  Chip,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useFormik } from "formik";
 import { useState } from "react";
 import FormDialog from "../../common/components/forms/FormDialog";
@@ -25,6 +34,7 @@ const RoleFormModal = ({
   isOpen,
 }: RoleFormProps) => {
   const [scopeSearch, setScopeSearch] = useState("");
+  const [permissionsExpanded, setPermissionsExpanded] = useState(false);
 
   const formik = useFormik({
     initialValues: {
@@ -75,6 +85,7 @@ const RoleFormModal = ({
   const handleClose = () => {
     formik.resetForm();
     setScopeSearch("");
+    setPermissionsExpanded(false);
     onCancel();
   };
 
@@ -121,41 +132,82 @@ const RoleFormModal = ({
         sx={{ mb: 3 }}
       />
 
-      <SelectableChecklist
-        title="Permisos asignados"
-        searchPlaceholder="Buscar permisos..."
-        searchValue={scopeSearch}
-        onSearchChange={setScopeSearch}
-        onSelectAll={() =>
-          formik.setFieldValue(
-            "permissionIds",
-            filteredScopes.map((scope) => scope.id),
-          )
-        }
-        onUnselectFiltered={() => {
-          const filteredIds = filteredScopes.map((scope) => scope.id);
-          formik.setFieldValue(
-            "permissionIds",
-            formik.values.permissionIds.filter(
-              (id) => !filteredIds.includes(id),
-            ),
-          );
-        }}
-        disableSelectAll={filteredScopes.length === 0}
-        disableUnselectFiltered={
-          filteredScopes.length === 0 ||
-          formik.values.permissionIds.filter((id) =>
-            filteredScopes.some((scope) => scope.id === id),
-          ).length === 0
-        }
-        selectAllLabel={
-          scopeSearch ? "Seleccionar filtrados" : "Seleccionar todos"
-        }
-        unselectLabel={scopeSearch ? "Desmarcar filtrados" : "Desmarcar todos"}
-        items={permissionItems}
-        onToggle={handlePermissionToggle}
-        emptyMessage="No hay permisos disponibles"
-      />
+      <Accordion
+        expanded={permissionsExpanded}
+        onChange={(_, expanded) => setPermissionsExpanded(expanded)}
+        disableGutters
+        elevation={0}
+        sx={{ border: "1px solid", borderColor: "divider", borderRadius: 2 }}
+      >
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon />}
+          sx={{ px: 2, py: 0.5, "& .MuiAccordionSummary-content": { my: 1 } }}
+        >
+          <Box
+            sx={{
+              width: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              pr: 1,
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Permisos asignados
+            </Typography>
+            <Chip
+              size="small"
+              color="primary"
+              label={`${formik.values.permissionIds.length} seleccionados`}
+            />
+          </Box>
+        </AccordionSummary>
+
+        <AccordionDetails sx={{ pt: 0, pb: 2, px: 2 }}>
+          <SelectableChecklist
+            title="Permisos"
+            searchPlaceholder="Buscar permisos..."
+            searchValue={scopeSearch}
+            onSearchChange={(value) => {
+              setScopeSearch(value);
+              if (!permissionsExpanded) {
+                setPermissionsExpanded(true);
+              }
+            }}
+            onSelectAll={() =>
+              formik.setFieldValue(
+                "permissionIds",
+                filteredScopes.map((scope) => scope.id),
+              )
+            }
+            onUnselectFiltered={() => {
+              const filteredIds = filteredScopes.map((scope) => scope.id);
+              formik.setFieldValue(
+                "permissionIds",
+                formik.values.permissionIds.filter(
+                  (id) => !filteredIds.includes(id),
+                ),
+              );
+            }}
+            disableSelectAll={filteredScopes.length === 0}
+            disableUnselectFiltered={
+              filteredScopes.length === 0 ||
+              formik.values.permissionIds.filter((id) =>
+                filteredScopes.some((scope) => scope.id === id),
+              ).length === 0
+            }
+            selectAllLabel={
+              scopeSearch ? "Seleccionar filtrados" : "Seleccionar todos"
+            }
+            unselectLabel={
+              scopeSearch ? "Desmarcar filtrados" : "Desmarcar todos"
+            }
+            items={permissionItems}
+            onToggle={handlePermissionToggle}
+            emptyMessage="No hay permisos disponibles"
+          />
+        </AccordionDetails>
+      </Accordion>
     </FormDialog>
   );
 };

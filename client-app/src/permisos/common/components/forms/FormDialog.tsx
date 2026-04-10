@@ -49,7 +49,10 @@ const FormDialog = ({
           <IconButton
             onClick={onClose}
             disabled={submitting}
-            sx={{ color: "#E52320", "&:hover": { backgroundColor: "#fce4e4" } }}
+            sx={{
+              color: "text.secondary",
+              "&:hover": { backgroundColor: "action.hover" },
+            }}
           >
             <CloseIcon />
           </IconButton>
@@ -72,11 +75,14 @@ const FormDialog = ({
             disabled={submitting}
             variant="outlined"
             sx={{
-              color: "#E52320",
-              borderColor: "#E52320",
+              color: "primary.main",
+              borderColor: "primary.main",
               textTransform: "none",
               fontWeight: 600,
-              "&:hover": { backgroundColor: "#fce4e4", borderColor: "#C71A17" },
+              "&:hover": {
+                backgroundColor: "action.hover",
+                borderColor: "primary.dark",
+              },
             }}
           >
             Cancelar
@@ -85,14 +91,16 @@ const FormDialog = ({
             type="submit"
             disabled={submitting || !canSubmit}
             variant="contained"
-            startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : null}
+            startIcon={
+              submitting ? <CircularProgress size={16} color="inherit" /> : null
+            }
             sx={{
-              backgroundColor: "#E52320",
+              backgroundColor: "primary.main",
               color: "white",
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": { backgroundColor: "#c21e1b", boxShadow: "none" },
-              "&:disabled": { backgroundColor: "#ccc" },
+              "&:hover": { backgroundColor: "primary.dark", boxShadow: "none" },
+              "&:disabled": { backgroundColor: "action.disabledBackground" },
               ...submitSx,
             }}
           >

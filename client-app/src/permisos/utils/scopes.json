@@ -17,6 +17,34 @@
   { "url": "/api/permissions/?", "method": "PUT", "model": "permisos" },
   { "url": "/api/permissions/?", "method": "DELETE", "model": "permisos" },
 
+  {
+    "url": "/api/user-role/user/?",
+    "method": "GET",
+    "model": "usuarios roles"
+  },
+  {
+    "url": "/api/user-role/user/?/role/?",
+    "method": "POST",
+    "model": "usuarios roles"
+  },
+  { "url": "/api/user-role/?", "method": "DELETE", "model": "usuarios roles" },
+
+  {
+    "url": "/api/role-permission/role/?",
+    "method": "GET",
+    "model": "roles permisos"
+  },
+  {
+    "url": "/api/role-permission/role/?/permission/?",
+    "method": "POST",
+    "model": "roles permisos"
+  },
+  {
+    "url": "/api/role-permission/?",
+    "method": "DELETE",
+    "model": "roles permisos"
+  },
+
   { "url": "/api/buses", "method": "GET", "model": "buses" },
   { "url": "/api/buses/?", "method": "GET", "model": "buses" },
   { "url": "/api/buses", "method": "POST", "model": "buses" },
