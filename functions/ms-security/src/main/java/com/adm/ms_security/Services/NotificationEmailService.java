@@ -48,10 +48,6 @@ public class NotificationEmailService {
         mailDeliveryService.sendHtmlRequired(to, subject, body);
     }
 
-    private void sendMessage(String to, String subject, String body) {
-        mailDeliveryService.sendPlainTextRequired(to, subject, body);
-    }
-
     private String extractRecipientName(String email) {
         if (email == null || email.isBlank()) {
             return "Usuario";
