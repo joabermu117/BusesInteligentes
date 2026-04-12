@@ -27,7 +27,9 @@ interface RegisterPayload {
   password: string;
 }
 
+// Frontend gateway for auth, 2FA and password recovery endpoints.
 class SecurityServiceClass {
+  // Step 1 local login: returns challenge metadata for OTP screen.
   async loginWithEmailPassword(
     email: string,
     password: string,
@@ -40,6 +42,7 @@ class SecurityServiceClass {
     return response.data;
   }
 
+  // Step 1 social login with Google/Microsoft token exchanged by backend.
   async exchangeFirebaseToken(
     idToken: string,
     recaptchaToken: string,
@@ -52,6 +55,7 @@ class SecurityServiceClass {
     return response.data;
   }
 
+  // Step 1 social login with GitHub token exchanged by backend.
   async exchangeGithubToken(
     idToken: string,
     recaptchaToken: string,
@@ -64,6 +68,7 @@ class SecurityServiceClass {
     return response.data;
   }
 
+  // Register and persist returned JWT.
   async registerWithEmailPassword(payload: RegisterPayload): Promise<void> {
     const response = await httpClient.post<LoginResponse>(
       `${API_CONFIG.securityBaseUrl}/register`,
@@ -78,6 +83,7 @@ class SecurityServiceClass {
     setAuthToken(token);
   }
 
+  // Step 2 login: validates OTP and persists final JWT.
   async verifyOtpCode(payload: VerifyOtpPayload): Promise<void> {
     const response = await httpClient.post<LoginResponse>(
       `${API_CONFIG.securityBaseUrl}/2fa/verify`,
@@ -92,6 +98,7 @@ class SecurityServiceClass {
     setAuthToken(token);
   }
 
+  // Requests a new OTP code under backend resend cooldown policy.
   async resendOtpCode(challengeId: string): Promise<LoginChallengeResponse> {
     const response = await httpClient.post<LoginChallengeResponse>(
       `${API_CONFIG.securityBaseUrl}/2fa/resend`,
@@ -101,12 +108,14 @@ class SecurityServiceClass {
     return response.data;
   }
 
+  // Explicitly cancels current OTP challenge.
   async cancelOtpChallenge(challengeId: string): Promise<void> {
     await httpClient.post(`${API_CONFIG.securityBaseUrl}/2fa/cancel`, {
       challengeId,
     });
   }
 
+  // Best-effort cancellation used during beforeunload events.
   cancelOtpChallengeWithBeacon(challengeId: string): void {
     if (!challengeId || typeof navigator === "undefined") {
       return;
@@ -118,6 +127,7 @@ class SecurityServiceClass {
     navigator.sendBeacon(`${API_CONFIG.securityBaseUrl}/2fa/cancel`, payload);
   }
 
+  // Recovery step 1: request recovery link with anti-bot token.
   async requestPasswordRecovery(
     email: string,
     recaptchaToken: string,
@@ -130,6 +140,7 @@ class SecurityServiceClass {
     return response.data;
   }
 
+  // Recovery step 2: confirm token and submit new password.
   async confirmPasswordRecovery(
     token: string,
     newPassword: string,

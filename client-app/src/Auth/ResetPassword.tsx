@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { SecurityService } from "../permisos/services/SecurityService";
 
+// Step 2 of recovery: consumes token from URL and sets a new password.
 const ResetPasswordPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const ResetPasswordPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Performs client-side validation before calling confirm endpoint.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);

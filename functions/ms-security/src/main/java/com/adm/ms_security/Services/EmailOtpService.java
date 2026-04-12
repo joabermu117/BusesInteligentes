@@ -14,6 +14,12 @@ import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Repositories.AuthChallengeRepository;
 
 @Service
+/**
+ * Manages OTP challenges: creation, validation, resend and cancellation.
+ *
+ * Challenge states are persisted in Mongo so limits and lifecycle remain
+ * consistent across requests and process restarts.
+ */
 public class EmailOtpService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
@@ -33,6 +39,9 @@ public class EmailOtpService {
         this.notificationEmailService = notificationEmailService;
     }
 
+    /**
+     * Creates a new ACTIVE challenge and sends first OTP code by email.
+     */
     public AuthChallenge startChallenge(User user) {
         String otp = generateOtp();
         Instant now = Instant.now();
@@ -55,6 +64,9 @@ public class EmailOtpService {
         return saved;
     }
 
+    /**
+     * Verifies OTP code and marks challenge as VERIFIED, BLOCKED or keeps ACTIVE.
+     */
     public AuthChallenge verifyCode(String challengeId, String code) {
         AuthChallenge challenge = getActiveChallenge(challengeId);
         if (isExpired(challenge)) {
@@ -84,6 +96,10 @@ public class EmailOtpService {
                 Map.of("remainingAttempts", remainingAttempts));
     }
 
+    /**
+     * Resends a fresh OTP code with progressive cooldown:
+     * initial cooldown from config, then 60s from second resend onward.
+     */
     public AuthChallenge resend(String challengeId) {
         AuthChallenge challenge = getActiveChallenge(challengeId);
         if (isExpired(challenge)) {
@@ -112,6 +128,9 @@ public class EmailOtpService {
         return updated;
     }
 
+    /**
+     * Cancels active challenge, used when user exits 2FA flow.
+     */
     public void cancel(String challengeId) {
         AuthChallenge challenge = getActiveChallenge(challengeId);
         invalidate(challenge, AuthChallenge.ChallengeStatus.CANCELLED);
@@ -147,6 +166,8 @@ public class EmailOtpService {
     }
 
     private long resolveNextCooldownSeconds(int resendCount) {
+        // First resend uses configured base cooldown (default 30s).
+        // Following resends use stronger lock (60s).
         return resendCount <= 0 ? otpProperties.getResendCooldownSeconds() : 60;
     }
 }

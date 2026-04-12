@@ -2,6 +2,7 @@ import axios from "axios";
 
 export const AUTH_TOKEN_STORAGE_KEY = "auth_token";
 
+// Public auth routes must stay reachable without forcing JWT redirects.
 const PUBLIC_AUTH_PATHS = new Set(["/login", "/2fa", "/password-recovery", "/reset-password", "/register"]);
 
 const isPublicAuthRoute = (pathName: string): boolean => {
@@ -18,6 +19,7 @@ const isPublicSecurityEndpoint = (url?: string): boolean => {
 
 const httpClient = axios.create();
 
+// Lightweight JWT payload decode used only for exp validation.
 const getTokenPayload = (token: string): { exp?: number } | null => {
   try {
     const tokenParts = token.split(".");
@@ -47,6 +49,8 @@ export const isAuthTokenExpired = (token: string): boolean => {
   return payload.exp <= currentTimestampInSeconds;
 };
 
+// Adds Authorization header except when token is expired.
+// For public auth endpoints we do not force redirect to avoid breaking login/2FA flows.
 httpClient.interceptors.request.use((config) => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 
@@ -66,6 +70,7 @@ httpClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Handles unauthorized responses while preserving expected behavior on public auth endpoints.
 httpClient.interceptors.response.use(
   (response) => response,
   (error) => {

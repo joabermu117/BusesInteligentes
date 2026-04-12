@@ -11,6 +11,7 @@ declare global {
 
 const RECAPTCHA_SCRIPT_URL = "https://www.google.com/recaptcha/api.js?render=";
 
+// Reads site key from Vite env and fails fast when missing.
 const getSiteKey = (): string => {
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
   if (!siteKey) {
@@ -20,6 +21,7 @@ const getSiteKey = (): string => {
   return siteKey;
 };
 
+// Loads Google script once and reuses promise across calls.
 const loadRecaptchaScript = (siteKey: string): Promise<void> => {
   if (scriptPromise) {
     return scriptPromise;
@@ -38,6 +40,7 @@ const loadRecaptchaScript = (siteKey: string): Promise<void> => {
   return scriptPromise;
 };
 
+// Executes reCAPTCHA v3 action and returns verification token.
 export const executeRecaptcha = async (action: string): Promise<string> => {
   const siteKey = getSiteKey();
   await loadRecaptchaScript(siteKey);

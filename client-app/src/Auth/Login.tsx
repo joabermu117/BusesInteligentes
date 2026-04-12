@@ -26,6 +26,7 @@ const GitHubIcon = () => (
   </svg>
 );
 
+// Entry point for all login providers. Every provider routes through OTP challenge.
 const LoginPage = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -71,6 +72,7 @@ const LoginPage = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
+      // Local credentials + anti-bot, then redirect to 2FA challenge.
       const recaptchaToken = await executeRecaptcha("login");
       const challenge = await SecurityService.loginWithEmailPassword(
         email,
@@ -89,6 +91,7 @@ const LoginPage = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
+      // Social identity is validated first, then backend starts shared OTP flow.
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithGoogle();
       const idToken = await FirebaseAuthService.getIdToken(credential);
@@ -108,6 +111,7 @@ const LoginPage = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
+      // Same flow as Google, but using GitHub provider token.
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithGithub();
       const idToken = await FirebaseAuthService.getIdToken(credential);
@@ -129,6 +133,7 @@ const LoginPage = () => {
     setIsSubmitting(true);
 
     try {
+      // Microsoft uses Firebase auth token exchange then OTP challenge.
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithMicrosoft();
       const idToken = await FirebaseAuthService.getIdToken(credential);

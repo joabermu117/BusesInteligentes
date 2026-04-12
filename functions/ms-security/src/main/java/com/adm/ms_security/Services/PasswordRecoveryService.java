@@ -20,6 +20,12 @@ import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Repositories.PasswordRecoveryTokenRepository;
 
 @Service
+/**
+ * Handles password recovery flow:
+ * 1) request with anti-bot and rate-limit,
+ * 2) token generation and mail delivery,
+ * 3) token validation and password update.
+ */
 public class PasswordRecoveryService {
     private final PasswordRecoveryProperties properties;
     private final AntiBotService antiBotService;
@@ -46,6 +52,10 @@ public class PasswordRecoveryService {
         this.encryptionService = encryptionService;
     }
 
+    /**
+     * Creates and sends recovery token when email exists.
+     * Response remains generic to avoid account enumeration.
+     */
     public GenericMessageResponseDto requestRecovery(RecoveryRequestDto request) {
         antiBotService.validate(request.getRecaptchaToken(), "password_recovery");
         applyRateLimit(request.getEmail());
@@ -58,6 +68,10 @@ public class PasswordRecoveryService {
         return new GenericMessageResponseDto(properties.getGenericMessage());
     }
 
+    /**
+     * Confirms recovery token and updates user password.
+     * Token is single-use and expires by configured TTL.
+     */
     public GenericMessageResponseDto confirmRecovery(PasswordRecoveryConfirmRequestDto request) {
         String tokenHash = encryptionService.convertSHA256(request.getToken());
         if (tokenHash == null || tokenHash.isBlank()) {
@@ -96,6 +110,7 @@ public class PasswordRecoveryService {
         return new GenericMessageResponseDto("La contraseña fue actualizada correctamente");
     }
 
+    // Per-email throttle to prevent abuse on recovery endpoint.
     private void applyRateLimit(String email) {
         String key = "password-recovery:" + normalizeEmail(email);
         boolean allowed = rateLimitService.isAllowed(
@@ -109,6 +124,7 @@ public class PasswordRecoveryService {
         }
     }
 
+    // Rotates previous tokens and generates fresh secure token.
     private void sendCustomResetLink(User user) {
         invalidatePreviousTokens(user.getId());
         String rawToken = generateRawToken();
@@ -125,6 +141,7 @@ public class PasswordRecoveryService {
         notificationEmailService.sendPasswordRecoveryLink(user.getEmail(), buildResetLink(rawToken));
     }
 
+    // Builds frontend URL that consumes the token, preserving existing query params.
     private String buildResetLink(String token) {
         if (properties.getResetUrl() == null || properties.getResetUrl().isBlank()) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "RECOVERY_CONFIG_ERROR",

@@ -34,6 +34,12 @@ import jakarta.validation.Valid;
 @CrossOrigin
 @RestController
 @RequestMapping("/api/public/security")
+/**
+ * Public authentication controller.
+ *
+ * This controller groups endpoints that do not require a previous JWT:
+ * login start, 2FA operations, registration and password recovery.
+ */
 public class SecurityController {
 
     private final SecurityService securityService;
@@ -51,24 +57,36 @@ public class SecurityController {
 
     @Operation(summary = "Inicia login y genera challenge OTP por correo")
     @PostMapping("login")
+    /**
+     * Starts local login flow and returns an OTP challenge id.
+     */
     public ResponseEntity<LoginChallengeResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
         return ResponseEntity.ok(authFlowService.startEmailLogin(request));
     }
 
     @Operation(summary = "Verifica OTP de 6 digitos y emite JWT")
     @PostMapping("2fa/verify")
+    /**
+     * Verifies OTP challenge and issues final JWT on success.
+     */
     public ResponseEntity<VerifyOtpResponseDto> verifyOtp(@Valid @RequestBody VerifyOtpRequestDto request) {
         return ResponseEntity.ok(authFlowService.verifyOtp(request));
     }
 
     @Operation(summary = "Reenvia OTP y rota el codigo")
     @PostMapping("2fa/resend")
+    /**
+     * Regenerates OTP and applies resend cooldown policy.
+     */
     public ResponseEntity<LoginChallengeResponseDto> resendOtp(@Valid @RequestBody ChallengeActionRequestDto request) {
         return ResponseEntity.ok(authFlowService.resendOtp(request.getChallengeId()));
     }
 
     @Operation(summary = "Cancela la sesion parcial de 2FA")
     @PostMapping("2fa/cancel")
+    /**
+     * Cancels partial 2FA session when user aborts flow.
+     */
     public ResponseEntity<GenericMessageResponseDto> cancelOtp(@Valid @RequestBody ChallengeActionRequestDto request) {
         authFlowService.cancelChallenge(request.getChallengeId());
         return ResponseEntity.ok(new GenericMessageResponseDto("Sesion de verificacion cancelada"));
@@ -76,12 +94,18 @@ public class SecurityController {
 
     @Operation(summary = "Solicita recuperacion de contraseña con respuesta generica")
     @PostMapping("password-recovery/request")
+    /**
+     * Requests password recovery link. Response is generic to avoid user enumeration.
+     */
     public ResponseEntity<GenericMessageResponseDto> requestRecovery(@Valid @RequestBody RecoveryRequestDto request) {
         return ResponseEntity.ok(passwordRecoveryService.requestRecovery(request));
     }
 
     @Operation(summary = "Confirma recuperacion de contraseña con token")
     @PostMapping("password-recovery/confirm")
+    /**
+     * Consumes recovery token and updates user password.
+     */
     public ResponseEntity<GenericMessageResponseDto> confirmRecovery(
             @Valid @RequestBody PasswordRecoveryConfirmRequestDto request) {
         return ResponseEntity.ok(passwordRecoveryService.confirmRecovery(request));
@@ -89,6 +113,9 @@ public class SecurityController {
 
     @Operation(summary = "Registro con email y contraseña")
     @PostMapping("register")
+    /**
+     * Registers local user and returns JWT if account is created.
+     */
     public ResponseEntity<AuthTokenResponse> register(@Valid @RequestBody RegisterRequest request) {
         User user = securityService.registerWithEmailPassword(
                 request.getName(),
@@ -105,6 +132,9 @@ public class SecurityController {
 
     @Operation(summary = "Login social con Firebase e inicio de challenge OTP")
     @PostMapping("firebase-login")
+    /**
+     * Validates Firebase token and starts 2FA flow for social login.
+     */
     public ResponseEntity<LoginChallengeResponseDto> firebaseLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
         User user = securityService.findOrCreateFromFirebase(decodedToken);
@@ -113,6 +143,9 @@ public class SecurityController {
 
     @Operation(summary = "Login con GitHub via Firebase e inicio de challenge OTP")
     @PostMapping("github-login")
+    /**
+     * Uses Firebase-issued GitHub token and starts unified 2FA flow.
+     */
     public ResponseEntity<LoginChallengeResponseDto> githubLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
         User user = securityService.findOrCreateFromGithub(decodedToken);

@@ -3,6 +3,12 @@ package com.adm.ms_security.Services;
 import org.springframework.stereotype.Service;
 
 @Service
+/**
+ * Builds and sends transactional security emails.
+ *
+ * This service delegates transport to MailDeliveryService and layout to
+ * EmailTemplateService so message content stays centralized.
+ */
 public class NotificationEmailService {
     private final MailDeliveryService mailDeliveryService;
     private final EmailTemplateService emailTemplateService;
@@ -12,6 +18,9 @@ public class NotificationEmailService {
         this.emailTemplateService = emailTemplateService;
     }
 
+    /**
+     * Sends OTP mail with branded HTML template and expiry hint.
+     */
     public void sendOtpCode(String to, String otpCode, long ttlSeconds) {
         String subject = "Codigo de verificacion";
         String recipientName = extractRecipientName(to);
@@ -29,6 +38,9 @@ public class NotificationEmailService {
         mailDeliveryService.sendHtmlRequired(to, subject, body);
     }
 
+    /**
+     * Sends password recovery mail with CTA button and fallback plain URL.
+     */
     public void sendPasswordRecoveryLink(String to, String resetLink) {
         String subject = "Recuperacion de contraseña";
         String recipientName = extractRecipientName(to);
@@ -48,6 +60,7 @@ public class NotificationEmailService {
         mailDeliveryService.sendHtmlRequired(to, subject, body);
     }
 
+    // Uses mailbox local-part as display name fallback in email template.
     private String extractRecipientName(String email) {
         if (email == null || email.isBlank()) {
             return "Usuario";

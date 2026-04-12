@@ -12,6 +12,12 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
+/**
+ * Low-level mail transport service.
+ *
+ * Exposes required (fail-fast) and best-effort methods used by business
+ * services depending on how critical the notification is for the flow.
+ */
 public class MailDeliveryService {
     private static final Logger LOGGER = LoggerFactory.getLogger(MailDeliveryService.class);
 
@@ -27,6 +33,9 @@ public class MailDeliveryService {
         this.mailSender = mailSender;
     }
 
+    /**
+     * Sends plain text email and throws on failure.
+     */
     public void sendPlainTextRequired(String to, String subject, String body) {
         if (!mailEnabled) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MAIL_DISABLED",
@@ -36,6 +45,9 @@ public class MailDeliveryService {
         sendPlainTextInternal(to, subject, body, true);
     }
 
+    /**
+     * Sends HTML email and only logs errors (non-blocking path).
+     */
     public void sendHtmlBestEffort(String to, String subject, String htmlContent) {
         if (!mailEnabled) {
             LOGGER.info("Email deshabilitado. Se omitio envio a {} con asunto '{}'", to, subject);
@@ -45,6 +57,9 @@ public class MailDeliveryService {
         sendHtmlInternal(to, subject, htmlContent, false);
     }
 
+    /**
+     * Sends HTML email and throws on failure.
+     */
     public void sendHtmlRequired(String to, String subject, String htmlContent) {
         if (!mailEnabled) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MAIL_DISABLED",

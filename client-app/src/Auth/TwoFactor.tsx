@@ -21,6 +21,7 @@ type ChallengeState = {
   resendCooldownSeconds: number;
 };
 
+// Second authentication step after login/social identity validation.
 const TwoFactorPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -38,6 +39,7 @@ const TwoFactorPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
 
+  // Protects route access: this screen only works when a challenge exists.
   useEffect(() => {
     if (!state?.challengeId) {
       navigate("/login", { replace: true });
@@ -45,6 +47,7 @@ const TwoFactorPage = () => {
     }
   }, [navigate, state?.challengeId]);
 
+  // Unified timer tick for OTP expiry and resend button cooldown.
   useEffect(() => {
     const timer = window.setInterval(() => {
       setSecondsLeft((current) => (current > 0 ? current - 1 : 0));
@@ -54,6 +57,7 @@ const TwoFactorPage = () => {
     return () => window.clearInterval(timer);
   }, []);
 
+  // If user closes/reloads the tab, invalidate partial 2FA session server-side.
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (!isFinished && challengeId) {
@@ -90,6 +94,7 @@ const TwoFactorPage = () => {
     handleCodeChange(pasted);
   };
 
+  // Verifies OTP and completes login by receiving final JWT.
   const handleVerify = async () => {
     setError(null);
     setInfo(null);
@@ -139,6 +144,7 @@ const TwoFactorPage = () => {
     }
   };
 
+  // Requests a new OTP respecting backend progressive cooldown policy.
   const handleResend = async () => {
     setError(null);
     setInfo(null);
@@ -168,6 +174,7 @@ const TwoFactorPage = () => {
     }
   };
 
+  // Explicit cancellation from user action.
   const handleCancel = async () => {
     if (challengeId) {
       await SecurityService.cancelOtpChallenge(challengeId).catch(() => undefined);

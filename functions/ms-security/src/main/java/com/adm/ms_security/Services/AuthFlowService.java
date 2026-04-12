@@ -12,6 +12,10 @@ import com.adm.ms_security.Models.AuthChallenge;
 import com.adm.ms_security.Models.User;
 
 @Service
+/**
+ * Orchestrates authentication flow between credentials/social login,
+ * anti-bot checks, OTP challenge lifecycle and final JWT issuance.
+ */
 public class AuthFlowService {
     private final SecurityService securityService;
     private final AntiBotService antiBotService;
@@ -23,6 +27,9 @@ public class AuthFlowService {
         this.emailOtpService = emailOtpService;
     }
 
+    /**
+     * Local login step 1: validate credentials and create OTP challenge.
+     */
     public LoginChallengeResponseDto startEmailLogin(LoginRequestDto request) {
         User user = securityService.authenticateLocalUser(request.getEmail(), request.getPassword());
         if (user == null) {
@@ -33,6 +40,9 @@ public class AuthFlowService {
         return createLoginChallenge(user, request.getRecaptchaToken());
     }
 
+    /**
+     * Social login step 1: receives resolved user and creates OTP challenge.
+     */
     public LoginChallengeResponseDto startSocialLogin(User user, String recaptchaToken) {
         if (user == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_CREDENTIALS",
@@ -42,6 +52,7 @@ public class AuthFlowService {
         return createLoginChallenge(user, recaptchaToken);
     }
 
+    // Shared challenge creation for local and social providers.
     private LoginChallengeResponseDto createLoginChallenge(User user, String recaptchaToken) {
         antiBotService.validate(recaptchaToken, "login");
         AuthChallenge challenge = emailOtpService.startChallenge(user);
@@ -52,6 +63,9 @@ public class AuthFlowService {
                 remainingResendCooldown(challenge));
     }
 
+    /**
+     * Login step 2: verify OTP and issue final JWT for authenticated session.
+     */
     public VerifyOtpResponseDto verifyOtp(VerifyOtpRequestDto request) {
         AuthChallenge challenge = emailOtpService.verifyCode(request.getChallengeId(), request.getCode());
         User user = securityService.findById(challenge.getUserId());
@@ -63,6 +77,9 @@ public class AuthFlowService {
         return new VerifyOtpResponseDto(securityService.generateToken(user));
     }
 
+    /**
+     * Regenerates OTP code keeping the same challenge id with updated timers.
+     */
     public LoginChallengeResponseDto resendOtp(String challengeId) {
         AuthChallenge challenge = emailOtpService.resend(challengeId);
         return new LoginChallengeResponseDto(
@@ -72,6 +89,9 @@ public class AuthFlowService {
                 remainingResendCooldown(challenge));
     }
 
+    /**
+     * Explicitly invalidates the challenge when user abandons 2FA.
+     */
     public void cancelChallenge(String challengeId) {
         emailOtpService.cancel(challengeId);
     }

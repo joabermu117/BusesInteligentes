@@ -4,12 +4,14 @@ import { useState } from "react";
 import { executeRecaptcha } from "../config/recaptcha";
 import { SecurityService } from "../permisos/services/SecurityService";
 
+// Step 1 of recovery: user requests reset link using email + reCAPTCHA.
 const PasswordRecoveryPage = () => {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Sends generic recovery request. Backend intentionally hides account existence.
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
