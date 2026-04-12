@@ -89,10 +89,14 @@ const LoginPage = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
+      const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithGoogle();
       const idToken = await FirebaseAuthService.getIdToken(credential);
-      await SecurityService.exchangeFirebaseToken(idToken);
-      navigate("/dashboard", { replace: true });
+      const challenge = await SecurityService.exchangeFirebaseToken(
+        idToken,
+        recaptchaToken,
+      );
+      navigate("/2fa", { replace: true, state: challenge });
     } catch (error) {
       setErrorMessage(getLoginErrorMessage(error, "google"));
     } finally {
@@ -104,10 +108,14 @@ const LoginPage = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
+      const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithGithub();
       const idToken = await FirebaseAuthService.getIdToken(credential);
-      await SecurityService.exchangeGithubToken(idToken);
-      navigate("/dashboard", { replace: true });
+      const challenge = await SecurityService.exchangeGithubToken(
+        idToken,
+        recaptchaToken,
+      );
+      navigate("/2fa", { replace: true, state: challenge });
     } catch (error: any) {
       if (error?.code === "auth/popup-closed-by-user") return;
       setErrorMessage(getLoginErrorMessage(error, "github"));
@@ -121,10 +129,14 @@ const LoginPage = () => {
     setIsSubmitting(true);
 
     try {
+      const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithMicrosoft();
       const idToken = await FirebaseAuthService.getIdToken(credential);
-      await SecurityService.exchangeFirebaseToken(idToken);
-      navigate("/dashboard", { replace: true });
+      const challenge = await SecurityService.exchangeFirebaseToken(
+        idToken,
+        recaptchaToken,
+      );
+      navigate("/2fa", { replace: true, state: challenge });
     } catch (error) {
       setErrorMessage(getLoginErrorMessage(error, "microsoft"));
     } finally {

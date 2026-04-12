@@ -42,6 +42,20 @@ public class MailDeliveryService {
             return;
         }
 
+        sendHtmlInternal(to, subject, htmlContent, false);
+    }
+
+    public void sendHtmlRequired(String to, String subject, String htmlContent) {
+        if (!mailEnabled) {
+            throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MAIL_DISABLED",
+                    "El envio de correo no esta habilitado");
+        }
+
+        sendHtmlInternal(to, subject, htmlContent, true);
+    }
+
+    private void sendHtmlInternal(String to, String subject, String htmlContent, boolean failOnError) {
+
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -51,6 +65,10 @@ public class MailDeliveryService {
             helper.setText(htmlContent, true);
             mailSender.send(message);
         } catch (RuntimeException | jakarta.mail.MessagingException exception) {
+            if (failOnError) {
+                throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "MAIL_SEND_ERROR",
+                        "No fue posible enviar el correo requerido");
+            }
             LOGGER.error("No fue posible enviar email HTML a {}", to, exception);
         }
     }

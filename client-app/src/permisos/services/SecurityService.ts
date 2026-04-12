@@ -9,6 +9,7 @@ interface LoginChallengeResponse {
   challengeId: string;
   maskedEmail: string;
   expiresInSeconds: number;
+  resendCooldownSeconds: number;
 }
 
 interface VerifyOtpPayload {
@@ -39,24 +40,28 @@ class SecurityServiceClass {
     return response.data;
   }
 
-  async exchangeFirebaseToken(idToken: string): Promise<void> {
-    const response = await httpClient.post<LoginResponse>(
+  async exchangeFirebaseToken(
+    idToken: string,
+    recaptchaToken: string,
+  ): Promise<LoginChallengeResponse> {
+    const response = await httpClient.post<LoginChallengeResponse>(
       `${API_CONFIG.securityBaseUrl}/firebase-login`,
-      { idToken },
+      { idToken, recaptchaToken },
     );
-    const token = response.data?.token;
-    if (!token) throw new Error("No se recibio token de autenticacion");
-    setAuthToken(token);
+
+    return response.data;
   }
 
-  async exchangeGithubToken(idToken: string): Promise<void> {
-    const response = await httpClient.post<LoginResponse>(
+  async exchangeGithubToken(
+    idToken: string,
+    recaptchaToken: string,
+  ): Promise<LoginChallengeResponse> {
+    const response = await httpClient.post<LoginChallengeResponse>(
       `${API_CONFIG.securityBaseUrl}/github-login`,
-      { idToken },
+      { idToken, recaptchaToken },
     );
-    const token = response.data?.token;
-    if (!token) throw new Error("No se recibio token de autenticacion");
-    setAuthToken(token);
+
+    return response.data;
   }
 
   async registerWithEmailPassword(payload: RegisterPayload): Promise<void> {
@@ -102,6 +107,17 @@ class SecurityServiceClass {
     });
   }
 
+  cancelOtpChallengeWithBeacon(challengeId: string): void {
+    if (!challengeId || typeof navigator === "undefined") {
+      return;
+    }
+
+    const payload = new Blob([JSON.stringify({ challengeId })], {
+      type: "application/json",
+    });
+    navigator.sendBeacon(`${API_CONFIG.securityBaseUrl}/2fa/cancel`, payload);
+  }
+
   async requestPasswordRecovery(
     email: string,
     recaptchaToken: string,
@@ -109,6 +125,18 @@ class SecurityServiceClass {
     const response = await httpClient.post<GenericMessageResponse>(
       `${API_CONFIG.securityBaseUrl}/password-recovery/request`,
       { email, recaptchaToken },
+    );
+
+    return response.data;
+  }
+
+  async confirmPasswordRecovery(
+    token: string,
+    newPassword: string,
+  ): Promise<GenericMessageResponse> {
+    const response = await httpClient.post<GenericMessageResponse>(
+      `${API_CONFIG.securityBaseUrl}/password-recovery/confirm`,
+      { token, newPassword },
     );
 
     return response.data;

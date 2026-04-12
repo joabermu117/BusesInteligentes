@@ -14,6 +14,7 @@ import com.adm.ms_security.Dtos.FirebaseLoginRequest;
 import com.adm.ms_security.Dtos.GenericMessageResponseDto;
 import com.adm.ms_security.Dtos.LoginChallengeResponseDto;
 import com.adm.ms_security.Dtos.LoginRequestDto;
+import com.adm.ms_security.Dtos.PasswordRecoveryConfirmRequestDto;
 import com.adm.ms_security.Dtos.RecoveryRequestDto;
 import com.adm.ms_security.Dtos.RegisterRequest;
 import com.adm.ms_security.Dtos.VerifyOtpRequestDto;
@@ -79,6 +80,13 @@ public class SecurityController {
         return ResponseEntity.ok(passwordRecoveryService.requestRecovery(request));
     }
 
+    @Operation(summary = "Confirma recuperacion de contraseña con token")
+    @PostMapping("password-recovery/confirm")
+    public ResponseEntity<GenericMessageResponseDto> confirmRecovery(
+            @Valid @RequestBody PasswordRecoveryConfirmRequestDto request) {
+        return ResponseEntity.ok(passwordRecoveryService.confirmRecovery(request));
+    }
+
     @Operation(summary = "Registro con email y contraseña")
     @PostMapping("register")
     public ResponseEntity<AuthTokenResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -95,28 +103,20 @@ public class SecurityController {
                 .body(new AuthTokenResponse(securityService.generateToken(user)));
     }
 
-    @Operation(summary = "Login social con Firebase")
+    @Operation(summary = "Login social con Firebase e inicio de challenge OTP")
     @PostMapping("firebase-login")
-    public ResponseEntity<AuthTokenResponse> firebaseLogin(@Valid @RequestBody FirebaseLoginRequest request) {
+    public ResponseEntity<LoginChallengeResponseDto> firebaseLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
         User user = securityService.findOrCreateFromFirebase(decodedToken);
-        if (user == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_FIREBASE", "No fue posible validar la cuenta");
-        }
-
-        return ResponseEntity.ok(new AuthTokenResponse(securityService.generateToken(user)));
+        return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
     }
 
-    @Operation(summary = "Login con GitHub via Firebase")
+    @Operation(summary = "Login con GitHub via Firebase e inicio de challenge OTP")
     @PostMapping("github-login")
-    public ResponseEntity<AuthTokenResponse> githubLogin(@Valid @RequestBody FirebaseLoginRequest request) {
+    public ResponseEntity<LoginChallengeResponseDto> githubLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
         User user = securityService.findOrCreateFromGithub(decodedToken);
-        if (user == null) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_GITHUB", "No fue posible validar la cuenta");
-        }
-
-        return ResponseEntity.ok(new AuthTokenResponse(securityService.generateToken(user)));
+        return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
     }
 
     private FirebaseToken verifyFirebaseIdToken(String idToken) {

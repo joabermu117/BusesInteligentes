@@ -23,6 +23,7 @@ public class AuthChallenge {
     private String otpHash;
     private int attemptsRemaining;
     private int maxAttempts;
+    private int resendCount;
     private Instant expiresAt;
     private Instant resendAllowedAt;
     private Instant createdAt;

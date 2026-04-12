@@ -20,7 +20,17 @@ const PasswordRecoveryPage = () => {
       const recaptchaToken = await executeRecaptcha("password_recovery");
       const response = await SecurityService.requestPasswordRecovery(email, recaptchaToken);
       setMessage(response.message);
-    } catch {
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes("VITE_RECAPTCHA_SITE_KEY")) {
+          setError("Falta configurar VITE_RECAPTCHA_SITE_KEY en el frontend.");
+          return;
+        }
+
+        setError(error.message);
+        return;
+      }
+
       setError("No fue posible procesar la solicitud. Intentalo nuevamente.");
     } finally {
       setIsSubmitting(false);

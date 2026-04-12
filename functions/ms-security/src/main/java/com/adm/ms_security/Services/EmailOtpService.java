@@ -43,6 +43,7 @@ public class EmailOtpService {
         challenge.setOtpHash(hashOtp(otp));
         challenge.setAttemptsRemaining(otpProperties.getMaxAttempts());
         challenge.setMaxAttempts(otpProperties.getMaxAttempts());
+        challenge.setResendCount(0);
         challenge.setCreatedAt(now);
         challenge.setUpdatedAt(now);
         challenge.setExpiresAt(now.plusSeconds(otpProperties.getTtlSeconds()));
@@ -98,9 +99,11 @@ public class EmailOtpService {
         }
 
         String otp = generateOtp();
+        long nextCooldownSeconds = resolveNextCooldownSeconds(challenge.getResendCount());
         challenge.setOtpHash(hashOtp(otp));
         challenge.setAttemptsRemaining(otpProperties.getMaxAttempts());
-        challenge.setResendAllowedAt(now.plusSeconds(otpProperties.getResendCooldownSeconds()));
+        challenge.setResendCount(challenge.getResendCount() + 1);
+        challenge.setResendAllowedAt(now.plusSeconds(nextCooldownSeconds));
         challenge.setExpiresAt(now.plusSeconds(otpProperties.getTtlSeconds()));
         challenge.setUpdatedAt(now);
 
@@ -141,5 +144,9 @@ public class EmailOtpService {
     private String generateOtp() {
         int number = SECURE_RANDOM.nextInt(1_000_000);
         return String.format("%06d", number);
+    }
+
+    private long resolveNextCooldownSeconds(int resendCount) {
+        return resendCount <= 0 ? otpProperties.getResendCooldownSeconds() : 60;
     }
 }

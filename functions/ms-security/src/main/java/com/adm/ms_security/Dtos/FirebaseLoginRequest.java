@@ -8,4 +8,7 @@ public class FirebaseLoginRequest {
 
     @NotBlank(message = "El token de Firebase es obligatorio")
     private String idToken;
+
+    @NotBlank(message = "El token de reCAPTCHA es obligatorio")
+    private String recaptchaToken;
 }

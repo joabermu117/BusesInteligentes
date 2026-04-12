@@ -1,18 +1,23 @@
 package com.adm.ms_security.Services;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Locale;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import com.adm.ms_security.Configurations.PasswordRecoveryProperties;
 import com.adm.ms_security.Dtos.GenericMessageResponseDto;
+import com.adm.ms_security.Dtos.PasswordRecoveryConfirmRequestDto;
 import com.adm.ms_security.Dtos.RecoveryRequestDto;
 import com.adm.ms_security.Exceptions.ApiException;
+import com.adm.ms_security.Models.PasswordRecoveryToken;
 import com.adm.ms_security.Models.User;
-import com.google.firebase.auth.ActionCodeSettings;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthException;
+import com.adm.ms_security.Repositories.PasswordRecoveryTokenRepository;
 
 @Service
 public class PasswordRecoveryService {
@@ -21,18 +26,24 @@ public class PasswordRecoveryService {
     private final RateLimitService rateLimitService;
     private final SecurityService securityService;
     private final NotificationEmailService notificationEmailService;
+    private final PasswordRecoveryTokenRepository passwordRecoveryTokenRepository;
+    private final EncryptionService encryptionService;
 
     public PasswordRecoveryService(
             PasswordRecoveryProperties properties,
             AntiBotService antiBotService,
             RateLimitService rateLimitService,
             SecurityService securityService,
-            NotificationEmailService notificationEmailService) {
+            NotificationEmailService notificationEmailService,
+            PasswordRecoveryTokenRepository passwordRecoveryTokenRepository,
+            EncryptionService encryptionService) {
         this.properties = properties;
         this.antiBotService = antiBotService;
         this.rateLimitService = rateLimitService;
         this.securityService = securityService;
         this.notificationEmailService = notificationEmailService;
+        this.passwordRecoveryTokenRepository = passwordRecoveryTokenRepository;
+        this.encryptionService = encryptionService;
     }
 
     public GenericMessageResponseDto requestRecovery(RecoveryRequestDto request) {
@@ -41,10 +52,48 @@ public class PasswordRecoveryService {
 
         User user = securityService.findByEmailForLogin(request.getEmail());
         if (user != null) {
-            sendFirebaseResetLink(user.getEmail());
+            sendCustomResetLink(user);
         }
 
         return new GenericMessageResponseDto(properties.getGenericMessage());
+    }
+
+    public GenericMessageResponseDto confirmRecovery(PasswordRecoveryConfirmRequestDto request) {
+        String tokenHash = encryptionService.convertSHA256(request.getToken());
+        if (tokenHash == null || tokenHash.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "RECOVERY_INVALID_TOKEN",
+                    "El token de recuperacion es invalido");
+        }
+
+        Optional<PasswordRecoveryToken> storedTokenOptional = passwordRecoveryTokenRepository
+                .findByTokenHashAndUsedFalse(tokenHash);
+
+        PasswordRecoveryToken storedToken = storedTokenOptional.orElseThrow(() -> new ApiException(
+                HttpStatus.BAD_REQUEST,
+                "RECOVERY_INVALID_TOKEN",
+                "El enlace de recuperacion no es valido o ya fue utilizado"));
+
+        if (storedToken.getExpiresAt() == null || Instant.now().isAfter(storedToken.getExpiresAt())) {
+            markTokenAsUsed(storedToken);
+            throw new ApiException(HttpStatus.BAD_REQUEST, "RECOVERY_EXPIRED_TOKEN",
+                    "El enlace de recuperacion ha expirado");
+        }
+
+        User user = securityService.findById(storedToken.getUserId());
+        if (user == null) {
+            markTokenAsUsed(storedToken);
+            throw new ApiException(HttpStatus.BAD_REQUEST, "RECOVERY_INVALID_TOKEN",
+                    "El enlace de recuperacion no es valido");
+        }
+
+        User updatedUser = securityService.updatePassword(user, request.getNewPassword());
+        if (updatedUser == null) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "RECOVERY_PASSWORD_UPDATE_ERROR",
+                    "No fue posible actualizar la contraseña");
+        }
+
+        invalidatePreviousTokens(user.getId());
+        return new GenericMessageResponseDto("La contraseña fue actualizada correctamente");
     }
 
     private void applyRateLimit(String email) {
@@ -60,26 +109,47 @@ public class PasswordRecoveryService {
         }
     }
 
-    private void sendFirebaseResetLink(String email) {
-        try {
-            String resetLink = FirebaseAuth.getInstance().generatePasswordResetLink(email, buildActionCodeSettings());
-            notificationEmailService.sendPasswordRecoveryLink(email, resetLink);
-        } catch (FirebaseAuthException exception) {
-            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "RECOVERY_LINK_ERROR",
-                    "No fue posible procesar la recuperacion de contraseña");
-        }
+    private void sendCustomResetLink(User user) {
+        invalidatePreviousTokens(user.getId());
+        String rawToken = generateRawToken();
+
+        PasswordRecoveryToken token = new PasswordRecoveryToken();
+        token.setUserId(user.getId());
+        token.setEmail(user.getEmail());
+        token.setTokenHash(encryptionService.convertSHA256(rawToken));
+        token.setCreatedAt(Instant.now());
+        token.setExpiresAt(Instant.now().plusSeconds(properties.getTokenTtlSeconds()));
+        token.setUsed(false);
+
+        passwordRecoveryTokenRepository.save(token);
+        notificationEmailService.sendPasswordRecoveryLink(user.getEmail(), buildResetLink(rawToken));
     }
 
-    private ActionCodeSettings buildActionCodeSettings() {
+    private String buildResetLink(String token) {
         if (properties.getResetUrl() == null || properties.getResetUrl().isBlank()) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "RECOVERY_CONFIG_ERROR",
                     "La URL de recuperacion no esta configurada");
         }
 
-        return ActionCodeSettings.builder()
-                .setUrl(properties.getResetUrl())
-                .setHandleCodeInApp(true)
-                .build();
+        String separator = properties.getResetUrl().contains("?") ? "&" : "?";
+        return properties.getResetUrl() + separator
+                + "token=" + URLEncoder.encode(token, StandardCharsets.UTF_8);
+    }
+
+    private void invalidatePreviousTokens(String userId) {
+        passwordRecoveryTokenRepository.findAllByUserIdAndUsedFalse(userId)
+                .forEach(this::markTokenAsUsed);
+    }
+
+    private void markTokenAsUsed(PasswordRecoveryToken token) {
+        token.setUsed(true);
+        token.setUsedAt(Instant.now());
+        passwordRecoveryTokenRepository.save(token);
+    }
+
+    private String generateRawToken() {
+        return UUID.randomUUID().toString().replace("-", "")
+                + UUID.randomUUID().toString().replace("-", "");
     }
 
     private String normalizeEmail(String email) {

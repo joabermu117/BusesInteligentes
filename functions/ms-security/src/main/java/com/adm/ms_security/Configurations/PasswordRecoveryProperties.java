@@ -9,6 +9,7 @@ import lombok.Data;
 public class PasswordRecoveryProperties {
     private String resetUrl;
     private String genericMessage = "Si la cuenta existe, recibiras instrucciones para recuperar tu contraseña.";
+    private long tokenTtlSeconds = 1800;
     private int rateLimitMaxRequests = 5;
     private long rateLimitWindowSeconds = 300;
 }

@@ -24,16 +24,32 @@ public class AuthFlowService {
     }
 
     public LoginChallengeResponseDto startEmailLogin(LoginRequestDto request) {
-        antiBotService.validate(request.getRecaptchaToken(), "login");
-
         User user = securityService.authenticateLocalUser(request.getEmail(), request.getPassword());
         if (user == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_CREDENTIALS",
                     "Credenciales invalidas");
         }
 
+        return createLoginChallenge(user, request.getRecaptchaToken());
+    }
+
+    public LoginChallengeResponseDto startSocialLogin(User user, String recaptchaToken) {
+        if (user == null) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_CREDENTIALS",
+                    "No fue posible validar la cuenta");
+        }
+
+        return createLoginChallenge(user, recaptchaToken);
+    }
+
+    private LoginChallengeResponseDto createLoginChallenge(User user, String recaptchaToken) {
+        antiBotService.validate(recaptchaToken, "login");
         AuthChallenge challenge = emailOtpService.startChallenge(user);
-        return new LoginChallengeResponseDto(challenge.getId(), maskEmail(user.getEmail()), remainingSeconds(challenge));
+        return new LoginChallengeResponseDto(
+                challenge.getId(),
+                maskEmail(user.getEmail()),
+                remainingSeconds(challenge),
+                remainingResendCooldown(challenge));
     }
 
     public VerifyOtpResponseDto verifyOtp(VerifyOtpRequestDto request) {
@@ -49,7 +65,11 @@ public class AuthFlowService {
 
     public LoginChallengeResponseDto resendOtp(String challengeId) {
         AuthChallenge challenge = emailOtpService.resend(challengeId);
-        return new LoginChallengeResponseDto(challenge.getId(), maskEmail(challenge.getEmail()), remainingSeconds(challenge));
+        return new LoginChallengeResponseDto(
+                challenge.getId(),
+                maskEmail(challenge.getEmail()),
+                remainingSeconds(challenge),
+                remainingResendCooldown(challenge));
     }
 
     public void cancelChallenge(String challengeId) {
@@ -58,6 +78,10 @@ public class AuthFlowService {
 
     private long remainingSeconds(AuthChallenge challenge) {
         return Math.max(0, challenge.getExpiresAt().getEpochSecond() - java.time.Instant.now().getEpochSecond());
+    }
+
+    private long remainingResendCooldown(AuthChallenge challenge) {
+        return Math.max(0, challenge.getResendAllowedAt().getEpochSecond() - java.time.Instant.now().getEpochSecond());
     }
 
     private String maskEmail(String email) {

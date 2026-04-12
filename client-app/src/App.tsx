@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import LoginPage from "./Auth/Login";
 import PasswordRecoveryPage from "./Auth/PasswordRecovery";
+import ResetPasswordPage from "./Auth/ResetPassword";
 import RegisterPage from "./Auth/Register";
 import TwoFactorPage from "./Auth/TwoFactor";
 import {
@@ -36,6 +37,7 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/2fa" element={<TwoFactorPage />} />
         <Route path="/password-recovery" element={<PasswordRecoveryPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>

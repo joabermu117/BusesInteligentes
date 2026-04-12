@@ -72,6 +72,15 @@ public class SecurityService {
         return this.theUserRepository.findById(id).orElse(null);
     }
 
+    public User updatePassword(User user, String rawPassword) {
+        if (user == null || user.getId() == null || rawPassword == null || rawPassword.isBlank()) {
+            return null;
+        }
+
+        user.setPassword(theEncryptionService.convertSHA256(rawPassword));
+        return this.theUserRepository.save(user);
+    }
+
     public String generateToken(User user) {
         if (user == null) {
             return null;
