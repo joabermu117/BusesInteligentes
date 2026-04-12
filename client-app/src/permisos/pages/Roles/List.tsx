@@ -12,8 +12,19 @@ import RoleFormModal from "./Form";
 
 const RoleList = () => {
   const INITIAL_VISIBLE_PERMISSIONS = 6;
-  const { roles, loading, createRole, updateRole, deleteRole } = useRoleStore();
-  const { scopes } = useScopeStore();
+  const {
+    roles,
+    isInitialLoading,
+    isMutating,
+    createRole,
+    updateRole,
+    deleteRole,
+  } = useRoleStore();
+  const {
+    scopes,
+    isInitialLoading: isScopesInitialLoading,
+    isRefreshing: isScopesRefreshing,
+  } = useScopeStore();
 
   const [isCreating, setIsCreating] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -59,7 +70,7 @@ const RoleList = () => {
     }));
   };
 
-  if (loading && roles.length === 0) {
+  if (isInitialLoading && roles.length === 0) {
     return <Loader message="Cargando roles del sistema..." />;
   }
 
@@ -70,7 +81,7 @@ const RoleList = () => {
         title="Confirmar eliminacion"
         description={`Estas seguro de eliminar el rol "${roleToDelete?.name ?? ""}"? Esta accion no se puede deshacer.`}
         confirmLabel="Eliminar"
-        confirmDisabled={loading}
+        confirmDisabled={isMutating}
         onCancel={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
       />
@@ -82,7 +93,7 @@ const RoleList = () => {
           <Button
             onClick={() => setIsCreating(true)}
             variant="contained"
-            disabled={loading}
+            disabled={isMutating}
           >
             Anadir rol
           </Button>
@@ -120,52 +131,61 @@ const RoleList = () => {
                 {role.permissionIds.length > 0 ? (
                   <>
                     <Box display="flex" flexWrap="wrap" gap={0.5}>
-                      {(expandedPermissionsByRole[role.id]
-                        ? role.permissionIds
-                        : role.permissionIds.slice(
-                            0,
-                            INITIAL_VISIBLE_PERMISSIONS,
-                          )
-                      ).map((permissionId) => {
-                        const permission = scopes.find(
-                          (scope) => scope.id === permissionId,
-                        );
-                        const label = permission
-                          ? `${permission.method} ${permission.url}`
-                          : permissionId;
-                        return (
-                          <Chip
-                            key={permissionId}
-                            label={label}
-                            size="small"
-                            sx={{
-                              backgroundColor: "#e8f5e8",
-                              color: "#2e7d32",
-                              fontSize: "0.75rem",
-                            }}
-                          />
-                        );
-                      })}
+                      {isScopesInitialLoading || isScopesRefreshing ? (
+                        <Chip
+                          label="Cargando permisos..."
+                          size="small"
+                          variant="outlined"
+                          sx={{ fontSize: "0.75rem" }}
+                        />
+                      ) : (
+                        (expandedPermissionsByRole[role.id]
+                          ? role.permissionIds
+                          : role.permissionIds.slice(
+                              0,
+                              INITIAL_VISIBLE_PERMISSIONS,
+                            )
+                        ).map((permissionId) => {
+                          const permission = scopes.find(
+                            (scope) => scope.id === permissionId,
+                          );
+                          const label = permission
+                            ? `${permission.method} ${permission.url}`
+                            : permissionId;
+                          return (
+                            <Chip
+                              key={permissionId}
+                              label={label}
+                              size="small"
+                              sx={{
+                                backgroundColor: "#e8f5e8",
+                                color: "#2e7d32",
+                                fontSize: "0.75rem",
+                              }}
+                            />
+                          );
+                        })
+                      )}
                     </Box>
 
-                    {role.permissionIds.length >
-                      INITIAL_VISIBLE_PERMISSIONS && (
-                      <Button
-                        size="small"
-                        onClick={() => togglePermissionsVisibility(role.id)}
-                        sx={{
-                          textTransform: "none",
-                          alignSelf: "flex-start",
-                          px: 0,
-                          minWidth: "auto",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {expandedPermissionsByRole[role.id]
-                          ? "Mostrar menos"
-                          : `Mostrar ${role.permissionIds.length - INITIAL_VISIBLE_PERMISSIONS} mas`}
-                      </Button>
-                    )}
+                    {role.permissionIds.length > INITIAL_VISIBLE_PERMISSIONS &&
+                      !(isScopesInitialLoading || isScopesRefreshing) && (
+                        <Button
+                          size="small"
+                          onClick={() => togglePermissionsVisibility(role.id)}
+                          sx={{
+                            textTransform: "none",
+                            alignSelf: "flex-start",
+                            px: 0,
+                            minWidth: "auto",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {expandedPermissionsByRole[role.id]
+                            ? "Mostrar menos"
+                            : `Mostrar ${role.permissionIds.length - INITIAL_VISIBLE_PERMISSIONS} mas`}
+                        </Button>
+                      )}
                   </>
                 ) : (
                   <Chip
@@ -182,12 +202,12 @@ const RoleList = () => {
                 <TextActionButton
                   label="Editar"
                   onClick={() => setEditingRole(role)}
-                  disabled={loading}
+                  disabled={isMutating}
                 />
                 <TextActionButton
                   label="Eliminar"
                   onClick={() => confirmDelete(role)}
-                  disabled={loading}
+                  disabled={isMutating}
                   color="error"
                 />
               </Box>

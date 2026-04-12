@@ -49,6 +49,13 @@ export const useUserStore = () => {
     updateMutation.isPending ||
     deleteMutation.isPending;
 
+  const isInitialLoading = usersQuery.isPending;
+  const isRefreshing = usersQuery.isFetching;
+  const isMutating =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
   const error = useMemo(() => {
     const errors = [
       usersQuery.error,
@@ -103,6 +110,9 @@ export const useUserStore = () => {
     users,
     currentUser,
     loading,
+    isInitialLoading,
+    isRefreshing,
+    isMutating,
     error,
     fetchUsers,
     fetchUser,

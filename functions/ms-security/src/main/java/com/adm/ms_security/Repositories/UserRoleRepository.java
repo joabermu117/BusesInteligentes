@@ -1,5 +1,6 @@
 package com.adm.ms_security.Repositories;
 
+import com.adm.ms_security.Models.Role;
 import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Models.UserRole;
 import org.springframework.data.mongodb.repository.MongoRepository;
@@ -15,4 +16,6 @@ public interface UserRoleRepository extends MongoRepository<UserRole, String> {
     boolean existsByRoleId(String roleId);
 
     List<UserRole> findAllByUser(User user);
+
+    List<UserRole> findAllByRole(Role role);
 }

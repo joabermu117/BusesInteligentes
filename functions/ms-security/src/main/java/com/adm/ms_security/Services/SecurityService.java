@@ -29,6 +29,9 @@ public class SecurityService {
     @Autowired
     private JwtService theJwtService;
 
+    @Autowired
+    private EmailService theEmailService;
+
     public String login(User theNewUser) {
         User theActualUser = findByEmailForLogin(theNewUser.getEmail());
         if (theActualUser == null) {
@@ -78,6 +81,7 @@ public class SecurityService {
 
         User created = this.theUserRepository.save(user);
         assignCitizenRoleIfMissing(created);
+        this.theEmailService.sendAccountCreatedEmail(created);
         return created;
     }
 
@@ -206,14 +210,17 @@ public class SecurityService {
      * }
      */
 
-     public User findOrCreateFromGithub(FirebaseToken firebaseToken) {
-        if (firebaseToken == null) return null;
+    public User findOrCreateFromGithub(FirebaseToken firebaseToken) {
+        if (firebaseToken == null)
+            return null;
 
         String firebaseUid = firebaseToken.getUid();
-        if (firebaseUid == null || firebaseUid.isBlank()) return null;
+        if (firebaseUid == null || firebaseUid.isBlank())
+            return null;
 
         String email = normalizeEmail(firebaseToken.getEmail());
-        if (email == null) return null;
+        if (email == null)
+            return null;
 
         User byUid = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
         if (byUid != null) {

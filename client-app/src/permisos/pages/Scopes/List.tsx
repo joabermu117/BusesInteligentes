@@ -47,7 +47,7 @@ const ScopesTable = () => {
     setScopeToDelete(null);
   };
 
-  if (scopeStore.loading && scopeStore.scopes.length === 0) {
+  if (scopeStore.isInitialLoading && scopeStore.scopes.length === 0) {
     return <Loader message="Cargando permisos del sistema..." />;
   }
 
@@ -58,7 +58,7 @@ const ScopesTable = () => {
         title="Confirmar eliminacion"
         description={`Estas seguro de eliminar el permiso "${scopeToDelete ?? ""}"? Esta accion no se puede deshacer.`}
         confirmLabel="Eliminar"
-        confirmDisabled={scopeStore.loading}
+        confirmDisabled={scopeStore.isMutating}
         onCancel={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
       />
@@ -72,7 +72,7 @@ const ScopesTable = () => {
             <Button
               onClick={() => setIsCreating(true)}
               variant="contained"
-              disabled={scopeStore.loading}
+              disabled={scopeStore.isMutating}
             >
               Crear permiso
             </Button>
@@ -86,7 +86,7 @@ const ScopesTable = () => {
         initialData={{ url: "", method: "GET", model: "" }}
         onCancel={() => setIsCreating(false)}
         onSubmit={handleCreate}
-        isLoading={scopeStore.loading}
+        isLoading={scopeStore.isMutating}
       />
 
       <ScopeFormModal
@@ -95,7 +95,7 @@ const ScopesTable = () => {
         initialData={editingScope || undefined}
         onCancel={() => setEditingScope(null)}
         onSubmit={handleUpdate}
-        isLoading={scopeStore.loading}
+        isLoading={scopeStore.isMutating}
       />
 
       <DataTable
@@ -113,12 +113,12 @@ const ScopesTable = () => {
                 <TextActionButton
                   label="Editar"
                   onClick={() => setEditingScope(scope)}
-                  disabled={scopeStore.loading}
+                  disabled={scopeStore.isMutating}
                 />
                 <TextActionButton
                   label="Eliminar"
                   onClick={() => confirmDelete(scope.id)}
-                  disabled={scopeStore.loading}
+                  disabled={scopeStore.isMutating}
                   color="error"
                 />
               </Box>

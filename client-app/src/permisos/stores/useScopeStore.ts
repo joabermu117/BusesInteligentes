@@ -47,6 +47,13 @@ export const useScopeStore = () => {
 
   const scopes = scopesQuery.data ?? [];
 
+  const isInitialLoading = scopesQuery.isPending;
+  const isRefreshing = scopesQuery.isFetching;
+  const isMutating =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
   const loading =
     scopesQuery.isPending ||
     scopesQuery.isFetching ||
@@ -108,6 +115,9 @@ export const useScopeStore = () => {
     scopes,
     currentScope,
     loading,
+    isInitialLoading,
+    isRefreshing,
+    isMutating,
     error,
     fetchScopes,
     fetchScopeById,

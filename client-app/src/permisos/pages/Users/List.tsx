@@ -24,9 +24,24 @@ import { useUserStore } from "../../stores/useUserStore";
 import UserFormModal from "./Form";
 
 const UserList = () => {
-  const { users, loading, updateUser, deleteUser } = useUserStore();
-  const { roles } = useRoleStore();
-  const { scopes } = useScopeStore();
+  const { users, isInitialLoading, isMutating, updateUser, deleteUser } =
+    useUserStore();
+  const {
+    roles,
+    isInitialLoading: isRolesInitialLoading,
+    isRefreshing: isRolesRefreshing,
+  } = useRoleStore();
+  const {
+    scopes,
+    isInitialLoading: isScopesInitialLoading,
+    isRefreshing: isScopesRefreshing,
+  } = useScopeStore();
+
+  const areCatalogsLoading =
+    isRolesInitialLoading ||
+    isScopesInitialLoading ||
+    isRolesRefreshing ||
+    isScopesRefreshing;
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -40,12 +55,20 @@ const UserList = () => {
   >({});
 
   const getRoleNames = (roleIds: string[]): string[] => {
+    if (areCatalogsLoading && roleIds.length > 0) {
+      return [];
+    }
+
     return roleIds
       .map((roleId) => roles.find((role) => role.id === roleId)?.name || roleId)
       .filter(Boolean);
   };
 
   const getEffectivePermissionLabels = (roleIds: string[]): string[] => {
+    if (areCatalogsLoading && roleIds.length > 0) {
+      return [];
+    }
+
     const permissionIds = new Set(
       roleIds.flatMap(
         (roleId) =>
@@ -122,7 +145,7 @@ const UserList = () => {
     setSelectedUserForActions(null);
   };
 
-  if (loading && users.length === 0) {
+  if (isInitialLoading && users.length === 0) {
     return <Loader message="Cargando usuarios registrados..." />;
   }
 
@@ -133,7 +156,7 @@ const UserList = () => {
         title="Confirmar eliminacion"
         description={`Estas seguro de eliminar al usuario "${selectedUserName}"? Esta accion no se puede deshacer.`}
         confirmLabel="Eliminar"
-        confirmDisabled={loading}
+        confirmDisabled={isMutating}
         onCancel={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDelete}
       />
@@ -221,7 +244,14 @@ const UserList = () => {
               <TableCell>{user.email}</TableCell>
               <TableCell>
                 <Box display="flex" flexWrap="wrap" gap={0.5}>
-                  {roleNames.length > 0 ? (
+                  {areCatalogsLoading && user.roleIds.length > 0 ? (
+                    <Chip
+                      label="Cargando roles..."
+                      size="small"
+                      variant="outlined"
+                      sx={{ fontSize: "0.75rem" }}
+                    />
+                  ) : roleNames.length > 0 ? (
                     roleNames.map((roleName) => (
                       <Chip
                         key={`${user.id}-${roleName}`}
@@ -256,6 +286,10 @@ const UserList = () => {
                       }))
                     }
                     renderValue={(selectedValue) => {
+                      if (areCatalogsLoading && user.roleIds.length > 0) {
+                        return "Cargando permisos...";
+                      }
+
                       if (!selectedValue) {
                         return effectivePermissions.length > 0
                           ? `${effectivePermissions.length} permisos efectivos`
@@ -265,9 +299,11 @@ const UserList = () => {
                     }}
                   >
                     <MenuItem value="">
-                      {effectivePermissions.length > 0
-                        ? "Seleccionar permiso"
-                        : "Sin permisos"}
+                      {areCatalogsLoading && user.roleIds.length > 0
+                        ? "Cargando permisos..."
+                        : effectivePermissions.length > 0
+                          ? "Seleccionar permiso"
+                          : "Sin permisos"}
                     </MenuItem>
                     {effectivePermissions.map((permissionLabel) => (
                       <MenuItem
@@ -287,7 +323,7 @@ const UserList = () => {
                     event.stopPropagation();
                     openActions(event, user);
                   }}
-                  disabled={loading}
+                  disabled={isMutating}
                 >
                   <MoreHoriz />
                 </IconButton>

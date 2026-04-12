@@ -22,13 +22,25 @@ public class UserRoleService {
     @Autowired
     private UserRoleRepository theUserRoleRepository;
 
+    @Autowired
+    private EmailService theEmailService;
+
     public boolean addUserRole(String userId,
             String roleId) {
         User user = this.theUserRepository.findById(userId).orElse(null);
         Role role = this.theRoleRepository.findById(roleId).orElse(null);
         if (user != null && role != null) {
+            boolean alreadyAssigned = this.theUserRoleRepository.findAllByUser(user).stream()
+                    .anyMatch(ur -> ur.getRole() != null
+                            && ur.getRole().getId() != null
+                            && ur.getRole().getId().equals(role.getId()));
+            if (alreadyAssigned) {
+                return true;
+            }
+
             UserRole theUserRole = new UserRole(user, role);
             this.theUserRoleRepository.save(theUserRole);
+            this.theEmailService.sendRoleUpdatedEmail(user, role, "asignado");
             return true;
         } else {
             return false;
@@ -38,7 +50,10 @@ public class UserRoleService {
     public boolean removeUserRole(String userRoleId) {
         UserRole userRole = this.theUserRoleRepository.findById(userRoleId).orElse(null);
         if (userRole != null) {
+            User user = userRole.getUser();
+            Role role = userRole.getRole();
             this.theUserRoleRepository.delete(userRole);
+            this.theEmailService.sendRoleUpdatedEmail(user, role, "removido");
             return true;
         } else {
             return false;
