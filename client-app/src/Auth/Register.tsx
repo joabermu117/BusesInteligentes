@@ -13,7 +13,7 @@ import axios from "axios";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { SecurityService } from "../../services/SecurityService";
+import { SecurityService } from "../permisos/services/SecurityService";
 
 const RegisterPage = () => {
   const navigate = useNavigate();

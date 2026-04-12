@@ -1,10 +1,11 @@
 import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
+import DashboardRounded from "@mui/icons-material/DashboardRounded";
 import ExpandLessRounded from "@mui/icons-material/ExpandLessRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import GppGoodRounded from "@mui/icons-material/GppGoodRounded";
 import GroupRounded from "@mui/icons-material/GroupRounded";
-import MenuRounded from "@mui/icons-material/MenuRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
+import MenuRounded from "@mui/icons-material/MenuRounded";
 import ShieldRounded from "@mui/icons-material/ShieldRounded";
 import {
   AppBar,
@@ -36,7 +37,14 @@ type NavigationItem = {
 
 const DRAWER_WIDTH = 292;
 
-const navigationItems: NavigationItem[] = [
+const dashboardItem: NavigationItem = {
+  path: "/dashboard",
+  label: "Dashboard",
+  description: "Estado general de rutas, flota y seguridad.",
+  icon: <DashboardRounded />,
+};
+
+const securityItems: NavigationItem[] = [
   {
     path: "/users/list",
     label: "Usuarios",
@@ -63,6 +71,9 @@ const AppShell = () => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(true);
 
+  const navigationItems = [dashboardItem, ...securityItems];
+  const isDashboardSelected = location.pathname.startsWith(dashboardItem.path);
+
   const activeItem = useMemo(
     () =>
       navigationItems.find((item) => location.pathname.startsWith(item.path)) ??
@@ -84,16 +95,56 @@ const AppShell = () => {
     <Stack sx={{ height: "100%" }}>
       <Box sx={{ px: 3, py: 3 }}>
         <Typography variant="h5" sx={{ color: "text.primary" }}>
-          Security Hub
+          Buses Inteligentes
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          Centro de control de usuarios, roles y permisos.
+          Centro de control de flota, rutas y seguridad.
         </Typography>
       </Box>
 
       <Divider />
 
       <List sx={{ px: 1.5, py: 1.5 }}>
+        <ListItemButton
+          selected={isDashboardSelected}
+          onClick={() => handleNavigate(dashboardItem.path)}
+          sx={{
+            borderRadius: 2,
+            py: 1.15,
+            pl: 1.75,
+            pr: 1.5,
+            mb: 0.75,
+            alignItems: "flex-start",
+            "&.Mui-selected": {
+              backgroundColor: "rgba(207,59,35,0.12)",
+              "&:hover": {
+                backgroundColor: "rgba(207,59,35,0.18)",
+              },
+            },
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              minWidth: 36,
+              color: isDashboardSelected ? "primary.main" : "text.secondary",
+            }}
+          >
+            {dashboardItem.icon}
+          </ListItemIcon>
+          <ListItemText
+            primary={dashboardItem.label}
+            secondary={dashboardItem.description}
+            primaryTypographyProps={{
+              fontWeight: 700,
+              color: isDashboardSelected ? "primary.main" : "text.primary",
+            }}
+            secondaryTypographyProps={{
+              variant: "caption",
+              sx: { display: "block", mt: 0.25 },
+            }}
+          />
+        </ListItemButton>
+
         <ListItemButton
           onClick={() => setIsSecurityOpen((prev) => !prev)}
           sx={{ borderRadius: 2, py: 1, px: 1.5 }}
@@ -103,14 +154,17 @@ const AppShell = () => {
           </ListItemIcon>
           <ListItemText
             primary="Seguridad"
-            primaryTypographyProps={{ fontWeight: 800, letterSpacing: "0.02em" }}
+            primaryTypographyProps={{
+              fontWeight: 800,
+              letterSpacing: "0.02em",
+            }}
           />
           {isSecurityOpen ? <ExpandLessRounded /> : <ExpandMoreRounded />}
         </ListItemButton>
 
         <Collapse in={isSecurityOpen} timeout="auto" unmountOnExit>
           <List sx={{ pt: 1, gap: 0.75, display: "grid" }}>
-            {navigationItems.map((item) => {
+            {securityItems.map((item) => {
               const isSelected = location.pathname.startsWith(item.path);
               return (
                 <ListItemButton
@@ -240,7 +294,10 @@ const AppShell = () => {
         </Drawer>
       </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` } }}>
+      <Box
+        component="main"
+        sx={{ flexGrow: 1, width: { md: `calc(100% - ${DRAWER_WIDTH}px)` } }}
+      >
         <Toolbar sx={{ minHeight: 72 }} />
         <Container maxWidth="xl" sx={{ py: { xs: 2.5, md: 4 } }}>
           <Outlet />

@@ -15,8 +15,13 @@ const ListUsers = loadable(() => import("../pages/Users/List.tsx"), {
   fallback: <Loader message="Cargando usuarios del sistema..." />,
 });
 
+const DashboardHome = loadable(() => import("../../Dashboard/Home.tsx"), {
+  fallback: <Loader message="Cargando dashboard de operaciones..." />,
+});
+
 export default (
   <>
+    <Route path="/dashboard" element={<DashboardHome />} />
     <Route path="/scopes/list" element={<ListScopes />} />
     <Route path="/roles/list" element={<ListRoles />} />
     <Route path="/users/list" element={<ListUsers />} />
