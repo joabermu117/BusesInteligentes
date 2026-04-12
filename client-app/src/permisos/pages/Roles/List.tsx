@@ -18,7 +18,7 @@ const RoleList = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
+  const [roleToDelete, setRoleToDelete] = useState<Role | null>(null);
   const [expandedPermissionsByRole, setExpandedPermissionsByRole] = useState<
     Record<string, boolean>
   >({});
@@ -37,8 +37,8 @@ const RoleList = () => {
     setEditingRole(null);
   };
 
-  const confirmDelete = (id: string) => {
-    setRoleToDelete(id);
+  const confirmDelete = (role: Role) => {
+    setRoleToDelete(role);
     setIsDeleteModalOpen(true);
   };
 
@@ -47,7 +47,7 @@ const RoleList = () => {
       return;
     }
 
-    await deleteRole(roleToDelete);
+    await deleteRole(roleToDelete.id);
     setIsDeleteModalOpen(false);
     setRoleToDelete(null);
   };
@@ -68,7 +68,7 @@ const RoleList = () => {
       <ConfirmActionDialog
         open={isDeleteModalOpen}
         title="Confirmar eliminacion"
-        description={`Estas seguro de eliminar el rol "${roleToDelete ?? ""}"? Esta accion no se puede deshacer.`}
+        description={`Estas seguro de eliminar el rol "${roleToDelete?.name ?? ""}"? Esta accion no se puede deshacer.`}
         confirmLabel="Eliminar"
         confirmDisabled={loading}
         onCancel={() => setIsDeleteModalOpen(false)}
@@ -186,7 +186,7 @@ const RoleList = () => {
                 />
                 <TextActionButton
                   label="Eliminar"
-                  onClick={() => confirmDelete(role.id)}
+                  onClick={() => confirmDelete(role)}
                   disabled={loading}
                   color="error"
                 />

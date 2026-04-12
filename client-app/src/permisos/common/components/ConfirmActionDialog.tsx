@@ -30,7 +30,9 @@ const ConfirmActionDialog = ({
 }: ConfirmActionDialogProps) => {
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ color: "error.main", fontWeight: 700 }}>{title}</DialogTitle>
+      <DialogTitle sx={{ color: "text.primary", fontWeight: 700 }}>
+        {title}
+      </DialogTitle>
       <DialogContent>
         <DialogContentText>{description}</DialogContentText>
       </DialogContent>
@@ -38,7 +40,12 @@ const ConfirmActionDialog = ({
         <Button onClick={onCancel} variant="outlined" color="inherit">
           {cancelLabel}
         </Button>
-        <Button onClick={onConfirm} variant="contained" color="error" disabled={confirmDisabled}>
+        <Button
+          onClick={onConfirm}
+          variant="contained"
+          color="primary"
+          disabled={confirmDisabled}
+        >
           {confirmLabel}
         </Button>
       </DialogActions>

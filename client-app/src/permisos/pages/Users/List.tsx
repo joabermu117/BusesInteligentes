@@ -2,10 +2,12 @@ import { MoreHoriz, Search } from "@mui/icons-material";
 import {
   Box,
   Chip,
+  FormControl,
   IconButton,
   InputAdornment,
   Menu,
   MenuItem,
+  Select,
   TableCell,
   TableRow,
   TextField,
@@ -17,12 +19,14 @@ import PageHeader from "../../common/components/PageHeader";
 import Loader from "../../common/loader";
 import type { User } from "../../models/user";
 import { useRoleStore } from "../../stores/useRoleStore";
+import { useScopeStore } from "../../stores/useScopeStore";
 import { useUserStore } from "../../stores/useUserStore";
 import UserFormModal from "./Form";
 
 const UserList = () => {
   const { users, loading, updateUser, deleteUser } = useUserStore();
   const { roles } = useRoleStore();
+  const { scopes } = useScopeStore();
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -31,6 +35,31 @@ const UserList = () => {
   const [actionsAnchor, setActionsAnchor] = useState<HTMLElement | null>(null);
   const [selectedUserForActions, setSelectedUserForActions] =
     useState<User | null>(null);
+  const [selectedPermissionByUser, setSelectedPermissionByUser] = useState<
+    Record<string, string>
+  >({});
+
+  const getRoleNames = (roleIds: string[]): string[] => {
+    return roleIds
+      .map((roleId) => roles.find((role) => role.id === roleId)?.name || roleId)
+      .filter(Boolean);
+  };
+
+  const getEffectivePermissionLabels = (roleIds: string[]): string[] => {
+    const permissionIds = new Set(
+      roleIds.flatMap(
+        (roleId) =>
+          roles.find((role) => role.id === roleId)?.permissionIds ?? [],
+      ),
+    );
+
+    return Array.from(permissionIds)
+      .map((permissionId) => {
+        const scope = scopes.find((item) => item.id === permissionId);
+        return scope ? `${scope.method} ${scope.url}` : permissionId;
+      })
+      .filter(Boolean);
+  };
 
   const filteredUsers = useMemo(() => {
     const q = searchTerm.toLowerCase();
@@ -38,25 +67,21 @@ const UserList = () => {
       const name = typeof user.name === "string" ? user.name : "";
       const email = typeof user.email === "string" ? user.email : "";
       const id = typeof user.id === "string" ? user.id : "";
-      const roleNames = (Array.isArray(user.roleIds) ? user.roleIds : [])
-        .map(
-          (roleId) => roles.find((role) => role.id === roleId)?.name || roleId,
-        )
-        .join(" ");
+      const roleNames = getRoleNames(
+        Array.isArray(user.roleIds) ? user.roleIds : [],
+      ).join(" ");
+      const effectivePermissions = getEffectivePermissionLabels(
+        Array.isArray(user.roleIds) ? user.roleIds : [],
+      ).join(" ");
       return (
         name.toLowerCase().includes(q) ||
         email.toLowerCase().includes(q) ||
         id.toLowerCase().includes(q) ||
-        roleNames.toLowerCase().includes(q)
+        roleNames.toLowerCase().includes(q) ||
+        effectivePermissions.toLowerCase().includes(q)
       );
     });
-  }, [roles, users, searchTerm]);
-
-  const getRoleNames = (roleIds: string[]): string[] => {
-    return roleIds
-      .map((roleId) => roles.find((role) => role.id === roleId)?.name || roleId)
-      .filter(Boolean);
-  };
+  }, [roles, scopes, users, searchTerm]);
 
   const selectedUserName = useMemo(
     () => users.find((user) => user.id === userToDelete)?.name ?? "",
@@ -176,7 +201,7 @@ const UserList = () => {
       </Menu>
 
       <DataTable
-        columns={["Nombre", "Email", "Roles", "Acciones"]}
+        columns={["Nombre", "Email", "Roles", "Permisos efectivos", "Acciones"]}
         hasData={filteredUsers.length > 0}
         emptyMessage={
           searchTerm
@@ -184,49 +209,92 @@ const UserList = () => {
             : "No hay usuarios disponibles"
         }
       >
-        {filteredUsers.map((user) => (
-          <TableRow key={user.id} hover>
-            <TableCell>{user.name}</TableCell>
-            <TableCell>{user.email}</TableCell>
-            <TableCell>
-              <Box display="flex" flexWrap="wrap" gap={0.5}>
-                {getRoleNames(user.roleIds).length > 0 ? (
-                  getRoleNames(user.roleIds).map((name) => (
+        {filteredUsers.map((user) => {
+          const roleNames = getRoleNames(user.roleIds);
+          const effectivePermissions = getEffectivePermissionLabels(
+            user.roleIds,
+          );
+
+          return (
+            <TableRow key={user.id} hover>
+              <TableCell>{user.name}</TableCell>
+              <TableCell>{user.email}</TableCell>
+              <TableCell>
+                <Box display="flex" flexWrap="wrap" gap={0.5}>
+                  {roleNames.length > 0 ? (
+                    roleNames.map((roleName) => (
+                      <Chip
+                        key={`${user.id}-${roleName}`}
+                        label={roleName}
+                        size="small"
+                        sx={{
+                          backgroundColor: "#e3f2fd",
+                          color: "#1976d2",
+                          fontSize: "0.75rem",
+                        }}
+                      />
+                    ))
+                  ) : (
                     <Chip
-                      key={name}
-                      label={name}
+                      label="Sin roles"
                       size="small"
-                      sx={{
-                        backgroundColor: "#e3f2fd",
-                        color: "#1976d2",
-                        fontSize: "0.75rem",
-                      }}
+                      variant="outlined"
+                      sx={{ fontSize: "0.75rem" }}
                     />
-                  ))
-                ) : (
-                  <Chip
-                    label="Sin roles"
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontSize: "0.75rem" }}
-                  />
-                )}
-              </Box>
-            </TableCell>
-            <TableCell>
-              <IconButton
-                size="small"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  openActions(event, user);
-                }}
-                disabled={loading}
-              >
-                <MoreHoriz />
-              </IconButton>
-            </TableCell>
-          </TableRow>
-        ))}
+                  )}
+                </Box>
+              </TableCell>
+              <TableCell>
+                <FormControl size="small" sx={{ minWidth: 260 }}>
+                  <Select
+                    displayEmpty
+                    value={selectedPermissionByUser[user.id] ?? ""}
+                    onChange={(event) =>
+                      setSelectedPermissionByUser((previousState) => ({
+                        ...previousState,
+                        [user.id]: event.target.value,
+                      }))
+                    }
+                    renderValue={(selectedValue) => {
+                      if (!selectedValue) {
+                        return effectivePermissions.length > 0
+                          ? `${effectivePermissions.length} permisos efectivos`
+                          : "Sin permisos";
+                      }
+                      return selectedValue;
+                    }}
+                  >
+                    <MenuItem value="">
+                      {effectivePermissions.length > 0
+                        ? "Seleccionar permiso"
+                        : "Sin permisos"}
+                    </MenuItem>
+                    {effectivePermissions.map((permissionLabel) => (
+                      <MenuItem
+                        key={`${user.id}-${permissionLabel}`}
+                        value={permissionLabel}
+                      >
+                        {permissionLabel}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </TableCell>
+              <TableCell>
+                <IconButton
+                  size="small"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openActions(event, user);
+                  }}
+                  disabled={loading}
+                >
+                  <MoreHoriz />
+                </IconButton>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </DataTable>
     </Box>
   );

@@ -2,8 +2,11 @@ package com.adm.ms_security.Services;
 
 import com.adm.ms_security.Models.Permission;
 import com.adm.ms_security.Repositories.PermissionRepository;
+import com.adm.ms_security.Repositories.RolePermissionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Locale;
@@ -13,6 +16,9 @@ public class PermissionService {
 
     @Autowired
     private PermissionRepository thePermissionRepository;
+
+    @Autowired
+    private RolePermissionRepository theRolePermissionRepository;
 
     public List<Permission> find() {
         return this.thePermissionRepository.findAll();
@@ -63,9 +69,18 @@ public class PermissionService {
 
     public void delete(String id) {
         Permission thePermission = this.thePermissionRepository.findById(id).orElse(null);
-        if (thePermission != null) {
-            this.thePermissionRepository.delete(thePermission);
+        if (thePermission == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Permission not found");
         }
+
+        boolean hasRolesWithPermission = this.theRolePermissionRepository.existsByPermissionId(id);
+        if (hasRolesWithPermission) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "No se puede eliminar el permiso porque hay roles asociados");
+        }
+
+        this.thePermissionRepository.delete(thePermission);
     }
 
     private String normalizeUrl(String url) {

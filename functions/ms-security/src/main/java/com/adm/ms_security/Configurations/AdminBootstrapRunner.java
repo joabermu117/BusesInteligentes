@@ -47,7 +47,7 @@ public class AdminBootstrapRunner implements ApplicationRunner {
     @Value("${admin.bootstrap.role-name:administrador}")
     private String adminRoleName;
 
-    @Value("${admin.bootstrap.citizen-role-name:ciudadano}")
+    @Value("${admin.bootstrap.citizen-role-name:Ciudadano}")
     private String citizenRoleName;
 
     public AdminBootstrapRunner(

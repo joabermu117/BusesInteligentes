@@ -15,6 +15,9 @@ public interface RolePermissionRepository extends MongoRepository<RolePermission
     @Query("{'role.$id' : ObjectId(?0)}")
     public List<RolePermission> getPermissionsByRole(String roleId);
 
+    @Query(value = "{'permission.$id' : ObjectId(?0)}", exists = true)
+    boolean existsByPermissionId(String permissionId);
+
     RolePermission findByRoleAndPermission(Role role, Permission permission);
 
     List<RolePermission> findAllByRole(Role role);
