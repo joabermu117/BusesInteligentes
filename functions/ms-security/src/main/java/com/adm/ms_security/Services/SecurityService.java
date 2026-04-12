@@ -30,17 +30,26 @@ public class SecurityService {
     private JwtService theJwtService;
 
     public String login(User theNewUser) {
-        User theActualUser = findByEmailForLogin(theNewUser.getEmail());
-        if (theActualUser == null) {
+        User authenticatedUser = authenticateLocalUser(theNewUser.getEmail(), theNewUser.getPassword());
+        if (authenticatedUser == null) {
             return null;
         }
 
-        String encryptedPassword = theEncryptionService.convertSHA256(theNewUser.getPassword());
-        if (!theActualUser.getPassword().equals(encryptedPassword)) {
+        return generateToken(authenticatedUser);
+    }
+
+    public User authenticateLocalUser(String email, String password) {
+        User actualUser = findByEmailForLogin(email);
+        if (actualUser == null || password == null || password.isBlank()) {
             return null;
         }
 
-        return generateToken(theActualUser);
+        String encryptedPassword = theEncryptionService.convertSHA256(password);
+        if (!actualUser.getPassword().equals(encryptedPassword)) {
+            return null;
+        }
+
+        return actualUser;
     }
 
     public User findByEmailForLogin(String email) {
@@ -50,6 +59,14 @@ public class SecurityService {
 
         Optional<User> user = this.theUserRepository.findByEmailIgnoreCase(email.trim().toLowerCase());
         return user.orElse(null);
+    }
+
+    public User findById(String id) {
+        if (id == null || id.isBlank()) {
+            return null;
+        }
+
+        return this.theUserRepository.findById(id).orElse(null);
     }
 
     public String generateToken(User user) {
@@ -207,29 +224,6 @@ public class SecurityService {
      */
 
      public User findOrCreateFromGithub(FirebaseToken firebaseToken) {
-        if (firebaseToken == null) return null;
-
-        String firebaseUid = firebaseToken.getUid();
-        if (firebaseUid == null || firebaseUid.isBlank()) return null;
-
-        String email = normalizeEmail(firebaseToken.getEmail());
-        if (email == null) return null;
-
-        User byUid = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
-        if (byUid != null) {
-            return syncFirebaseFields(byUid, firebaseUid, email, firebaseToken.getName());
-        }
-
-        User byEmail = this.theUserRepository.findByEmailIgnoreCase(email).orElse(null);
-        if (byEmail != null) {
-            return syncFirebaseFields(byEmail, firebaseUid, email, firebaseToken.getName());
-        }
-
-        User newUser = new User();
-        newUser.setEmail(email);
-        newUser.setFirebaseUid(firebaseUid);
-        newUser.setName(resolveDisplayName(firebaseToken.getName(), email));
-        newUser.setPassword(generateFirebasePassword(firebaseUid));
-        return this.theUserRepository.save(newUser);
+        return findOrCreateFromFirebase(firebaseToken);
     }
 }

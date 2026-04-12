@@ -16,6 +16,7 @@ import axios from "axios";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { executeRecaptcha } from "../config/recaptcha";
 import { FirebaseAuthService } from "../permisos/services/FirebaseAuthService";
 import { SecurityService } from "../permisos/services/SecurityService";
 
@@ -70,8 +71,13 @@ const LoginPage = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
-      await SecurityService.loginWithEmailPassword(email, password);
-      navigate("/dashboard", { replace: true });
+      const recaptchaToken = await executeRecaptcha("login");
+      const challenge = await SecurityService.loginWithEmailPassword(
+        email,
+        password,
+        recaptchaToken,
+      );
+      navigate("/2fa", { replace: true, state: challenge });
     } catch (error) {
       setErrorMessage(getLoginErrorMessage(error, "email"));
     } finally {
@@ -229,6 +235,16 @@ const LoginPage = () => {
                   fullWidth
                   required
                 />
+                <Button
+                  type="button"
+                  variant="text"
+                  onClick={() => navigate("/password-recovery")}
+                  disabled={isSubmitting}
+                  size="small"
+                >
+                  ¿Olvidó su contraseña?
+                </Button>
+
                 <Button
                   type="submit"
                   variant="contained"

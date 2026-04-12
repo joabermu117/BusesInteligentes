@@ -6,7 +6,9 @@ import {
   Routes,
 } from "react-router-dom";
 import LoginPage from "./Auth/Login";
+import PasswordRecoveryPage from "./Auth/PasswordRecovery";
 import RegisterPage from "./Auth/Register";
+import TwoFactorPage from "./Auth/TwoFactor";
 import {
   AUTH_TOKEN_STORAGE_KEY,
   isAuthTokenExpired,
@@ -32,6 +34,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/2fa" element={<TwoFactorPage />} />
+        <Route path="/password-recovery" element={<PasswordRecoveryPage />} />
 
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
