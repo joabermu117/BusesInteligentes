@@ -42,6 +42,13 @@ export const useRoleStore = () => {
 
   const roles = rolesQuery.data ?? [];
 
+  const isInitialLoading = rolesQuery.isPending;
+  const isRefreshing = rolesQuery.isFetching;
+  const isMutating =
+    createMutation.isPending ||
+    updateMutation.isPending ||
+    deleteMutation.isPending;
+
   const loading =
     rolesQuery.isPending ||
     rolesQuery.isFetching ||
@@ -104,6 +111,9 @@ export const useRoleStore = () => {
     roles,
     currentRole,
     loading,
+    isInitialLoading,
+    isRefreshing,
+    isMutating,
     error,
     fetchRoles,
     fetchRoleById,
