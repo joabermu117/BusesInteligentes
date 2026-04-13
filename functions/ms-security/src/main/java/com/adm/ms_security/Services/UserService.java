@@ -1,5 +1,7 @@
 package com.adm.ms_security.Services;
 
+import com.adm.ms_security.Dtos.UserPayloadDto;
+import com.adm.ms_security.Dtos.UserResponseDto;
 import com.adm.ms_security.Models.Profile;
 import com.adm.ms_security.Models.Session;
 import com.adm.ms_security.Models.User;
@@ -9,6 +11,7 @@ import com.adm.ms_security.Repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -33,13 +36,34 @@ public class UserService {
     @Autowired
     private ProfileService theProfileService;
 
+    @Autowired
+    private UserRoleService theUserRoleService;
+
     public List<User> find() {
         return this.theUserRepository.findAll();
+    }
+
+    public List<UserResponseDto> findWithRoles() {
+        List<User> users = this.theUserRepository.findAll();
+        List<UserResponseDto> response = new ArrayList<>();
+        for (User user : users) {
+            response.add(toResponse(user));
+        }
+        return response;
     }
 
     public User findById(String id) {
         User theUser = this.theUserRepository.findById(id).orElse(null);
         return theUser;
+    }
+
+    public UserResponseDto findByIdWithRoles(String id) {
+        User user = this.theUserRepository.findById(id).orElse(null);
+        if (user == null) {
+            return null;
+        }
+
+        return toResponse(user);
     }
 
     // Crea usuario normalizando email y asegurando perfil base asociado.
@@ -60,6 +84,28 @@ public class UserService {
         User createdUser = this.theUserRepository.save(newUser);
         this.theProfileService.ensureProfileForUser(createdUser);
         return createdUser;
+    }
+
+    public UserResponseDto createWithRoles(UserPayloadDto payload) {
+        User newUser = new User();
+        newUser.setName(payload.getName());
+        newUser.setEmail(payload.getEmail());
+        newUser.setPassword(payload.getPassword());
+
+        User createdOrExistingUser = create(newUser);
+        if (payload.getRoleIds() != null && createdOrExistingUser != null && createdOrExistingUser.getId() != null) {
+            for (String roleId : payload.getRoleIds()) {
+                if (roleId != null && !roleId.isBlank()) {
+                    this.theUserRoleService.addUserRole(createdOrExistingUser.getId(), roleId);
+                }
+            }
+        }
+
+        if (createdOrExistingUser == null) {
+            return null;
+        }
+
+        return findByIdWithRoles(createdOrExistingUser.getId());
     }
 
     public User update(String id, User newUser) {
@@ -87,6 +133,24 @@ public class UserService {
         } else {
             return null;
         }
+    }
+
+    public UserResponseDto updateWithRoles(String id, UserPayloadDto payload) {
+        User newUser = new User();
+        newUser.setName(payload.getName());
+        newUser.setEmail(payload.getEmail());
+        newUser.setPassword(payload.getPassword());
+
+        User updatedUser = update(id, newUser);
+        if (updatedUser == null) {
+            return null;
+        }
+
+        if (payload.getRoleIds() != null) {
+            this.theUserRoleService.syncRolesForUser(id, payload.getRoleIds());
+        }
+
+        return findByIdWithRoles(id);
     }
 
     public void delete(String id) {
@@ -178,5 +242,14 @@ public class UserService {
         } else {
             return false;
         }
+    }
+
+    private UserResponseDto toResponse(User user) {
+        UserResponseDto response = new UserResponseDto();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setRoleIds(this.theUserRoleService.getRoleIdsByUser(user.getId()));
+        return response;
     }
 }

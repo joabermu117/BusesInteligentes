@@ -3,6 +3,8 @@ package com.adm.ms_security.Controllers;
 import java.util.List;
 import java.util.Map;
 
+import com.adm.ms_security.Dtos.UserPayloadDto;
+import com.adm.ms_security.Dtos.UserResponseDto;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Services.UserService;
 
 @CrossOrigin
@@ -34,26 +35,26 @@ public class UserController {
 
     // Lista todos los usuarios registrados.
     @GetMapping("")
-    public List<User> find() {
-        return this.theUserService.find();
+    public List<UserResponseDto> find() {
+        return this.theUserService.findWithRoles();
     }
 
     // Consulta detalle de un usuario por id.
     @GetMapping("{id}")
-    public User findById(@PathVariable String id) {
-        return this.theUserService.findById(id);
+    public UserResponseDto findById(@PathVariable String id) {
+        return this.theUserService.findByIdWithRoles(id);
     }
 
     // Crea usuario nuevo (normaliza email y asegura perfil en capa service).
     @PostMapping
-    public User create(@Valid @RequestBody User newUser) {
-        return this.theUserService.create(newUser);
+    public UserResponseDto create(@Valid @RequestBody UserPayloadDto payload) {
+        return this.theUserService.createWithRoles(payload);
     }
 
     // Actualiza datos base del usuario.
     @PutMapping("{id}")
-    public User update(@PathVariable String id, @RequestBody User newUser) {
-        return this.theUserService.update(id, newUser);
+    public UserResponseDto update(@PathVariable String id, @RequestBody UserPayloadDto payload) {
+        return this.theUserService.updateWithRoles(id, payload);
     }
 
     // Elimina usuario por id.

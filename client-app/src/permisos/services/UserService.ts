@@ -1,7 +1,6 @@
 import { API_CONFIG } from "../../config/apiConfig";
 import httpClient from "../../config/httpClient";
 import type { User } from "../models/user";
-import { UserRoleService } from "./UserRoleService";
 
 const USERS_API_URL = `${API_CONFIG.permisosBaseUrl}/users`;
 
@@ -14,38 +13,21 @@ const normalizeUser = (user: UserApiShape): User => ({
   id: user.id ?? user._id ?? "",
   name: user.name ?? "",
   email: user.email ?? "",
-  roleIds: [],
+  roleIds: Array.isArray(user.roleIds) ? user.roleIds.filter(Boolean) : [],
   password: user.password,
 });
 
 class UserServiceClass {
   async getUsers(): Promise<User[]> {
     const response = await httpClient.get<UserApiShape[]>(USERS_API_URL);
-    const users = response.data.map(normalizeUser);
-
-    const usersWithRoles = await Promise.all(
-      users.map(async (user) => {
-        const relations = await UserRoleService.getRolesByUser(user.id);
-        return {
-          ...user,
-          roleIds: relations.map((relation) => relation.roleId).filter(Boolean),
-        };
-      }),
-    );
-
-    return usersWithRoles;
+    return response.data.map(normalizeUser);
   }
 
   async getUser(id: string): Promise<User> {
     const response = await httpClient.get<UserApiShape>(
       `${USERS_API_URL}/${id}`,
     );
-    const baseUser = normalizeUser(response.data);
-    const relations = await UserRoleService.getRolesByUser(id);
-    return {
-      ...baseUser,
-      roleIds: relations.map((relation) => relation.roleId).filter(Boolean),
-    };
+    return normalizeUser(response.data);
   }
 
   async createUser(user: Omit<User, "id">): Promise<User> {
@@ -53,24 +35,9 @@ class UserServiceClass {
       name: user.name,
       email: user.email,
       password: user.password,
+      roleIds: user.roleIds,
     });
-
-    const createdUser = normalizeUser(response.data);
-    const createdUserId = createdUser.id;
-
-    if (
-      createdUserId &&
-      Array.isArray(user.roleIds) &&
-      user.roleIds.length > 0
-    ) {
-      await Promise.all(
-        user.roleIds
-          .filter(Boolean)
-          .map((roleId) => UserRoleService.addUserRole(createdUserId, roleId)),
-      );
-    }
-
-    return this.getUser(createdUserId);
+    return normalizeUser(response.data);
   }
 
   async updateUser(id: string, changes: Partial<User>): Promise<User> {
@@ -80,41 +47,10 @@ class UserServiceClass {
         name: changes.name,
         email: changes.email,
         password: changes.password,
+        roleIds: changes.roleIds,
       },
     );
-
-    if (Array.isArray(changes.roleIds)) {
-      const currentRelations = await UserRoleService.getRolesByUser(id);
-      const currentRoleIds = currentRelations.map(
-        (relation) => relation.roleId,
-      );
-      const nextRoleIds = Array.from(new Set(changes.roleIds.filter(Boolean)));
-
-      const relationsToRemove = currentRelations.filter(
-        (relation) => !nextRoleIds.includes(relation.roleId),
-      );
-
-      const roleIdsToAdd = nextRoleIds.filter(
-        (roleId) => !currentRoleIds.includes(roleId),
-      );
-
-      await Promise.all(
-        relationsToRemove.map((relation) =>
-          UserRoleService.removeUserRole(relation.id),
-        ),
-      );
-      await Promise.all(
-        roleIdsToAdd.map((roleId) => UserRoleService.addUserRole(id, roleId)),
-      );
-    }
-
-    const normalizedUser = normalizeUser(response.data);
-    return {
-      ...normalizedUser,
-      roleIds: (await UserRoleService.getRolesByUser(id)).map(
-        (relation) => relation.roleId,
-      ),
-    };
+    return normalizeUser(response.data);
   }
 
   async deleteUser(id: string): Promise<{ success: boolean; message: string }> {

@@ -9,7 +9,10 @@ import com.adm.ms_security.Repositories.UserRoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 /**
@@ -68,6 +71,60 @@ public class UserRoleService {
 
     public List<UserRole> getRolesByUser(String userId) {
         return this.theUserRoleRepository.getRolesByUser(userId);
+    }
+
+    public List<String> getRoleIdsByUser(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return new ArrayList<>();
+        }
+
+        Set<String> roleIds = new HashSet<>();
+        for (UserRole relation : this.theUserRoleRepository.getRolesByUser(userId)) {
+            if (relation == null || relation.getRole() == null || relation.getRole().getId() == null) {
+                continue;
+            }
+            roleIds.add(relation.getRole().getId());
+        }
+
+        return new ArrayList<>(roleIds);
+    }
+
+    public boolean syncRolesForUser(String userId, List<String> roleIds) {
+        User user = this.theUserRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+
+        Set<String> nextRoleIds = new HashSet<>();
+        if (roleIds != null) {
+            for (String roleId : roleIds) {
+                if (roleId != null && !roleId.isBlank()) {
+                    nextRoleIds.add(roleId);
+                }
+            }
+        }
+
+        List<UserRole> currentRelations = this.theUserRoleRepository.findAllByUser(user);
+        Set<String> currentRoleIds = new HashSet<>();
+        for (UserRole relation : currentRelations) {
+            if (relation == null || relation.getRole() == null || relation.getRole().getId() == null) {
+                continue;
+            }
+
+            String currentRoleId = relation.getRole().getId();
+            currentRoleIds.add(currentRoleId);
+            if (!nextRoleIds.contains(currentRoleId) && relation.getId() != null) {
+                removeUserRole(relation.getId());
+            }
+        }
+
+        for (String roleId : nextRoleIds) {
+            if (!currentRoleIds.contains(roleId)) {
+                addUserRole(userId, roleId);
+            }
+        }
+
+        return true;
     }
 
 }
