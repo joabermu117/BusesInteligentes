@@ -12,6 +12,10 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+/**
+ * Gestiona relacion N:N entre usuarios y roles.
+ * Tambien envia notificaciones cuando cambia el rol asignado al usuario.
+ */
 public class UserRoleService {
     @Autowired
     private UserRepository theUserRepository;
@@ -25,6 +29,7 @@ public class UserRoleService {
     @Autowired
     private EmailService theEmailService;
 
+    // Asigna rol al usuario evitando reasignaciones duplicadas.
     public boolean addUserRole(String userId,
             String roleId) {
         User user = this.theUserRepository.findById(userId).orElse(null);
@@ -47,6 +52,7 @@ public class UserRoleService {
         }
     }
 
+    // Remueve asignacion de rol y notifica al usuario afectado.
     public boolean removeUserRole(String userRoleId) {
         UserRole userRole = this.theUserRoleRepository.findById(userRoleId).orElse(null);
         if (userRole != null) {

@@ -20,15 +20,21 @@ import com.adm.ms_security.Services.UserRoleService;
 @CrossOrigin
 @RestController
 @RequestMapping("/api/user-role")
+/**
+ * API para gestionar asignaciones usuario-rol.
+ * Se usa para controlar que permisos hereda cada usuario.
+ */
 public class UserRoleController {
     @Autowired
     private UserRoleService theUserRoleService;
 
+    // Lista roles asignados a un usuario.
     @GetMapping("user/{userId}")
     public List<UserRole> getRolesByUser(@PathVariable String userId) {
         return this.theUserRoleService.getRolesByUser(userId);
     }
 
+    // Asigna un rol al usuario.
     @PostMapping("user/{userId}/role/{roleId}")
     public ResponseEntity<Map<String, String>> addUserRole(
             @PathVariable String userId,
@@ -44,6 +50,7 @@ public class UserRoleController {
         }
     }
 
+    // Remueve una asignacion usuario-rol por id de la relacion.
     @DeleteMapping("{userRoleId}")
     public ResponseEntity<Map<String, String>> removeUserRole(
             @PathVariable String userRoleId) {

@@ -17,6 +17,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
+/**
+ * Encapsula emision y validacion de JWT de la aplicacion.
+ * Tambien permite reconstruir datos basicos del usuario desde el token.
+ */
 public class JwtService {
     @Value("${jwt.secret}")
     private String secret; // Esta es la clave secreta que se utiliza para firmar el token. Debe mantenerse
@@ -25,11 +29,13 @@ public class JwtService {
     private Long expiration; // Tiempo de expiración del token en milisegundos.
     private Key secretKey;
 
+    // Inicializa la llave HMAC al arrancar el servicio.
     @PostConstruct
     public void init() {
         this.secretKey = Keys.hmacShaKeyFor(this.secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    // Crea JWT con claims minimos necesarios para autenticacion/autorizacion.
     public String generateToken(User theUser) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
@@ -46,6 +52,7 @@ public class JwtService {
                 .compact();
     }
 
+    // Verifica firma y expiracion del token.
     public boolean validateToken(String token) {
         try {
             Jws<Claims> claimsJws = Jwts.parserBuilder()
@@ -67,6 +74,7 @@ public class JwtService {
         }
     }
 
+    // Extrae un User basico (id, name, email) desde claims del JWT.
     public User getUserFromToken(String token) {
         try {
             Jws<Claims> claimsJws = Jwts.parserBuilder()

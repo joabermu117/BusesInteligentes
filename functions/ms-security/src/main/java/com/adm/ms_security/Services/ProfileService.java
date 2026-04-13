@@ -9,6 +9,11 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+/**
+ * Administra el perfil extendido del usuario (foto, telefono, proveedores
+ * sociales).
+ * Se usa desde controladores de perfil y desde flujos de autenticacion.
+ */
 public class ProfileService {
     private static final String GOOGLE_PROVIDER = "google";
     private static final String GITHUB_PROVIDER = "github";
@@ -38,6 +43,7 @@ public class ProfileService {
         return this.theProfileRepository.save(newProfile);
     }
 
+    // Garantiza que cada usuario tenga un perfil; si no existe, lo crea.
     public Profile ensureProfileForUser(User user) {
         if (user == null || user.getId() == null || user.getId().isBlank()) {
             return null;
@@ -58,6 +64,7 @@ public class ProfileService {
         return this.theProfileRepository.save(profile);
     }
 
+    // Variante para login social: asegura perfil y sincroniza datos del proveedor.
     public Profile ensureProfileForUserWithSocialData(
             User user,
             String provider,
@@ -123,6 +130,7 @@ public class ProfileService {
         }
     }
 
+    // Desvincula proveedor social y limpia campos derivados cuando aplica.
     public Profile unlinkProvider(String userId, String provider) {
         if (userId == null || userId.isBlank()) {
             return null;

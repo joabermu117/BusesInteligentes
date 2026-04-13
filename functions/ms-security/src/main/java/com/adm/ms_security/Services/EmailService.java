@@ -7,6 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
+/**
+ * Fachada de notificaciones por correo para eventos de negocio.
+ * Centraliza mensajes de alta de cuenta, cambios de rol y de permisos.
+ */
 public class EmailService {
     @Autowired
     private EmailTemplateService theTemplateService;
@@ -14,6 +18,7 @@ public class EmailService {
     @Autowired
     private MailDeliveryService mailDeliveryService;
 
+    // Correo de bienvenida/confirmacion al crear cuenta local.
     public void sendAccountCreatedEmail(User user) {
         if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
             return;
@@ -29,6 +34,7 @@ public class EmailService {
         mailDeliveryService.sendHtmlBestEffort(user.getEmail(), subject, body);
     }
 
+    // Notifica al usuario cuando se le asigna/remueve un rol.
     public void sendRoleUpdatedEmail(User user, Role role, String action) {
         if (user == null || role == null) {
             return;
@@ -44,6 +50,7 @@ public class EmailService {
         mailDeliveryService.sendHtmlBestEffort(user.getEmail(), subject, body);
     }
 
+    // Notifica impacto de cambios de permisos sobre el rol del usuario.
     public void sendPermissionUpdatedEmail(User user, Role role, Permission permission, String action) {
         if (user == null || role == null || permission == null) {
             return;

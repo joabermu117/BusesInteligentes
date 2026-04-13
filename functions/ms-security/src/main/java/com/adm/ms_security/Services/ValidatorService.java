@@ -16,6 +16,10 @@ import java.util.List;
 import java.util.Locale;
 
 @Service
+/**
+ * Motor de autorizacion (ACL): valida si un usuario autenticado
+ * tiene permiso para ejecutar una URL/metodo segun sus roles.
+ */
 public class ValidatorService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ValidatorService.class);
 
@@ -37,6 +41,8 @@ public class ValidatorService {
 
     private static final String BEARER_PREFIX = "Bearer ";
 
+    // Flujo principal ACL: usuario -> roles -> role_permission -> permiso
+    // solicitado.
     public boolean validationRolePermission(HttpServletRequest request,
             String url,
             String method) {

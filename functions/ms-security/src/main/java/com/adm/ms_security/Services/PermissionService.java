@@ -12,6 +12,10 @@ import java.util.List;
 import java.util.Locale;
 
 @Service
+/**
+ * CRUD de permisos del sistema (URL + metodo HTTP + modulo/modelo).
+ * Lo usan controladores administrativos para mantener catalogo de permisos.
+ */
 public class PermissionService {
 
     @Autowired
@@ -29,6 +33,7 @@ public class PermissionService {
         return thePermission;
     }
 
+    // Crea permiso evitando duplicados por combinacion URL/METODO.
     public Permission create(Permission newPermission) {
         if (newPermission == null) {
             return null;
@@ -67,6 +72,7 @@ public class PermissionService {
         }
     }
 
+    // Impide borrar permisos que ya esten asociados a roles.
     public void delete(String id) {
         Permission thePermission = this.thePermissionRepository.findById(id).orElse(null);
         if (thePermission == null) {

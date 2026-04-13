@@ -11,6 +11,10 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 @Service
+/**
+ * CRUD de roles funcionales del sistema.
+ * Incluye validaciones de integridad para evitar eliminar roles en uso.
+ */
 public class RoleService {
 
     @Autowired
@@ -44,6 +48,7 @@ public class RoleService {
         }
     }
 
+    // Evita eliminar un rol si existen usuarios asociados via UserRole.
     public void delete(String id) {
         Role theRole = this.theRoleRepository.findById(id).orElse(null);
         if (theRole == null) {

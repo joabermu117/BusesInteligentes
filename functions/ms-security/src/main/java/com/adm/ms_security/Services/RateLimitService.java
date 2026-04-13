@@ -7,9 +7,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Service;
 
 @Service
+/**
+ * Rate limiter en memoria por llave (key).
+ * Se usa en recuperacion de contrasena para frenar abuso por ventana de tiempo.
+ */
 public class RateLimitService {
     private final Map<String, RateLimitBucket> buckets = new ConcurrentHashMap<>();
 
+    // Devuelve true si la llave aun tiene cupo dentro de la ventana configurada.
     public boolean isAllowed(String key, int maxRequests, long windowSeconds) {
         Instant now = Instant.now();
         RateLimitBucket bucket = buckets.computeIfAbsent(key, ignored -> new RateLimitBucket(now, 0));

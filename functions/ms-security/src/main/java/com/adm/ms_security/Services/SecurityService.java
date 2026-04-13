@@ -16,6 +16,11 @@ import com.adm.ms_security.Repositories.UserRoleRepository;
 import com.google.firebase.auth.FirebaseToken;
 
 @Service
+/**
+ * Servicio central de autenticacion/registro.
+ * Se consume desde los controladores de seguridad para login local/social,
+ * emision de JWT y alta de usuarios con rol/perfil inicial.
+ */
 public class SecurityService {
     private static final String CITIZEN_ROLE_NAME = "Ciudadano";
 
@@ -84,6 +89,7 @@ public class SecurityService {
         return this.theUserRepository.save(user);
     }
 
+    // Punto unico para firmar tokens JWT con los claims base del usuario.
     public String generateToken(User user) {
         if (user == null) {
             return null;
@@ -92,6 +98,7 @@ public class SecurityService {
         return theJwtService.generateToken(user);
     }
 
+    // Registro tradicional (email/password): crea usuario, rol Ciudadano y perfil.
     public User registerWithEmailPassword(String name, String email, String password) {
         String normalizedEmail = normalizeEmail(email);
         if (normalizedEmail == null || password == null || password.isBlank()) {
@@ -115,6 +122,7 @@ public class SecurityService {
         return created;
     }
 
+    // Login social: sincroniza usuario local y completa datos sociales del perfil.
     public User findOrCreateFromFirebase(
             FirebaseToken firebaseToken,
             String provider,

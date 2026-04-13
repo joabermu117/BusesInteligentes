@@ -23,37 +23,46 @@ import com.adm.ms_security.Services.UserService;
 @CrossOrigin
 @RestController
 @RequestMapping("/api/users")
+/**
+ * API de usuarios para administracion.
+ * Expone CRUD y asociaciones de usuario con perfil/sesion.
+ */
 public class UserController {
 
     @Autowired
     private UserService theUserService;
 
+    // Lista todos los usuarios registrados.
     @GetMapping("")
     public List<User> find() {
         return this.theUserService.find();
     }
 
+    // Consulta detalle de un usuario por id.
     @GetMapping("{id}")
     public User findById(@PathVariable String id) {
         return this.theUserService.findById(id);
     }
 
+    // Crea usuario nuevo (normaliza email y asegura perfil en capa service).
     @PostMapping
     public User create(@Valid @RequestBody User newUser) {
         return this.theUserService.create(newUser);
     }
 
+    // Actualiza datos base del usuario.
     @PutMapping("{id}")
     public User update(@PathVariable String id, @RequestBody User newUser) {
         return this.theUserService.update(id, newUser);
     }
 
+    // Elimina usuario por id.
     @DeleteMapping("{id}")
     public void delete(@PathVariable String id) {
         this.theUserService.delete(id);
     }
 
-    // Al Usuario ser el fuerte la asociación debe realizarse aquí
+    // Asocia un perfil existente a un usuario existente.
     @PostMapping("{userId}/profile/{profileId}")
     public ResponseEntity<Map<String, String>> addUserProfile(
             @PathVariable String userId,
@@ -69,6 +78,7 @@ public class UserController {
         }
     }
 
+    // Desasocia perfil de usuario sin borrar el documento de perfil.
     @DeleteMapping("{userId}/profile/{profileId}")
     public ResponseEntity<Map<String, String>> deleteUserProfile(
             @PathVariable String userId,
@@ -84,7 +94,7 @@ public class UserController {
         }
     }
 
-    // Al Usuario ser el fuerte la asociación debe realizarse aquí
+    // Asocia una sesion existente a un usuario existente.
     @PostMapping("{userId}/session/{sessionId}")
     public ResponseEntity<Map<String, String>> addUserSession(
             @PathVariable String userId,
@@ -100,6 +110,7 @@ public class UserController {
         }
     }
 
+    // Desasocia sesion de usuario.
     @DeleteMapping("{userId}/session/{sessionId}")
     public ResponseEntity<Map<String, String>> deleteUserSession(
             @PathVariable String userId,

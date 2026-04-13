@@ -19,31 +19,40 @@ import com.adm.ms_security.Services.RoleService;
 @CrossOrigin
 @RestController
 @RequestMapping("/api/roles")
+/**
+ * API CRUD de roles.
+ * Sirve para administrar catalogo de roles consumido por ACL.
+ */
 public class RoleController {
 
     @Autowired
     private RoleService theRoleService;
 
+    // Lista roles.
     @GetMapping("")
     public List<Role> find() {
         return this.theRoleService.find();
     }
 
+    // Consulta rol por id.
     @GetMapping("{id}")
     public Role findById(@PathVariable String id) {
         return this.theRoleService.findById(id);
     }
 
+    // Crea rol nuevo.
     @PostMapping
     public Role create(@RequestBody Role newRole) {
         return this.theRoleService.create(newRole);
     }
 
+    // Actualiza nombre/descripcion del rol.
     @PutMapping("{id}")
     public Role update(@PathVariable String id, @RequestBody Role newRole) {
         return this.theRoleService.update(id, newRole);
     }
 
+    // Elimina rol (si no esta asignado a usuarios).
     @DeleteMapping("{id}")
     public void delete(@PathVariable String id) {
         this.theRoleService.delete(id);

@@ -17,6 +17,10 @@ import java.util.List;
 import java.util.Set;
 
 @Service
+/**
+ * Gestiona relacion N:N entre roles y permisos.
+ * Ademas notifica por correo a usuarios afectados por cambios de permisos.
+ */
 public class RolePermissionService {
     @Autowired
     private RoleRepository theRoleRepository;
@@ -33,6 +37,7 @@ public class RolePermissionService {
     @Autowired
     private EmailService theEmailService;
 
+    // Asocia permiso a rol evitando duplicados y notificando impacto.
     public boolean addRolePermission(String roleId,
             String permissionId) {
         Role role = this.theRoleRepository.findById(roleId).orElse(null);
@@ -51,6 +56,7 @@ public class RolePermissionService {
         }
     }
 
+    // Elimina relacion rol-permiso y dispara notificacion a usuarios del rol.
     public boolean removeRolePermission(String rolePermissionId) {
         RolePermission rolePermission = this.theRolePermissionRepository.findById(rolePermissionId).orElse(null);
         if (rolePermission != null) {

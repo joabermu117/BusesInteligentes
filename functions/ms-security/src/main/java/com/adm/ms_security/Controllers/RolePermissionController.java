@@ -20,15 +20,21 @@ import com.adm.ms_security.Services.RolePermissionService;
 @CrossOrigin
 @RestController
 @RequestMapping("/api/role-permission")
+/**
+ * API para gestionar asignaciones rol-permiso.
+ * Define que endpoints/metodos puede ejecutar cada rol.
+ */
 public class RolePermissionController {
     @Autowired
     private RolePermissionService theRolePermissionService;
 
+    // Lista permisos asignados a un rol.
     @GetMapping("role/{roleId}")
     public List<RolePermission> getPermissionsByRole(@PathVariable String roleId) {
         return this.theRolePermissionService.getPermissionsByRole(roleId);
     }
 
+    // Asigna permiso a rol.
     @PostMapping("role/{roleId}/permission/{permissionId}")
     public ResponseEntity<Map<String, String>> addRolePermission(
             @PathVariable String roleId,
@@ -44,6 +50,7 @@ public class RolePermissionController {
         }
     }
 
+    // Remueve asignacion rol-permiso por id de la relacion.
     @DeleteMapping("{rolePermissionId}")
     public ResponseEntity<Map<String, String>> removeRolePermission(
             @PathVariable String rolePermissionId) {

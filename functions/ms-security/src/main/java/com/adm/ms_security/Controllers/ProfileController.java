@@ -26,6 +26,10 @@ import jakarta.validation.Valid;
 @CrossOrigin
 @RestController
 @RequestMapping("/api/profiles")
+/**
+ * API de perfiles extendidos del usuario.
+ * Maneja CRUD de perfil y desvinculacion de proveedores sociales.
+ */
 public class ProfileController {
 
     @Autowired
@@ -34,36 +38,43 @@ public class ProfileController {
     @Autowired
     private UserService theUserService;
 
+    // Lista perfiles del sistema.
     @GetMapping("")
     public List<Profile> find() {
         return this.theProfileService.find();
     }
 
+    // Obtiene perfil por id de perfil.
     @GetMapping("{id}")
     public Profile findById(@PathVariable String id) {
         return this.theProfileService.findById(id);
     }
 
+    // Obtiene perfil asociado a un usuario.
     @GetMapping("user/{userId}")
     public Profile findByUserId(@PathVariable String userId) {
         return this.theProfileService.findByUserId(userId);
     }
 
+    // Crea perfil manualmente (caso administrativo).
     @PostMapping
     public Profile create(@RequestBody Profile newProfile) {
         return this.theProfileService.create(newProfile);
     }
 
+    // Actualiza datos editables del perfil.
     @PutMapping("{id}")
     public Profile update(@PathVariable String id, @RequestBody Profile newProfile) {
         return this.theProfileService.update(id, newProfile);
     }
 
+    // Elimina perfil por id.
     @DeleteMapping("{id}")
     public void delete(@PathVariable String id) {
         this.theProfileService.delete(id);
     }
 
+    // Desvincula proveedor social y establece/actualiza contraseña local.
     @DeleteMapping("user/{userId}/providers/{provider}")
     public ResponseEntity<Map<String, String>> unlinkProvider(
             @PathVariable String userId,

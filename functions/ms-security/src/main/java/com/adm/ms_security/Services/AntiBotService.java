@@ -17,6 +17,10 @@ import com.adm.ms_security.Configurations.RecaptchaProperties;
 import com.adm.ms_security.Exceptions.ApiException;
 
 @Service
+/**
+ * Verifica reCAPTCHA en operaciones sensibles (login, recuperacion, etc.).
+ * Si falla, corta el flujo con ApiException.
+ */
 public class AntiBotService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AntiBotService.class);
 
@@ -28,6 +32,8 @@ public class AntiBotService {
         this.restClient = RestClient.builder().build();
     }
 
+    // Valida token de reCAPTCHA y action esperada contra el score minimo
+    // configurado.
     public void validate(String recaptchaToken, String expectedAction) {
         if (!recaptchaProperties.isEnabled()) {
             return;

@@ -8,27 +8,31 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+/**
+ * CRUD simple de sesiones persistidas.
+ * Sirve como capa de acceso para administracion de tokens/sesiones.
+ */
 public class SessionService {
 
     @Autowired
     private SessionRepository theSessionRepository;
 
-    public List<Session> find(){
+    public List<Session> find() {
         return this.theSessionRepository.findAll();
     }
 
-    public Session findById(String id){
+    public Session findById(String id) {
         return this.theSessionRepository.findById(id).orElse(null);
     }
 
-    public Session create(Session newSession){
+    public Session create(Session newSession) {
         return this.theSessionRepository.save(newSession);
     }
 
-    public Session update(String id, Session newSession){
+    public Session update(String id, Session newSession) {
         Session actualSession = this.theSessionRepository.findById(id).orElse(null);
 
-        if(actualSession != null){
+        if (actualSession != null) {
             actualSession.setToken(newSession.getToken());
             actualSession.setExpiration(newSession.getExpiration());
             actualSession.setCode2FA(newSession.getCode2FA());
@@ -39,9 +43,9 @@ public class SessionService {
         }
     }
 
-    public void delete(String id){
+    public void delete(String id) {
         Session theSession = this.theSessionRepository.findById(id).orElse(null);
-        if(theSession != null){
+        if (theSession != null) {
             this.theSessionRepository.delete(theSession);
         }
     }

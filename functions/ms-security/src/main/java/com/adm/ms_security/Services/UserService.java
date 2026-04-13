@@ -12,6 +12,10 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 @Service
+/**
+ * Gestiona CRUD de usuarios y asociaciones con perfil/sesion.
+ * Lo usa principalmente UserController para operaciones administrativas.
+ */
 public class UserService {
 
     @Autowired
@@ -38,6 +42,7 @@ public class UserService {
         return theUser;
     }
 
+    // Crea usuario normalizando email y asegurando perfil base asociado.
     public User create(User newUser) {
         if (newUser.getEmail() != null) {
             newUser.setEmail(newUser.getEmail().trim().toLowerCase());
@@ -91,6 +96,7 @@ public class UserService {
         }
     }
 
+    // Cambio de contrasena local (requerido al desvincular login social).
     public boolean updatePassword(String id, String rawPassword) {
         if (id == null || id.isBlank() || rawPassword == null || rawPassword.isBlank() || rawPassword.length() < 8) {
             return false;
@@ -127,6 +133,7 @@ public class UserService {
         }
     }
 
+    // Desasocia un perfil de un usuario, conservando el documento de perfil.
     public boolean removeProfile(String userId, String profileId) {
         User theUser = this.theUserRepository.findById(userId).orElse(null);
         Profile theProfile = this.theProfileRepository.findById(profileId).orElse(null);
@@ -160,6 +167,7 @@ public class UserService {
         }
     }
 
+    // Desasocia una sesion existente de un usuario.
     public boolean removeSession(String userId, String sessionId) {
         User theUser = this.theUserRepository.findById(userId).orElse(null);
         Session theSession = this.theSessionRepository.findById(sessionId).orElse(null);
