@@ -26,6 +26,9 @@ public class UserService {
     @Autowired
     private EncryptionService theEncryptionService;
 
+    @Autowired
+    private ProfileService theProfileService;
+
     public List<User> find() {
         return this.theUserRepository.findAll();
     }
@@ -44,11 +47,14 @@ public class UserService {
         // base de datos (usar getUserByEmail de UserRepository)
         User existingUser = this.theUserRepository.findByEmailIgnoreCase(newUser.getEmail()).orElse(null);
         if (existingUser != null) {
+            this.theProfileService.ensureProfileForUser(existingUser);
             return existingUser;
         }
 
         newUser.setPassword(theEncryptionService.convertSHA256(newUser.getPassword()));
-        return this.theUserRepository.save(newUser);
+        User createdUser = this.theUserRepository.save(newUser);
+        this.theProfileService.ensureProfileForUser(createdUser);
+        return createdUser;
     }
 
     public User update(String id, User newUser) {
@@ -83,6 +89,21 @@ public class UserService {
         if (theUser != null) {
             this.theUserRepository.delete(theUser);
         }
+    }
+
+    public boolean updatePassword(String id, String rawPassword) {
+        if (id == null || id.isBlank() || rawPassword == null || rawPassword.isBlank() || rawPassword.length() < 8) {
+            return false;
+        }
+
+        User actualUser = this.theUserRepository.findById(id).orElse(null);
+        if (actualUser == null) {
+            return false;
+        }
+
+        actualUser.setPassword(theEncryptionService.convertSHA256(rawPassword));
+        this.theUserRepository.save(actualUser);
+        return true;
     }
 
     // Al Usuario ser el fuerte la asociación debe realizarse aquí

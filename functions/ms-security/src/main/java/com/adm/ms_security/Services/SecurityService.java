@@ -1,6 +1,7 @@
 package com.adm.ms_security.Services;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,8 @@ public class SecurityService {
     private EncryptionService theEncryptionService;
     @Autowired
     private JwtService theJwtService;
+    @Autowired
+    private ProfileService theProfileService;
 
     @Autowired
     private EmailService theEmailService;
@@ -107,11 +110,16 @@ public class SecurityService {
 
         User created = this.theUserRepository.save(user);
         assignCitizenRoleIfMissing(created);
+        this.theProfileService.ensureProfileForUser(created);
         this.theEmailService.sendAccountCreatedEmail(created);
         return created;
     }
 
-    public User findOrCreateFromFirebase(FirebaseToken firebaseToken) {
+    public User findOrCreateFromFirebase(
+            FirebaseToken firebaseToken,
+            String provider,
+            String photoUrl,
+            String githubUsername) {
         if (firebaseToken == null) {
             return null;
         }
@@ -128,12 +136,24 @@ public class SecurityService {
 
         User byUid = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
         if (byUid != null) {
-            return syncFirebaseFields(byUid, firebaseUid, email, firebaseToken.getName());
+            User syncedUser = syncFirebaseFields(byUid, firebaseUid, email, firebaseToken.getName());
+            this.theProfileService.ensureProfileForUserWithSocialData(
+                    syncedUser,
+                    resolveProvider(provider, firebaseToken),
+                    resolvePhotoUrl(photoUrl, firebaseToken),
+                    githubUsername);
+            return syncedUser;
         }
 
         User byEmail = this.theUserRepository.findByEmailIgnoreCase(email).orElse(null);
         if (byEmail != null) {
-            return syncFirebaseFields(byEmail, firebaseUid, email, firebaseToken.getName());
+            User syncedUser = syncFirebaseFields(byEmail, firebaseUid, email, firebaseToken.getName());
+            this.theProfileService.ensureProfileForUserWithSocialData(
+                    syncedUser,
+                    resolveProvider(provider, firebaseToken),
+                    resolvePhotoUrl(photoUrl, firebaseToken),
+                    githubUsername);
+            return syncedUser;
         }
 
         User newUser = new User();
@@ -143,6 +163,11 @@ public class SecurityService {
         newUser.setPassword(generateFirebasePassword(firebaseUid));
         User created = this.theUserRepository.save(newUser);
         assignCitizenRoleIfMissing(created);
+        this.theProfileService.ensureProfileForUserWithSocialData(
+                created,
+                resolveProvider(provider, firebaseToken),
+                resolvePhotoUrl(photoUrl, firebaseToken),
+                githubUsername);
         return created;
     }
 
@@ -236,7 +261,41 @@ public class SecurityService {
      * }
      */
 
-    public User findOrCreateFromGithub(FirebaseToken firebaseToken) {
-        return findOrCreateFromFirebase(firebaseToken);
+    public User findOrCreateFromGithub(FirebaseToken firebaseToken, String photoUrl, String githubUsername) {
+        return findOrCreateFromFirebase(firebaseToken, "github", photoUrl, githubUsername);
+    }
+
+    private String resolveProvider(String provider, FirebaseToken firebaseToken) {
+        if (provider != null && !provider.isBlank()) {
+            return provider.trim().toLowerCase();
+        }
+
+        if (firebaseToken == null || firebaseToken.getClaims() == null) {
+            return "";
+        }
+
+        Object firebaseClaim = firebaseToken.getClaims().get("firebase");
+        if (!(firebaseClaim instanceof Map<?, ?> firebaseData)) {
+            return "";
+        }
+
+        Object signInProvider = firebaseData.get("sign_in_provider");
+        if (!(signInProvider instanceof String providerValue)) {
+            return "";
+        }
+
+        return providerValue;
+    }
+
+    private String resolvePhotoUrl(String photoUrl, FirebaseToken firebaseToken) {
+        if (photoUrl != null && !photoUrl.isBlank()) {
+            return photoUrl.trim();
+        }
+
+        if (firebaseToken == null || firebaseToken.getPicture() == null || firebaseToken.getPicture().isBlank()) {
+            return null;
+        }
+
+        return firebaseToken.getPicture();
     }
 }

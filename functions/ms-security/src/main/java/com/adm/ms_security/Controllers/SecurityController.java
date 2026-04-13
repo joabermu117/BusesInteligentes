@@ -95,7 +95,8 @@ public class SecurityController {
     @Operation(summary = "Solicita recuperacion de contraseña con respuesta generica")
     @PostMapping("password-recovery/request")
     /**
-     * Requests password recovery link. Response is generic to avoid user enumeration.
+     * Requests password recovery link. Response is generic to avoid user
+     * enumeration.
      */
     public ResponseEntity<GenericMessageResponseDto> requestRecovery(@Valid @RequestBody RecoveryRequestDto request) {
         return ResponseEntity.ok(passwordRecoveryService.requestRecovery(request));
@@ -137,7 +138,11 @@ public class SecurityController {
      */
     public ResponseEntity<LoginChallengeResponseDto> firebaseLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
-        User user = securityService.findOrCreateFromFirebase(decodedToken);
+        User user = securityService.findOrCreateFromFirebase(
+                decodedToken,
+                request.getProvider(),
+                request.getPhotoUrl(),
+                request.getGithubUsername());
         return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
     }
 
@@ -148,7 +153,10 @@ public class SecurityController {
      */
     public ResponseEntity<LoginChallengeResponseDto> githubLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
-        User user = securityService.findOrCreateFromGithub(decodedToken);
+        User user = securityService.findOrCreateFromGithub(
+                decodedToken,
+                request.getPhotoUrl(),
+                request.getGithubUsername());
         return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
     }
 
@@ -156,7 +164,8 @@ public class SecurityController {
         try {
             return FirebaseAuth.getInstance().verifyIdToken(idToken.trim());
         } catch (FirebaseAuthException | IllegalArgumentException exception) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_FIREBASE", "No fue posible validar la cuenta");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_FIREBASE",
+                    "No fue posible validar la cuenta");
         }
     }
 }

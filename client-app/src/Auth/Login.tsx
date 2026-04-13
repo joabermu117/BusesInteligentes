@@ -95,9 +95,14 @@ const LoginPage = () => {
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithGoogle();
       const idToken = await FirebaseAuthService.getIdToken(credential);
+      const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
       const challenge = await SecurityService.exchangeFirebaseToken(
         idToken,
         recaptchaToken,
+        {
+          provider: "google",
+          photoUrl: socialMetadata.photoUrl,
+        },
       );
       navigate("/2fa", { replace: true, state: challenge });
     } catch (error) {
@@ -115,9 +120,14 @@ const LoginPage = () => {
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithGithub();
       const idToken = await FirebaseAuthService.getIdToken(credential);
+      const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
       const challenge = await SecurityService.exchangeGithubToken(
         idToken,
         recaptchaToken,
+        {
+          photoUrl: socialMetadata.photoUrl,
+          githubUsername: socialMetadata.githubUsername,
+        },
       );
       navigate("/2fa", { replace: true, state: challenge });
     } catch (error: any) {
@@ -137,9 +147,14 @@ const LoginPage = () => {
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithMicrosoft();
       const idToken = await FirebaseAuthService.getIdToken(credential);
+      const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
       const challenge = await SecurityService.exchangeFirebaseToken(
         idToken,
         recaptchaToken,
+        {
+          provider: "microsoft",
+          photoUrl: socialMetadata.photoUrl,
+        },
       );
       navigate("/2fa", { replace: true, state: challenge });
     } catch (error) {

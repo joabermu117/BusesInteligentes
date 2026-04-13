@@ -1,16 +1,30 @@
 import {
+  getAdditionalUserInfo,
   signInWithEmailAndPassword,
   signInWithPopup,
   type UserCredential,
 } from "firebase/auth";
 import {
   firebaseAuth,
+  githubProvider,
   googleProvider,
   microsoftProvider,
-  githubProvider,
 } from "../../config/firebase";
 
 class FirebaseAuthServiceClass {
+  getSocialMetadata(userCredential: UserCredential): {
+    photoUrl: string | null;
+    githubUsername: string | null;
+  } {
+    const additionalUserInfo = getAdditionalUserInfo(userCredential);
+    const username = additionalUserInfo?.username;
+
+    return {
+      photoUrl: userCredential.user.photoURL,
+      githubUsername: typeof username === "string" ? username : null,
+    };
+  }
+
   async signInWithEmailPassword(
     email: string,
     password: string,
@@ -25,7 +39,7 @@ class FirebaseAuthServiceClass {
   async signInWithGithub(): Promise<UserCredential> {
     return signInWithPopup(firebaseAuth, githubProvider);
   }
-  
+
   async signInWithMicrosoft(): Promise<UserCredential> {
     return signInWithPopup(firebaseAuth, microsoftProvider);
   }

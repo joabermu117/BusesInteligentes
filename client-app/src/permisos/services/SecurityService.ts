@@ -12,6 +12,12 @@ interface LoginChallengeResponse {
   resendCooldownSeconds: number;
 }
 
+interface SocialLoginPayload {
+  provider?: "google" | "github" | "microsoft";
+  photoUrl?: string | null;
+  githubUsername?: string | null;
+}
+
 interface VerifyOtpPayload {
   challengeId: string;
   code: string;
@@ -46,10 +52,17 @@ class SecurityServiceClass {
   async exchangeFirebaseToken(
     idToken: string,
     recaptchaToken: string,
+    socialPayload?: SocialLoginPayload,
   ): Promise<LoginChallengeResponse> {
     const response = await httpClient.post<LoginChallengeResponse>(
       `${API_CONFIG.securityBaseUrl}/firebase-login`,
-      { idToken, recaptchaToken },
+      {
+        idToken,
+        recaptchaToken,
+        provider: socialPayload?.provider,
+        photoUrl: socialPayload?.photoUrl,
+        githubUsername: socialPayload?.githubUsername,
+      },
     );
 
     return response.data;
@@ -59,10 +72,17 @@ class SecurityServiceClass {
   async exchangeGithubToken(
     idToken: string,
     recaptchaToken: string,
+    socialPayload?: Omit<SocialLoginPayload, "provider">,
   ): Promise<LoginChallengeResponse> {
     const response = await httpClient.post<LoginChallengeResponse>(
       `${API_CONFIG.securityBaseUrl}/github-login`,
-      { idToken, recaptchaToken },
+      {
+        idToken,
+        recaptchaToken,
+        provider: "github",
+        photoUrl: socialPayload?.photoUrl,
+        githubUsername: socialPayload?.githubUsername,
+      },
     );
 
     return response.data;

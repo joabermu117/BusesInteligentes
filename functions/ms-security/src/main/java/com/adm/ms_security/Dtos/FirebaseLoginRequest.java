@@ -11,4 +11,8 @@ public class FirebaseLoginRequest {
 
     @NotBlank(message = "El token de reCAPTCHA es obligatorio")
     private String recaptchaToken;
+
+    private String provider;
+    private String photoUrl;
+    private String githubUsername;
 }

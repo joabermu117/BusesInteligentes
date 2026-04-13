@@ -5,6 +5,13 @@
   { "url": "/api/users/?", "method": "PUT", "model": "usuarios" },
   { "url": "/api/users/?", "method": "DELETE", "model": "usuarios" },
 
+  { "url": "/api/profiles/user/?", "method": "GET", "model": "perfiles" },
+  {
+    "url": "/api/profiles/user/?/providers/?",
+    "method": "DELETE",
+    "model": "perfiles"
+  },
+
   { "url": "/api/roles", "method": "GET", "model": "roles" },
   { "url": "/api/roles/?", "method": "GET", "model": "roles" },
   { "url": "/api/roles", "method": "POST", "model": "roles" },

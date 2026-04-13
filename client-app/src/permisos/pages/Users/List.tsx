@@ -1,6 +1,7 @@
 import { MoreHoriz, Search } from "@mui/icons-material";
 import {
   Box,
+  Button,
   Chip,
   FormControl,
   IconButton,
@@ -13,6 +14,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ConfirmActionDialog from "../../common/components/ConfirmActionDialog";
 import DataTable from "../../common/components/DataTable";
 import PageHeader from "../../common/components/PageHeader";
@@ -24,6 +26,7 @@ import { useUserStore } from "../../stores/useUserStore";
 import UserFormModal from "./Form";
 
 const UserList = () => {
+  const navigate = useNavigate();
   const { users, isInitialLoading, isMutating, updateUser, deleteUser } =
     useUserStore();
   const {
@@ -240,7 +243,20 @@ const UserList = () => {
 
           return (
             <TableRow key={user.id} hover>
-              <TableCell>{user.name}</TableCell>
+              <TableCell>
+                <Button
+                  variant="text"
+                  sx={{
+                    p: 0,
+                    minWidth: 0,
+                    textTransform: "none",
+                    fontWeight: 700,
+                  }}
+                  onClick={() => navigate(`/users/profile/${user.id}`)}
+                >
+                  {user.name}
+                </Button>
+              </TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
                 <Box display="flex" flexWrap="wrap" gap={0.5}>

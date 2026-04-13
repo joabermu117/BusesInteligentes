@@ -76,8 +76,16 @@ const AppShell = () => {
 
   const activeItem = useMemo(
     () =>
-      navigationItems.find((item) => location.pathname.startsWith(item.path)) ??
-      navigationItems[0],
+      navigationItems.find((item) => {
+        if (
+          item.path === "/users/list" &&
+          location.pathname.startsWith("/users/profile")
+        ) {
+          return true;
+        }
+
+        return location.pathname.startsWith(item.path);
+      }) ?? navigationItems[0],
     [location.pathname],
   );
 
@@ -166,10 +174,13 @@ const AppShell = () => {
           <List sx={{ pt: 1, gap: 0.75, display: "grid" }}>
             {securityItems.map((item) => {
               const isSelected = location.pathname.startsWith(item.path);
+              const isUsersProfilePath =
+                item.path === "/users/list" &&
+                location.pathname.startsWith("/users/profile");
               return (
                 <ListItemButton
                   key={item.path}
-                  selected={isSelected}
+                  selected={isSelected || isUsersProfilePath}
                   onClick={() => handleNavigate(item.path)}
                   sx={{
                     borderRadius: 2,
