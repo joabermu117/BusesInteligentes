@@ -199,4 +199,23 @@ public class ProfileService {
 
         return normalized;
     }
+
+    // Verifica si el perfil del ciudadano está incompleto (sin dirección o teléfono)
+    public boolean isProfileIncomplete(String userId) {
+        Profile profile = findByUserId(userId);
+        if (profile == null) return true;
+        boolean missingPhone = profile.getPhone() == null || profile.getPhone().isBlank();
+        boolean missingAddress = profile.getAddress() == null || profile.getAddress().isBlank();
+        return missingPhone || missingAddress;
+    }
+
+    // Completa los datos obligatorios del perfil ciudadano
+    public Profile completeProfile(String userId, String phone, String address) {
+        Profile profile = findByUserId(userId);
+        if (profile == null) return null;
+
+        if (phone != null && !phone.isBlank()) profile.setPhone(phone.trim());
+        if (address != null && !address.isBlank()) profile.setAddress(address.trim());
+        return this.theProfileRepository.save(profile);
+    }
 }

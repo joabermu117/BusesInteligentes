@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { executeRecaptcha } from "../config/recaptcha";
 import { FirebaseAuthService } from "../permisos/services/FirebaseAuthService";
 import { SecurityService } from "../permisos/services/SecurityService";
+import GithubPrivateEmailDialog from "./GithubPrivateEmailDialog";
 
 const GitHubIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -33,6 +34,13 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [githubEmailDialogOpen, setGithubEmailDialogOpen] = useState(false);
+  const [githubPrivateData, setGithubPrivateData] = useState({
+    firebaseUid: "",
+    name: "",
+    photoUrl: "",
+    githubUsername: "",
+  });
 
   const getLoginErrorMessage = (
     error: unknown,
@@ -116,11 +124,32 @@ const LoginPage = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
-      // Same flow as Google, but using GitHub provider token.
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithGithub();
       const idToken = await FirebaseAuthService.getIdToken(credential);
       const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
+
+      // Verificar email directo desde providerData de GitHub
+      // Firebase puede cachear un email aunque ya esté privado en GitHub
+      const githubProviderData = credential.user.providerData
+        .find(p => p.providerId === "github.com");
+      const githubEmail = githubProviderData?.email ?? null;
+
+      console.log("providerData completo:", credential.user.providerData);
+      console.log("githubEmail detectado:", githubEmail);
+      console.log("uid:", credential.user.uid);
+
+      if (!githubEmail) {
+        setGithubPrivateData({
+          firebaseUid: credential.user.uid,
+          name: credential.user.displayName ?? "",
+          photoUrl: credential.user.photoURL ?? "",
+          githubUsername: socialMetadata.githubUsername ?? "",
+        });
+        setGithubEmailDialogOpen(true);
+        return;
+      }
+
       const challenge = await SecurityService.exchangeGithubToken(
         idToken,
         recaptchaToken,
@@ -132,6 +161,17 @@ const LoginPage = () => {
       navigate("/2fa", { replace: true, state: challenge });
     } catch (error: any) {
       if (error?.code === "auth/popup-closed-by-user") return;
+      if (error?.response?.status === 422 && error?.response?.data?.requiresEmail) {
+        const data = error.response.data;
+        setGithubPrivateData({
+          firebaseUid: data.firebaseUid ?? "",
+          name: data.name ?? "",
+          photoUrl: data.photoUrl ?? "",
+          githubUsername: data.githubUsername ?? "",
+        });
+        setGithubEmailDialogOpen(true);
+        return;
+      }
       setErrorMessage(getLoginErrorMessage(error, "github"));
     } finally {
       setIsSubmitting(false);
@@ -341,6 +381,14 @@ const LoginPage = () => {
           </Stack>
         </Box>
       </Paper>
+      <GithubPrivateEmailDialog
+        open={githubEmailDialogOpen}
+        firebaseUid={githubPrivateData.firebaseUid}
+        name={githubPrivateData.name}
+        photoUrl={githubPrivateData.photoUrl}
+        githubUsername={githubPrivateData.githubUsername}
+        onClose={() => setGithubEmailDialogOpen(false)}
+      />
     </Box>
   );
 };

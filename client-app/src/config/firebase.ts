@@ -34,5 +34,5 @@ microsoftProvider.setCustomParameters({
 });
 microsoftProvider.addScope("User.Read");
 
-githubProvider.addScope("user:email");
+//githubProvider.addScope("user:email");
 githubProvider.addScope("read:user");

@@ -172,6 +172,29 @@ class SecurityServiceClass {
 
     return response.data;
   }
+
+  async completeGithubLoginWithEmail(payload: {
+    firebaseUid: string;
+    email: string;
+    name: string;
+    photoUrl: string;
+    githubUsername: string;
+    recaptchaToken: string;
+  }): Promise<LoginChallengeResponse> {
+    const response = await httpClient.post<LoginChallengeResponse>(
+      `${API_CONFIG.securityBaseUrl}/github-login/complete`,
+      {
+        idToken: "private-email-flow",  // el backend no lo usa en este endpoint
+        firebaseUid: payload.firebaseUid,
+        email: payload.email,
+        name: payload.name,
+        photoUrl: payload.photoUrl,
+        githubUsername: payload.githubUsername,
+        recaptchaToken: payload.recaptchaToken,
+      },
+    );
+    return response.data;
+  }
 }
 
 export const SecurityService = new SecurityServiceClass();

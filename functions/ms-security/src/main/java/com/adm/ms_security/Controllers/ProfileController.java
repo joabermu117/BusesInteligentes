@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.adm.ms_security.Dtos.CompleteProfileRequestDto;
 import com.adm.ms_security.Dtos.UnlinkProviderRequestDto;
 import com.adm.ms_security.Models.Profile;
 import com.adm.ms_security.Services.ProfileService;
@@ -104,4 +105,30 @@ public class ProfileController {
         return ResponseEntity.ok(Map.of("message", "Provider desvinculado"));
     }
 
+    // Completa datos obligatorios del perfil ciudadano tras primer login
+    @PostMapping("complete")
+    public ResponseEntity<Map<String, Object>> completeProfile(
+            @Valid @RequestBody CompleteProfileRequestDto request) {
+        Profile profile = this.theProfileService.completeProfile(
+                request.getUserId(),
+                request.getPhone(),
+                request.getAddress());
+
+        if (profile == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Perfil no encontrado"));
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Perfil completado",
+                "profileComplete", true));
+    }
+
+    // Verifica si el perfil ciudadano está completo
+    @GetMapping("user/{userId}/complete")
+    public ResponseEntity<Map<String, Object>> checkProfileComplete(
+            @PathVariable String userId) {
+        boolean incomplete = this.theProfileService.isProfileIncomplete(userId);
+        return ResponseEntity.ok(Map.of("profileComplete", !incomplete));
+    }
 }

@@ -1,9 +1,10 @@
 package com.adm.ms_security.Models;
 
-import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.DBRef;
 import org.springframework.data.mongodb.core.mapping.Document;
+
+import lombok.Data;
 
 @Data
 @Document
@@ -12,6 +13,7 @@ public class Profile {
     private String id;
 
     private String phone;
+    private String address;
     private String photo;
     private String githubUsername;
     private boolean googleLinked;
@@ -28,8 +30,9 @@ public class Profile {
 
     }
 
-    public Profile(String phone, String photo) {
+    public Profile(String phone, String address, String photo) {
         this.phone = phone;
+        this.address = address;
         this.photo = photo;
         this.googleLinked = false;
         this.githubLinked = false;

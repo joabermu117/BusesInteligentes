@@ -13,6 +13,7 @@ const normalizeProfile = (profile: ProfileApiShape): Profile => ({
   id: profile.id ?? profile._id ?? "",
   userId: profile.userId ?? profile.user?.id ?? profile.user?._id ?? "",
   phone: profile.phone ?? "",
+  address: profile.address ?? "",
   photo: profile.photo ?? "",
   githubUsername: profile.githubUsername ?? "",
   googleLinked: Boolean(profile.googleLinked),
@@ -26,14 +27,36 @@ class ProfileServiceClass {
       const response = await httpClient.get<ProfileApiShape>(
         `${PROFILES_API_URL}/user/${userId}`,
       );
-      if (!response.data) {
-        return null;
-      }
-
+      if (!response.data) return null;
       return normalizeProfile(response.data);
     } catch {
       return null;
     }
+  }
+
+  // Verifica si el perfil tiene dirección y teléfono
+  async isProfileComplete(userId: string): Promise<boolean> {
+    try {
+      const response = await httpClient.get<{ profileComplete: boolean }>(
+        `${PROFILES_API_URL}/user/${userId}/complete`,
+      );
+      return response.data?.profileComplete ?? false;
+    } catch {
+      return false;
+    }
+  }
+
+  // Completa los datos obligatorios del perfil
+  async completeProfile(
+    userId: string,
+    phone: string,
+    address: string,
+  ): Promise<void> {
+    await httpClient.post(`${PROFILES_API_URL}/complete`, {
+      userId,
+      phone,
+      address,
+    });
   }
 
   async unlinkProvider(
@@ -44,12 +67,7 @@ class ProfileServiceClass {
   ): Promise<void> {
     await httpClient.delete(
       `${PROFILES_API_URL}/user/${userId}/providers/${provider}`,
-      {
-        data: {
-          password,
-          confirmPassword,
-        },
-      },
+      { data: { password, confirmPassword } },
     );
   }
 }

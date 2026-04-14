@@ -1,5 +1,7 @@
 package com.adm.ms_security.Controllers;
 
+import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -151,12 +153,51 @@ public class SecurityController {
     /**
      * Uses Firebase-issued GitHub token and starts unified 2FA flow.
      */
-    public ResponseEntity<LoginChallengeResponseDto> githubLogin(@Valid @RequestBody FirebaseLoginRequest request) {
+    public ResponseEntity<?> githubLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
+
+        // Email privado en GitHub — pedir email alternativo al frontend
+        if (decodedToken.getEmail() == null || decodedToken.getEmail().isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                    .body(Map.of(
+                        "requiresEmail", true,
+                        "firebaseUid", decodedToken.getUid(),
+                        "name", decodedToken.getName() != null ? decodedToken.getName() : "",
+                        "photoUrl", request.getPhotoUrl() != null ? request.getPhotoUrl() : "",
+                        "githubUsername", request.getGithubUsername() != null ? request.getGithubUsername() : ""
+                    ));
+        }
+
         User user = securityService.findOrCreateFromGithub(
                 decodedToken,
                 request.getPhotoUrl(),
                 request.getGithubUsername());
+        return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
+    }
+
+    @Operation(summary = "Completa login GitHub cuando el email era privado")
+    @PostMapping("github-login/complete")
+    public ResponseEntity<LoginChallengeResponseDto> githubLoginComplete(
+            @Valid @RequestBody FirebaseLoginRequest request) {
+
+        // En este caso el email viene del frontend (el alternativo que ingresó el usuario)
+        String email = request.getEmail();
+        if (email == null || email.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "EMAIL_REQUIRED", "El email es requerido");
+        }
+
+        User user = securityService.findOrCreateFromGithubWithEmail(
+                request.getFirebaseUid(),
+                email,
+                request.getName(),
+                request.getPhotoUrl(),
+                request.getGithubUsername());
+
+        if (user == null) {
+            throw new ApiException(HttpStatus.CONFLICT, "EMAIL_EXISTS",
+                    "Ese correo ya esta registrado con otro metodo de acceso");
+        }
+
         return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
     }
 

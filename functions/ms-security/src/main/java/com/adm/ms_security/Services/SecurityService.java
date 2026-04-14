@@ -306,4 +306,51 @@ public class SecurityService {
 
         return firebaseToken.getPicture();
     }
+
+    // Login GitHub cuando el usuario tenía email privado y proporcionó uno alternativo
+    public User findOrCreateFromGithubWithEmail(
+            String firebaseUid,
+            String email,
+            String name,
+            String photoUrl,
+            String githubUsername) {
+
+        if (firebaseUid == null || firebaseUid.isBlank()) return null;
+
+        String normalizedEmail = normalizeEmail(email);
+        if (normalizedEmail == null) return null;
+
+        // Si ya existe por UID, solo sincronizar email
+        User byUid = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
+        if (byUid != null) {
+            this.theProfileService.ensureProfileForUserWithSocialData(
+                    byUid, "github", photoUrl, githubUsername);
+            return byUid;
+        }
+
+        // Si ya existe por email con otro método, no permitir
+        User byEmail = this.theUserRepository.findByEmailIgnoreCase(normalizedEmail).orElse(null);
+        if (byEmail != null && byEmail.getFirebaseUid() != null) return null;
+
+        // Si existe por email sin Firebase, vincular
+        if (byEmail != null) {
+            byEmail.setFirebaseUid(firebaseUid);
+            User synced = this.theUserRepository.save(byEmail);
+            this.theProfileService.ensureProfileForUserWithSocialData(
+                    synced, "github", photoUrl, githubUsername);
+            return synced;
+        }
+
+        // Usuario completamente nuevo
+        User newUser = new User();
+        newUser.setEmail(normalizedEmail);
+        newUser.setFirebaseUid(firebaseUid);
+        newUser.setName(resolveDisplayName(name, normalizedEmail));
+        newUser.setPassword(generateFirebasePassword(firebaseUid));
+        User created = this.theUserRepository.save(newUser);
+        assignCitizenRoleIfMissing(created);
+        this.theProfileService.ensureProfileForUserWithSocialData(
+                created, "github", photoUrl, githubUsername);
+        return created;
+    }
 }

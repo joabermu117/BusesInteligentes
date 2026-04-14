@@ -10,7 +10,10 @@ import {
 import axios from "axios";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { AUTH_TOKEN_STORAGE_KEY, isAuthTokenExpired } from "../config/httpClient";
+import { ProfileService } from "../permisos/services/ProfileService";
 import { SecurityService } from "../permisos/services/SecurityService";
+import CompleteProfileDialog from "./CompleteProfileDialog";
 
 const OTP_LENGTH = 6;
 
@@ -21,7 +24,20 @@ type ChallengeState = {
   resendCooldownSeconds: number;
 };
 
-// Second authentication step after login/social identity validation.
+// Decodifica el JWT y extrae el userId del claim "id"
+const getUserIdFromToken = (): string | null => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    if (!token || isAuthTokenExpired(token)) return null;
+    const payload = JSON.parse(
+      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+    );
+    return payload?.id ?? null;
+  } catch {
+    return null;
+  }
+};
+
 const TwoFactorPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -39,36 +55,32 @@ const TwoFactorPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
 
-  // Protects route access: this screen only works when a challenge exists.
+  // ✅ Estado para el dialog de completar perfil
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!state?.challengeId) {
       navigate("/login", { replace: true });
-      return;
     }
   }, [navigate, state?.challengeId]);
 
-  // Unified timer tick for OTP expiry and resend button cooldown.
   useEffect(() => {
     const timer = window.setInterval(() => {
       setSecondsLeft((current) => (current > 0 ? current - 1 : 0));
       setResendCooldownLeft((current) => (current > 0 ? current - 1 : 0));
     }, 1000);
-
     return () => window.clearInterval(timer);
   }, []);
 
-  // If user closes/reloads the tab, invalidate partial 2FA session server-side.
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (!isFinished && challengeId) {
         SecurityService.cancelOtpChallengeWithBeacon(challengeId);
       }
     };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [challengeId, isFinished]);
 
   const formattedCountdown = useMemo(() => {
@@ -94,7 +106,7 @@ const TwoFactorPage = () => {
     handleCodeChange(pasted);
   };
 
-  // Verifies OTP and completes login by receiving final JWT.
+  // ✅ Después de OTP exitoso verifica si el perfil está completo
   const handleVerify = async () => {
     setError(null);
     setInfo(null);
@@ -108,11 +120,24 @@ const TwoFactorPage = () => {
     try {
       await SecurityService.verifyOtpCode({ challengeId, code });
       setIsFinished(true);
+
+      // Obtener userId del JWT recién guardado
+      const userId = getUserIdFromToken();
+      if (userId) {
+        const isComplete = await ProfileService.isProfileComplete(userId);
+        if (!isComplete) {
+          setPendingUserId(userId);
+          setProfileDialogOpen(true);
+          return;
+        }
+      }
+
       navigate("/dashboard", { replace: true });
     } catch (unknownError) {
       if (axios.isAxiosError(unknownError)) {
         const apiCode = unknownError.response?.data?.code;
-        const remainingAttempts = unknownError.response?.data?.details?.remainingAttempts;
+        const remainingAttempts =
+          unknownError.response?.data?.details?.remainingAttempts;
 
         if (apiCode === "OTP_ATTEMPTS_EXCEEDED") {
           setIsFinished(true);
@@ -144,11 +169,9 @@ const TwoFactorPage = () => {
     }
   };
 
-  // Requests a new OTP respecting backend progressive cooldown policy.
   const handleResend = async () => {
     setError(null);
     setInfo(null);
-
     setIsSubmitting(true);
     try {
       const response = await SecurityService.resendOtpCode(challengeId);
@@ -160,21 +183,20 @@ const TwoFactorPage = () => {
       setInfo("Te enviamos un nuevo codigo. Revisa bandeja principal y spam.");
     } catch (unknownError) {
       if (axios.isAxiosError(unknownError)) {
-        const cooldownSeconds = unknownError.response?.data?.details?.cooldownSeconds;
+        const cooldownSeconds =
+          unknownError.response?.data?.details?.cooldownSeconds;
         if (typeof cooldownSeconds === "number") {
           setResendCooldownLeft(cooldownSeconds);
           setError(`Espera ${cooldownSeconds}s antes de reenviar.`);
           return;
         }
       }
-
       setError("No fue posible reenviar el codigo.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Explicit cancellation from user action.
   const handleCancel = async () => {
     if (challengeId) {
       await SecurityService.cancelOtpChallenge(challengeId).catch(() => undefined);
@@ -200,9 +222,13 @@ const TwoFactorPage = () => {
               Verificacion de seguridad
             </Typography>
             <Typography color="text.secondary">
-              Ingrese el codigo de 6 digitos enviado a su email {maskedEmail || "em***@***.com"}.
+              Ingrese el codigo de 6 digitos enviado a su email{" "}
+              {maskedEmail || "em***@***.com"}.
             </Typography>
-            <Typography color={secondsLeft > 0 ? "text.primary" : "error.main"} sx={{ mt: 1 }}>
+            <Typography
+              color={secondsLeft > 0 ? "text.primary" : "error.main"}
+              sx={{ mt: 1 }}
+            >
               Expira en: {formattedCountdown}
             </Typography>
           </Box>
@@ -215,12 +241,20 @@ const TwoFactorPage = () => {
             value={code}
             onChange={(event) => handleCodeChange(event.target.value)}
             onPaste={handlePaste}
-            inputProps={{ inputMode: "numeric", pattern: "[0-9]*", maxLength: OTP_LENGTH }}
+            inputProps={{
+              inputMode: "numeric",
+              pattern: "[0-9]*",
+              maxLength: OTP_LENGTH,
+            }}
             fullWidth
             autoFocus
           />
 
-          <Button variant="contained" disabled={isSubmitting || secondsLeft <= 0} onClick={handleVerify}>
+          <Button
+            variant="contained"
+            disabled={isSubmitting || secondsLeft <= 0}
+            onClick={handleVerify}
+          >
             {isSubmitting ? "Validando..." : "Validar codigo"}
           </Button>
 
@@ -238,11 +272,28 @@ const TwoFactorPage = () => {
             ¿No recibio el codigo? Revisar spam o reenviar.
           </Typography>
 
-          <Button variant="text" color="inherit" disabled={isSubmitting} onClick={handleCancel}>
+          <Button
+            variant="text"
+            color="inherit"
+            disabled={isSubmitting}
+            onClick={handleCancel}
+          >
             Cancelar y volver al login
           </Button>
         </Stack>
       </Paper>
+
+      {/* ✅ Dialog de completar perfil — aparece antes de ir al dashboard */}
+      {pendingUserId && (
+        <CompleteProfileDialog
+          open={profileDialogOpen}
+          userId={pendingUserId}
+          onCompleted={() => {
+            setProfileDialogOpen(false);
+            navigate("/dashboard", { replace: true });
+          }}
+        />
+      )}
     </Box>
   );
 };

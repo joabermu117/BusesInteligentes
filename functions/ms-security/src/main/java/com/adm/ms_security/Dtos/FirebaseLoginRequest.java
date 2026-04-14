@@ -15,4 +15,8 @@ public class FirebaseLoginRequest {
     private String provider;
     private String photoUrl;
     private String githubUsername;
+
+    private String email;
+    private String firebaseUid;
+    private String name;
 }
