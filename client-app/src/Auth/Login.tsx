@@ -131,8 +131,9 @@ const LoginPage = () => {
 
       // Verificar email directo desde providerData de GitHub
       // Firebase puede cachear un email aunque ya esté privado en GitHub
-      const githubProviderData = credential.user.providerData
-        .find(p => p.providerId === "github.com");
+      const githubProviderData = credential.user.providerData.find(
+        (p) => p.providerId === "github.com",
+      );
       const githubEmail = githubProviderData?.email ?? null;
 
       console.log("providerData completo:", credential.user.providerData);
@@ -161,7 +162,10 @@ const LoginPage = () => {
       navigate("/2fa", { replace: true, state: challenge });
     } catch (error: any) {
       if (error?.code === "auth/popup-closed-by-user") return;
-      if (error?.response?.status === 422 && error?.response?.data?.requiresEmail) {
+      if (
+        error?.response?.status === 422 &&
+        error?.response?.data?.requiresEmail
+      ) {
         const data = error.response.data;
         setGithubPrivateData({
           firebaseUid: data.firebaseUid ?? "",
@@ -187,7 +191,8 @@ const LoginPage = () => {
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithMicrosoft();
       const idToken = await FirebaseAuthService.getIdToken(credential);
-      const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
+      const socialMetadata =
+        await FirebaseAuthService.getMicrosoftSocialMetadata(credential);
       const challenge = await SecurityService.exchangeFirebaseToken(
         idToken,
         recaptchaToken,

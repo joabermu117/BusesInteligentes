@@ -1,4 +1,5 @@
 import {
+  OAuthProvider,
   getAdditionalUserInfo,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -12,9 +13,60 @@ import {
 } from "../../config/firebase";
 
 class FirebaseAuthServiceClass {
-  private getPhotoFromProviderProfile(profile: unknown): string | null {
-    if (!profile || typeof profile !== "object") {
+  private blobToDataUrl(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          resolve(reader.result);
+          return;
+        }
+
+        reject(new Error("No fue posible convertir la imagen"));
+      };
+      reader.onerror = () => reject(new Error("No fue posible leer la imagen"));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  private async getMicrosoftPhotoFromGraph(
+    userCredential: UserCredential,
+  ): Promise<string | null> {
+    const credential = OAuthProvider.credentialFromResult(userCredential);
+    const accessToken = credential?.accessToken;
+    if (!accessToken) {
       return null;
+    }
+
+    try {
+      const response = await fetch(
+        "https://graph.microsoft.com/v1.0/me/photo/$value",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const blob = await response.blob();
+      if (!blob || blob.size === 0) {
+        return null;
+      }
+
+      return this.blobToDataUrl(blob);
+    } catch {
+      return null;
+    }
+  }
+
+  private extractUrlCandidates(profile: unknown): string[] {
+    if (!profile || typeof profile !== "object") {
+      return [];
     }
 
     const typedProfile = profile as Record<string, unknown>;
@@ -25,12 +77,42 @@ class FirebaseAuthServiceClass {
       "photoURL",
       "avatar_url",
       "avatar",
+      "profile_image_url",
+      "profilePhoto",
+      "image",
+      "url",
     ];
 
+    const collected: string[] = [];
     for (const key of possibleKeys) {
       const value = typedProfile[key];
       if (typeof value === "string" && value.trim().length > 0) {
-        return value.trim();
+        collected.push(value.trim());
+      }
+
+      if (value && typeof value === "object") {
+        collected.push(...this.extractUrlCandidates(value));
+      }
+    }
+
+    for (const value of Object.values(typedProfile)) {
+      if (value && typeof value === "object") {
+        collected.push(...this.extractUrlCandidates(value));
+      }
+    }
+
+    return collected;
+  }
+
+  private getPhotoFromProviderProfile(profile: unknown): string | null {
+    const candidates = this.extractUrlCandidates(profile);
+    for (const candidate of candidates) {
+      if (
+        candidate.startsWith("http://") ||
+        candidate.startsWith("https://") ||
+        candidate.startsWith("data:image/")
+      ) {
+        return candidate;
       }
     }
 
@@ -50,6 +132,22 @@ class FirebaseAuthServiceClass {
     return {
       photoUrl: userCredential.user.photoURL ?? fallbackPhoto,
       githubUsername: typeof username === "string" ? username : null,
+    };
+  }
+
+  async getMicrosoftSocialMetadata(userCredential: UserCredential): Promise<{
+    photoUrl: string | null;
+    githubUsername: string | null;
+  }> {
+    const baseMetadata = this.getSocialMetadata(userCredential);
+    if (baseMetadata.photoUrl) {
+      return baseMetadata;
+    }
+
+    const graphPhoto = await this.getMicrosoftPhotoFromGraph(userCredential);
+    return {
+      ...baseMetadata,
+      photoUrl: graphPhoto,
     };
   }
 

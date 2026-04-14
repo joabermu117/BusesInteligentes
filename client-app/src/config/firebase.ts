@@ -32,6 +32,9 @@ googleProvider.addScope("profile");
 microsoftProvider.setCustomParameters({
   prompt: "select_account",
 });
+microsoftProvider.addScope("openid");
+microsoftProvider.addScope("profile");
+microsoftProvider.addScope("email");
 microsoftProvider.addScope("User.Read");
 
 //githubProvider.addScope("user:email");

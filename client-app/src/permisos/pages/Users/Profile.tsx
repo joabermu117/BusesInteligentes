@@ -39,6 +39,7 @@ const UserProfilePage = () => {
     useState<SocialProvider | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -71,6 +72,10 @@ const UserProfilePage = () => {
     void loadData();
   }, [userId]);
 
+  useEffect(() => {
+    setAvatarLoadFailed(false);
+  }, [profile?.photo]);
+
   const assignedRoles = useMemo(() => {
     if (!user) {
       return [];
@@ -78,6 +83,22 @@ const UserProfilePage = () => {
 
     return roles.filter((role) => user.roleIds.includes(role.id));
   }, [roles, user]);
+
+  const fallbackAvatarSrc = useMemo(() => {
+    const displayName = user?.name?.trim() || "Usuario";
+    const initial = displayName.charAt(0).toUpperCase() || "U";
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='184' height='184' viewBox='0 0 184 184'><rect width='184' height='184' fill='%231976d2'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='84' font-family='Arial, sans-serif'>${initial}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }, [user?.name]);
+
+  const avatarSrc = useMemo(() => {
+    const photo = profile?.photo?.trim();
+    if (!avatarLoadFailed && photo) {
+      return photo;
+    }
+
+    return fallbackAvatarSrc;
+  }, [avatarLoadFailed, fallbackAvatarSrc, profile?.photo]);
 
   const handleUnlinkProvider = async (provider: SocialProvider) => {
     if (!user) {
@@ -147,7 +168,11 @@ const UserProfilePage = () => {
         <Paper sx={{ p: 3 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2.5}>
             <Avatar
-              src={profile?.photo || undefined}
+              src={avatarSrc}
+              imgProps={{
+                referrerPolicy: "no-referrer",
+                onError: () => setAvatarLoadFailed(true),
+              }}
               sx={{ width: 92, height: 92, bgcolor: "primary.main" }}
             >
               {user.name.charAt(0).toUpperCase()}
