@@ -129,18 +129,7 @@ const LoginPage = () => {
       const idToken = await FirebaseAuthService.getIdToken(credential);
       const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
 
-      // Verificar email directo desde providerData de GitHub
-      // Firebase puede cachear un email aunque ya esté privado en GitHub
-      const githubProviderData = credential.user.providerData.find(
-        (p) => p.providerId === "github.com",
-      );
-      const githubEmail = githubProviderData?.email ?? null;
-
-      console.log("providerData completo:", credential.user.providerData);
-      console.log("githubEmail detectado:", githubEmail);
-      console.log("uid:", credential.user.uid);
-
-      if (!githubEmail) {
+      if (FirebaseAuthService.requiresGithubAlternativeEmail(credential)) {
         setGithubPrivateData({
           firebaseUid: credential.user.uid,
           name: credential.user.displayName ?? "",

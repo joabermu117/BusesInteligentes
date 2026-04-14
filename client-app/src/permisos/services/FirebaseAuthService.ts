@@ -13,6 +13,23 @@ import {
 } from "../../config/firebase";
 
 class FirebaseAuthServiceClass {
+  private normalizeEmail(value: string | null | undefined): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    return normalized.length > 0 ? normalized : null;
+  }
+
+  private isGithubPrivateEmail(email: string | null): boolean {
+    if (!email) {
+      return true;
+    }
+
+    return email.endsWith("@users.noreply.github.com");
+  }
+
   private blobToDataUrl(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -133,6 +150,29 @@ class FirebaseAuthServiceClass {
       photoUrl: userCredential.user.photoURL ?? fallbackPhoto,
       githubUsername: typeof username === "string" ? username : null,
     };
+  }
+
+  getGithubEmail(userCredential: UserCredential): string | null {
+    const githubProviderData = userCredential.user.providerData.find(
+      (provider) => provider.providerId === "github.com",
+    );
+
+    const providerEmail = this.normalizeEmail(githubProviderData?.email);
+    const userEmail = this.normalizeEmail(userCredential.user.email);
+
+    if (providerEmail && !this.isGithubPrivateEmail(providerEmail)) {
+      return providerEmail;
+    }
+
+    if (userEmail && !this.isGithubPrivateEmail(userEmail)) {
+      return userEmail;
+    }
+
+    return null;
+  }
+
+  requiresGithubAlternativeEmail(userCredential: UserCredential): boolean {
+    return this.getGithubEmail(userCredential) === null;
   }
 
   async getMicrosoftSocialMetadata(userCredential: UserCredential): Promise<{
