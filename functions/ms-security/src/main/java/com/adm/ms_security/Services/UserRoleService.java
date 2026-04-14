@@ -70,6 +70,21 @@ public class UserRoleService {
     }
 
     public List<UserRole> getRolesByUser(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return new ArrayList<>();
+        }
+
+        User user = this.theUserRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return new ArrayList<>();
+        }
+
+        List<UserRole> relations = this.theUserRoleRepository.findAllByUser(user);
+        if (!relations.isEmpty()) {
+            return relations;
+        }
+
+        // Fallback para compatibilidad con consultas legacy por ObjectId.
         return this.theUserRoleRepository.getRolesByUser(userId);
     }
 
@@ -79,7 +94,7 @@ public class UserRoleService {
         }
 
         Set<String> roleIds = new HashSet<>();
-        for (UserRole relation : this.theUserRoleRepository.getRolesByUser(userId)) {
+        for (UserRole relation : getRolesByUser(userId)) {
             if (relation == null || relation.getRole() == null || relation.getRole().getId() == null) {
                 continue;
             }

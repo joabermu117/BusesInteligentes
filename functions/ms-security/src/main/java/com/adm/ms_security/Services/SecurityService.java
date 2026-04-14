@@ -301,6 +301,18 @@ public class SecurityService {
         }
 
         if (firebaseToken == null || firebaseToken.getPicture() == null || firebaseToken.getPicture().isBlank()) {
+            if (firebaseToken == null || firebaseToken.getClaims() == null) {
+                return null;
+            }
+
+            String[] possibleClaimKeys = { "picture", "photo", "photo_url", "photoUrl", "avatar_url", "avatar" };
+            for (String key : possibleClaimKeys) {
+                Object value = firebaseToken.getClaims().get(key);
+                if (value instanceof String stringValue && !stringValue.isBlank()) {
+                    return stringValue.trim();
+                }
+            }
+
             return null;
         }
 

@@ -72,6 +72,22 @@ public class RolePermissionService {
     }
 
     public List<RolePermission> getPermissionsByRole(String roleId) {
+        if (roleId == null || roleId.isBlank()) {
+            return new ArrayList<>();
+        }
+
+        Role role = this.theRoleRepository.findById(roleId).orElse(null);
+        if (role == null) {
+            return new ArrayList<>();
+        }
+
+        List<RolePermission> relations = this.theRolePermissionRepository.findAllByRole(role);
+        if (!relations.isEmpty()) {
+            return relations;
+        }
+
+        // Compatibilidad con datos existentes cuando el mapping por entidad no devuelve
+        // resultados.
         return this.theRolePermissionRepository.getPermissionsByRole(roleId);
     }
 
@@ -81,7 +97,7 @@ public class RolePermissionService {
         }
 
         Set<String> permissionIds = new HashSet<>();
-        for (RolePermission relation : this.theRolePermissionRepository.getPermissionsByRole(roleId)) {
+        for (RolePermission relation : getPermissionsByRole(roleId)) {
             if (relation == null || relation.getPermission() == null || relation.getPermission().getId() == null) {
                 continue;
             }
@@ -108,6 +124,7 @@ public class RolePermissionService {
 
         List<RolePermission> currentRelations = this.theRolePermissionRepository.findAllByRole(role);
         Set<String> currentPermissionIds = new HashSet<>();
+        List<RolePermission> relationsToRemove = new ArrayList<>();
         for (RolePermission relation : currentRelations) {
             if (relation == null || relation.getPermission() == null || relation.getPermission().getId() == null) {
                 continue;
@@ -115,18 +132,54 @@ public class RolePermissionService {
 
             String currentPermissionId = relation.getPermission().getId();
             currentPermissionIds.add(currentPermissionId);
-            if (!nextPermissionIds.contains(currentPermissionId) && relation.getId() != null) {
-                removeRolePermission(relation.getId());
+            if (!nextPermissionIds.contains(currentPermissionId)) {
+                relationsToRemove.add(relation);
             }
         }
 
-        for (String permissionId : nextPermissionIds) {
-            if (!currentPermissionIds.contains(permissionId)) {
-                addRolePermission(roleId, permissionId);
+        Set<String> permissionIdsToAdd = new HashSet<>(nextPermissionIds);
+        permissionIdsToAdd.removeAll(currentPermissionIds);
+
+        List<RolePermission> relationsToAdd = new ArrayList<>();
+        if (!permissionIdsToAdd.isEmpty()) {
+            for (Permission permission : this.thePermissionRepository.findAllById(permissionIdsToAdd)) {
+                if (permission == null || permission.getId() == null || permission.getId().isBlank()) {
+                    continue;
+                }
+                relationsToAdd.add(new RolePermission(role, permission));
             }
+        }
+
+        if (!relationsToRemove.isEmpty()) {
+            this.theRolePermissionRepository.deleteAll(relationsToRemove);
+        }
+
+        if (!relationsToAdd.isEmpty()) {
+            this.theRolePermissionRepository.saveAll(relationsToAdd);
+        }
+
+        if (!relationsToAdd.isEmpty() || !relationsToRemove.isEmpty()) {
+            notifyUsersByRolePermissionSync(role, relationsToAdd.size(), relationsToRemove.size());
         }
 
         return true;
+    }
+
+    private void notifyUsersByRolePermissionSync(Role role, int addedCount, int removedCount) {
+        if (role == null || role.getId() == null || (addedCount <= 0 && removedCount <= 0)) {
+            return;
+        }
+
+        List<UserRole> usersWithRole = this.theUserRoleRepository.findAllByRole(role);
+        Set<String> notifiedUsers = new HashSet<>();
+        for (UserRole userRole : usersWithRole) {
+            User user = userRole.getUser();
+            if (user == null || user.getId() == null || !notifiedUsers.add(user.getId())) {
+                continue;
+            }
+
+            this.theEmailService.sendRolePermissionsBulkUpdatedEmail(user, role, addedCount, removedCount);
+        }
     }
 
     private void notifyUsersByRolePermissionChange(Role role, Permission permission, String action) {
