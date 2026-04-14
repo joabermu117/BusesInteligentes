@@ -16,7 +16,7 @@ import { SecurityService } from "../permisos/services/SecurityService";
 
 interface GithubPrivateEmailDialogProps {
   open: boolean;
-  firebaseUid: string;
+  idToken: string;
   name: string;
   photoUrl: string;
   githubUsername: string;
@@ -25,7 +25,7 @@ interface GithubPrivateEmailDialogProps {
 
 const GithubPrivateEmailDialog = ({
   open,
-  firebaseUid,
+  idToken,
   name,
   photoUrl,
   githubUsername,
@@ -47,7 +47,7 @@ const GithubPrivateEmailDialog = ({
     try {
       const recaptchaToken = await executeRecaptcha("login");
       const challenge = await SecurityService.completeGithubLoginWithEmail({
-        firebaseUid,
+        idToken,
         email,
         name,
         photoUrl,

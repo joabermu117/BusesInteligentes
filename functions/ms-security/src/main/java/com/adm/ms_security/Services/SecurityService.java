@@ -332,12 +332,26 @@ public class SecurityService {
         String normalizedEmail = normalizeEmail(email);
         if (normalizedEmail == null) return null;
 
-        // Si ya existe por UID, solo sincronizar email
+        // Si ya existe por UID, sincronizar email alternativo y validar colision.
         User byUid = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
         if (byUid != null) {
+            User emailOwner = this.theUserRepository.findByEmailIgnoreCase(normalizedEmail).orElse(null);
+            if (emailOwner != null && emailOwner.getId() != null && !emailOwner.getId().equals(byUid.getId())) {
+                return null;
+            }
+
+            if (byUid.getEmail() == null || !byUid.getEmail().equalsIgnoreCase(normalizedEmail)) {
+                byUid.setEmail(normalizedEmail);
+            }
+
+            if (name != null && !name.isBlank()) {
+                byUid.setName(name.trim());
+            }
+
+            User syncedUser = this.theUserRepository.save(byUid);
             this.theProfileService.ensureProfileForUserWithSocialData(
-                    byUid, "github", photoUrl, githubUsername);
-            return byUid;
+                    syncedUser, "github", photoUrl, githubUsername);
+            return syncedUser;
         }
 
         // Si ya existe por email con otro método, no permitir

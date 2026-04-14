@@ -54,7 +54,7 @@ public class ValidatorService {
 
         if (!authorizationEnabled) {
             LOGGER.warn("ACL bypass enabled. userId={}, email={}, method={}, url={}",
-                    theUser.getId(), theUser.getEmail(), method, url);
+                    theUser.getId(), maskEmail(theUser.getEmail()), method, url);
             return true;
         }
 
@@ -83,7 +83,7 @@ public class ValidatorService {
             LOGGER.warn(
                     "ACL deny: permission not found for userId={}, email={}, method={}, normalizedUrl={}, rolesCount={}",
                     theUser.getId(),
-                    theUser.getEmail(),
+                    maskEmail(theUser.getEmail()),
                     normalizedMethod,
                     normalizedUrl,
                     roles.size());
@@ -109,7 +109,7 @@ public class ValidatorService {
             LOGGER.warn(
                     "ACL deny: missing role-permission mapping. userId={}, email={}, permissionId={}, method={}, normalizedUrl={}, roleIds={}",
                     theUser.getId(),
-                    theUser.getEmail(),
+                    maskEmail(theUser.getEmail()),
                     thePermission.getId(),
                     normalizedMethod,
                     normalizedUrl,
@@ -171,5 +171,17 @@ public class ValidatorService {
         }
 
         return normalizedUrl;
+    }
+
+    private String maskEmail(String email) {
+        if (email == null || email.isBlank() || !email.contains("@")) {
+            return "***";
+        }
+
+        String[] parts = email.split("@", 2);
+        String local = parts[0];
+        String domain = parts[1];
+        String visible = local.length() <= 2 ? local.substring(0, 1) : local.substring(0, 2);
+        return visible + "***@" + domain;
     }
 }

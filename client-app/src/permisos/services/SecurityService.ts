@@ -174,7 +174,7 @@ class SecurityServiceClass {
   }
 
   async completeGithubLoginWithEmail(payload: {
-    firebaseUid: string;
+    idToken: string;
     email: string;
     name: string;
     photoUrl: string;
@@ -184,13 +184,13 @@ class SecurityServiceClass {
     const response = await httpClient.post<LoginChallengeResponse>(
       `${API_CONFIG.securityBaseUrl}/github-login/complete`,
       {
-        idToken: "private-email-flow",  // el backend no lo usa en este endpoint
-        firebaseUid: payload.firebaseUid,
+        idToken: payload.idToken,
         email: payload.email,
         name: payload.name,
         photoUrl: payload.photoUrl,
         githubUsername: payload.githubUsername,
         recaptchaToken: payload.recaptchaToken,
+        alternateEmailFlow: true,
       },
     );
     return response.data;

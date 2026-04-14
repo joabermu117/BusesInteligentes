@@ -1,6 +1,7 @@
 package com.adm.ms_security.Controllers;
 
 import java.util.Map;
+import java.util.Locale;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import com.adm.ms_security.Dtos.AuthTokenResponse;
 import com.adm.ms_security.Dtos.ChallengeActionRequestDto;
 import com.adm.ms_security.Dtos.FirebaseLoginRequest;
 import com.adm.ms_security.Dtos.GenericMessageResponseDto;
+import com.adm.ms_security.Dtos.GithubPrivateEmailCompleteRequest;
 import com.adm.ms_security.Dtos.LoginChallengeResponseDto;
 import com.adm.ms_security.Dtos.LoginRequestDto;
 import com.adm.ms_security.Dtos.PasswordRecoveryConfirmRequestDto;
@@ -138,13 +140,34 @@ public class SecurityController {
     /**
      * Validates Firebase token and starts 2FA flow for social login.
      */
-    public ResponseEntity<LoginChallengeResponseDto> firebaseLogin(@Valid @RequestBody FirebaseLoginRequest request) {
+    public ResponseEntity<?> firebaseLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
-        User user = securityService.findOrCreateFromFirebase(
+        String signInProvider = getSignInProvider(decodedToken);
+        String firebaseEmail = normalizeEmail(decodedToken.getEmail());
+
+        if (isGithubProvider(signInProvider)) {
+            if (isGithubPrivateEmail(firebaseEmail)) {
+                return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                        .body(Map.of(
+                                "requiresEmail", true,
+                                "name", decodedToken.getName() != null ? decodedToken.getName() : "",
+                                "photoUrl", request.getPhotoUrl() != null ? request.getPhotoUrl() : "",
+                                "githubUsername",
+                                request.getGithubUsername() != null ? request.getGithubUsername() : ""));
+            }
+
+            User githubUser = securityService.findOrCreateFromGithub(
                 decodedToken,
-                request.getProvider(),
                 request.getPhotoUrl(),
                 request.getGithubUsername());
+            return ResponseEntity.ok(authFlowService.startSocialLogin(githubUser, request.getRecaptchaToken()));
+        }
+
+        User user = securityService.findOrCreateFromFirebase(
+            decodedToken,
+            mapProviderForProfile(signInProvider),
+            request.getPhotoUrl(),
+            request.getGithubUsername());
         return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
     }
 
@@ -155,6 +178,7 @@ public class SecurityController {
      */
     public ResponseEntity<?> githubLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
+        validateGithubProvider(decodedToken);
         String firebaseEmail = normalizeEmail(decodedToken.getEmail());
 
         // Email privado en GitHub — pedir email alternativo al frontend
@@ -162,7 +186,6 @@ public class SecurityController {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(Map.of(
                             "requiresEmail", true,
-                            "firebaseUid", decodedToken.getUid(),
                             "name", decodedToken.getName() != null ? decodedToken.getName() : "",
                             "photoUrl", request.getPhotoUrl() != null ? request.getPhotoUrl() : "",
                             "githubUsername", request.getGithubUsername() != null ? request.getGithubUsername() : ""));
@@ -178,7 +201,15 @@ public class SecurityController {
     @Operation(summary = "Completa login GitHub cuando el email era privado")
     @PostMapping("github-login/complete")
     public ResponseEntity<LoginChallengeResponseDto> githubLoginComplete(
-            @Valid @RequestBody FirebaseLoginRequest request) {
+            @Valid @RequestBody GithubPrivateEmailCompleteRequest request) {
+
+        FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
+        validateGithubProvider(decodedToken);
+        boolean githubEmailPrivate = isGithubPrivateEmail(normalizeEmail(decodedToken.getEmail()));
+        if (!githubEmailPrivate && !request.isAlternateEmailFlow()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "GITHUB_EMAIL_NOT_PRIVATE",
+                "El flujo de email alternativo solo aplica cuando GitHub no entrega un email usable");
+        }
 
         // En este caso el email viene del frontend (el alternativo que ingresó el
         // usuario)
@@ -188,7 +219,7 @@ public class SecurityController {
         }
 
         User user = securityService.findOrCreateFromGithubWithEmail(
-                request.getFirebaseUid(),
+                decodedToken.getUid(),
                 email,
                 request.getName(),
                 request.getPhotoUrl(),
@@ -225,5 +256,48 @@ public class SecurityController {
         }
 
         return email.endsWith("@users.noreply.github.com");
+    }
+
+    private String getSignInProvider(FirebaseToken token) {
+        if (token == null || token.getClaims() == null) {
+            return "";
+        }
+
+        Object firebaseClaim = token.getClaims().get("firebase");
+        if (!(firebaseClaim instanceof Map<?, ?> firebaseData)) {
+            return "";
+        }
+
+        Object provider = firebaseData.get("sign_in_provider");
+        if (!(provider instanceof String providerValue)) {
+            return "";
+        }
+
+        return providerValue.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String mapProviderForProfile(String signInProvider) {
+        if (signInProvider == null || signInProvider.isBlank()) {
+            return "";
+        }
+
+        return switch (signInProvider) {
+            case "google.com" -> "google";
+            case "github.com" -> "github";
+            case "microsoft.com" -> "microsoft";
+            default -> signInProvider;
+        };
+    }
+
+    private void validateGithubProvider(FirebaseToken token) {
+        String signInProvider = getSignInProvider(token);
+        if (!isGithubProvider(signInProvider)) {
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_PROVIDER_MISMATCH",
+                    "El token no corresponde a un inicio de sesion con GitHub");
+        }
+    }
+
+    private boolean isGithubProvider(String signInProvider) {
+        return "github.com".equals(signInProvider) || "github".equals(signInProvider);
     }
 }

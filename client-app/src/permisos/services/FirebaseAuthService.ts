@@ -1,4 +1,5 @@
 import {
+  GithubAuthProvider,
   OAuthProvider,
   getAdditionalUserInfo,
   signInWithEmailAndPassword,
@@ -13,6 +14,9 @@ import {
 } from "../../config/firebase";
 
 class FirebaseAuthServiceClass {
+  private static readonly GITHUB_EMAILS_ENDPOINT =
+    "https://api.github.com/user/emails";
+
   private normalizeEmail(value: string | null | undefined): string | null {
     if (typeof value !== "string") {
       return null;
@@ -28,6 +32,55 @@ class FirebaseAuthServiceClass {
     }
 
     return email.endsWith("@users.noreply.github.com");
+  }
+
+  private async fetchGithubEmails(
+    accessToken: string,
+  ): Promise<
+    Array<{
+      email?: string;
+      primary?: boolean;
+      verified?: boolean;
+      visibility?: string | null;
+    }>
+  > {
+    const response = await fetch(FirebaseAuthServiceClass.GITHUB_EMAILS_ENDPOINT, {
+      method: "GET",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${accessToken}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("No fue posible consultar los correos de GitHub");
+    }
+
+    const payload = (await response.json()) as unknown;
+    if (!Array.isArray(payload)) {
+      return [];
+    }
+
+    return payload as Array<{
+      email?: string;
+      primary?: boolean;
+      verified?: boolean;
+      visibility?: string | null;
+    }>;
+  }
+
+  private pickGithubPrimaryVerifiedEmail(
+    emails: Array<{
+      email?: string;
+      primary?: boolean;
+      verified?: boolean;
+      visibility?: string | null;
+    }>,
+  ) {
+    return emails.find(
+      (item) => item.primary === true && item.verified === true,
+    ) ?? null;
   }
 
   private blobToDataUrl(blob: Blob): Promise<string> {
@@ -171,8 +224,46 @@ class FirebaseAuthServiceClass {
     return null;
   }
 
-  requiresGithubAlternativeEmail(userCredential: UserCredential): boolean {
-    return this.getGithubEmail(userCredential) === null;
+  async requiresGithubAlternativeEmail(
+    userCredential: UserCredential,
+  ): Promise<boolean> {
+    const credential = GithubAuthProvider.credentialFromResult(userCredential);
+    const accessToken = credential?.accessToken;
+
+    if (!accessToken) {
+      return this.getGithubEmail(userCredential) === null;
+    }
+
+    try {
+      const emails = await this.fetchGithubEmails(accessToken);
+      if (emails.length === 0) {
+        return true;
+      }
+
+      const primaryVerified = this.pickGithubPrimaryVerifiedEmail(emails);
+      const normalizedPrimaryEmail = this.normalizeEmail(
+        primaryVerified?.email ?? null,
+      );
+      if (!normalizedPrimaryEmail) {
+        return true;
+      }
+
+      if (this.isGithubPrivateEmail(normalizedPrimaryEmail)) {
+        return true;
+      }
+
+      const visibility = typeof primaryVerified?.visibility === "string"
+        ? primaryVerified.visibility.toLowerCase()
+        : null;
+
+      if (visibility === "private") {
+        return true;
+      }
+
+      return false;
+    } catch {
+      return this.getGithubEmail(userCredential) === null;
+    }
   }
 
   async getMicrosoftSocialMetadata(userCredential: UserCredential): Promise<{

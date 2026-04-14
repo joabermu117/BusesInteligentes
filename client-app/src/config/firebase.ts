@@ -37,5 +37,5 @@ microsoftProvider.addScope("profile");
 microsoftProvider.addScope("email");
 microsoftProvider.addScope("User.Read");
 
-//githubProvider.addScope("user:email");
+githubProvider.addScope("user:email");
 githubProvider.addScope("read:user");

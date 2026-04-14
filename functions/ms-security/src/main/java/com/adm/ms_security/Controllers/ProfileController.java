@@ -19,9 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.adm.ms_security.Dtos.CompleteProfileRequestDto;
 import com.adm.ms_security.Dtos.UnlinkProviderRequestDto;
 import com.adm.ms_security.Models.Profile;
+import com.adm.ms_security.Models.User;
+import com.adm.ms_security.Services.ValidatorService;
 import com.adm.ms_security.Services.ProfileService;
 import com.adm.ms_security.Services.UserService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @CrossOrigin
@@ -38,6 +41,9 @@ public class ProfileController {
 
     @Autowired
     private UserService theUserService;
+
+    @Autowired
+    private ValidatorService validatorService;
 
     // Lista perfiles del sistema.
     @GetMapping("")
@@ -108,9 +114,23 @@ public class ProfileController {
     // Completa datos obligatorios del perfil ciudadano tras primer login
     @PostMapping("complete")
     public ResponseEntity<Map<String, Object>> completeProfile(
-            @Valid @RequestBody CompleteProfileRequestDto request) {
+            @Valid @RequestBody CompleteProfileRequestDto request,
+            HttpServletRequest httpRequest) {
+        User authenticatedUser = this.validatorService.getUser(httpRequest);
+        if (authenticatedUser == null || authenticatedUser.getId() == null || authenticatedUser.getId().isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("message", "No fue posible identificar el usuario autenticado"));
+        }
+
+        if (request.getUserId() != null
+            && !request.getUserId().isBlank()
+            && !authenticatedUser.getId().equals(request.getUserId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("message", "No puedes completar el perfil de otro usuario"));
+        }
+
         Profile profile = this.theProfileService.completeProfile(
-                request.getUserId(),
+            authenticatedUser.getId(),
                 request.getPhone(),
                 request.getAddress());
 
@@ -127,8 +147,20 @@ public class ProfileController {
     // Verifica si el perfil ciudadano está completo
     @GetMapping("user/{userId}/complete")
     public ResponseEntity<Map<String, Object>> checkProfileComplete(
-            @PathVariable String userId) {
-        boolean incomplete = this.theProfileService.isProfileIncomplete(userId);
+            @PathVariable String userId,
+            HttpServletRequest httpRequest) {
+        User authenticatedUser = this.validatorService.getUser(httpRequest);
+        if (authenticatedUser == null || authenticatedUser.getId() == null || authenticatedUser.getId().isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "No fue posible identificar el usuario autenticado"));
+        }
+
+        if (!authenticatedUser.getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "No puedes consultar el perfil de otro usuario"));
+        }
+
+        boolean incomplete = this.theProfileService.isProfileIncomplete(authenticatedUser.getId());
         return ResponseEntity.ok(Map.of("profileComplete", !incomplete));
     }
 }

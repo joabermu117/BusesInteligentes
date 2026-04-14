@@ -36,7 +36,7 @@ const LoginPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [githubEmailDialogOpen, setGithubEmailDialogOpen] = useState(false);
   const [githubPrivateData, setGithubPrivateData] = useState({
-    firebaseUid: "",
+    idToken: "",
     name: "",
     photoUrl: "",
     githubUsername: "",
@@ -73,6 +73,31 @@ const LoginPage = () => {
     }
 
     return "Credenciales invalidas. Verifica email y contrasena.";
+  };
+
+  const getGithubLinkingMessage = (error: unknown): string | null => {
+    const typedError = error as {
+      code?: string;
+      customData?: { _tokenResponse?: { needConfirmation?: boolean } };
+      response?: { data?: { needConfirmation?: boolean } };
+    };
+
+    const code = typedError?.code;
+    const needConfirmationFromFirebase =
+      typedError?.customData?._tokenResponse?.needConfirmation === true;
+    const needConfirmationFromHttp =
+      typedError?.response?.data?.needConfirmation === true;
+
+    if (
+      code === "auth/account-exists-with-different-credential" ||
+      code === "auth/email-already-in-use" ||
+      needConfirmationFromFirebase ||
+      needConfirmationFromHttp
+    ) {
+      return "Ese correo ya esta asociado a Google en Firebase. Inicia con Google y luego vincula GitHub desde tu perfil.";
+    }
+
+    return null;
   };
 
   const handleEmailLogin = async (event: FormEvent<HTMLFormElement>) => {
@@ -123,15 +148,17 @@ const LoginPage = () => {
   const handleGithubLogin = async () => {
     setErrorMessage(null);
     setIsSubmitting(true);
+    let currentGithubIdToken = "";
     try {
       const recaptchaToken = await executeRecaptcha("login");
       const credential = await FirebaseAuthService.signInWithGithub();
       const idToken = await FirebaseAuthService.getIdToken(credential);
+      currentGithubIdToken = idToken;
       const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
 
-      if (FirebaseAuthService.requiresGithubAlternativeEmail(credential)) {
+      if (await FirebaseAuthService.requiresGithubAlternativeEmail(credential)) {
         setGithubPrivateData({
-          firebaseUid: credential.user.uid,
+          idToken,
           name: credential.user.displayName ?? "",
           photoUrl: credential.user.photoURL ?? "",
           githubUsername: socialMetadata.githubUsername ?? "",
@@ -151,13 +178,20 @@ const LoginPage = () => {
       navigate("/2fa", { replace: true, state: challenge });
     } catch (error: any) {
       if (error?.code === "auth/popup-closed-by-user") return;
+
+      const linkingMessage = getGithubLinkingMessage(error);
+      if (linkingMessage) {
+        setErrorMessage(linkingMessage);
+        return;
+      }
+
       if (
         error?.response?.status === 422 &&
         error?.response?.data?.requiresEmail
       ) {
         const data = error.response.data;
         setGithubPrivateData({
-          firebaseUid: data.firebaseUid ?? "",
+          idToken: currentGithubIdToken,
           name: data.name ?? "",
           photoUrl: data.photoUrl ?? "",
           githubUsername: data.githubUsername ?? "",
@@ -377,7 +411,7 @@ const LoginPage = () => {
       </Paper>
       <GithubPrivateEmailDialog
         open={githubEmailDialogOpen}
-        firebaseUid={githubPrivateData.firebaseUid}
+        idToken={githubPrivateData.idToken}
         name={githubPrivateData.name}
         photoUrl={githubPrivateData.photoUrl}
         githubUsername={githubPrivateData.githubUsername}
