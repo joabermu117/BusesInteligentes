@@ -16,6 +16,7 @@ interface SocialLoginPayload {
   provider?: "google" | "github" | "microsoft";
   photoUrl?: string | null;
   githubUsername?: string | null;
+  requiresAlternativeEmail?: boolean;
 }
 
 interface VerifyOtpPayload {
@@ -82,6 +83,7 @@ class SecurityServiceClass {
         provider: "github",
         photoUrl: socialPayload?.photoUrl,
         githubUsername: socialPayload?.githubUsername,
+        requiresAlternativeEmail: socialPayload?.requiresAlternativeEmail,
       },
     );
 

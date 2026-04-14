@@ -155,17 +155,8 @@ const LoginPage = () => {
       const idToken = await FirebaseAuthService.getIdToken(credential);
       currentGithubIdToken = idToken;
       const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
-
-      if (await FirebaseAuthService.requiresGithubAlternativeEmail(credential)) {
-        setGithubPrivateData({
-          idToken,
-          name: credential.user.displayName ?? "",
-          photoUrl: credential.user.photoURL ?? "",
-          githubUsername: socialMetadata.githubUsername ?? "",
-        });
-        setGithubEmailDialogOpen(true);
-        return;
-      }
+      const requiresAlternativeEmail =
+        await FirebaseAuthService.requiresGithubAlternativeEmail(credential);
 
       const challenge = await SecurityService.exchangeGithubToken(
         idToken,
@@ -173,6 +164,7 @@ const LoginPage = () => {
         {
           photoUrl: socialMetadata.photoUrl,
           githubUsername: socialMetadata.githubUsername,
+          requiresAlternativeEmail,
         },
       );
       navigate("/2fa", { replace: true, state: challenge });

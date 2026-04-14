@@ -180,9 +180,14 @@ public class SecurityController {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
         validateGithubProvider(decodedToken);
         String firebaseEmail = normalizeEmail(decodedToken.getEmail());
+        boolean requiresAlternativeByClient = Boolean.TRUE.equals(request.getRequiresAlternativeEmail());
+        boolean hasUsableGithubIdentity = securityService.hasUsableGithubIdentity(
+            decodedToken.getUid(),
+            request.getGithubUsername());
 
         // Email privado en GitHub — pedir email alternativo al frontend
-        if (isGithubPrivateEmail(firebaseEmail)) {
+        if (isGithubPrivateEmail(firebaseEmail)
+            || (requiresAlternativeByClient && !hasUsableGithubIdentity)) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(Map.of(
                             "requiresEmail", true,
