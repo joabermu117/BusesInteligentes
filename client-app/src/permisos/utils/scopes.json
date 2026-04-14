@@ -11,6 +11,21 @@
     "method": "DELETE",
     "model": "perfiles"
   },
+  {
+    "url": "/api/profiles/user/?/providers/github",
+    "method": "DELETE",
+    "model": "perfiles"
+  },
+  {
+    "url": "/api/profiles/user/?/providers/google",
+    "method": "DELETE",
+    "model": "perfiles"
+  },
+  {
+    "url": "/api/profiles/user/?/providers/microsoft",
+    "method": "DELETE",
+    "model": "perfiles"
+  },
 
   { "url": "/api/roles", "method": "GET", "model": "roles" },
   { "url": "/api/roles/?", "method": "GET", "model": "roles" },
