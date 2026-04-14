@@ -155,17 +155,17 @@ public class SecurityController {
      */
     public ResponseEntity<?> githubLogin(@Valid @RequestBody FirebaseLoginRequest request) {
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
+        String firebaseEmail = normalizeEmail(decodedToken.getEmail());
 
         // Email privado en GitHub — pedir email alternativo al frontend
-        if (decodedToken.getEmail() == null || decodedToken.getEmail().isBlank()) {
+        if (isGithubPrivateEmail(firebaseEmail)) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(Map.of(
-                        "requiresEmail", true,
-                        "firebaseUid", decodedToken.getUid(),
-                        "name", decodedToken.getName() != null ? decodedToken.getName() : "",
-                        "photoUrl", request.getPhotoUrl() != null ? request.getPhotoUrl() : "",
-                        "githubUsername", request.getGithubUsername() != null ? request.getGithubUsername() : ""
-                    ));
+                            "requiresEmail", true,
+                            "firebaseUid", decodedToken.getUid(),
+                            "name", decodedToken.getName() != null ? decodedToken.getName() : "",
+                            "photoUrl", request.getPhotoUrl() != null ? request.getPhotoUrl() : "",
+                            "githubUsername", request.getGithubUsername() != null ? request.getGithubUsername() : ""));
         }
 
         User user = securityService.findOrCreateFromGithub(
@@ -180,7 +180,8 @@ public class SecurityController {
     public ResponseEntity<LoginChallengeResponseDto> githubLoginComplete(
             @Valid @RequestBody FirebaseLoginRequest request) {
 
-        // En este caso el email viene del frontend (el alternativo que ingresó el usuario)
+        // En este caso el email viene del frontend (el alternativo que ingresó el
+        // usuario)
         String email = request.getEmail();
         if (email == null || email.isBlank()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "EMAIL_REQUIRED", "El email es requerido");
@@ -208,5 +209,21 @@ public class SecurityController {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_FIREBASE",
                     "No fue posible validar la cuenta");
         }
+    }
+
+    private String normalizeEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
+
+        return email.trim().toLowerCase();
+    }
+
+    private boolean isGithubPrivateEmail(String email) {
+        if (email == null) {
+            return true;
+        }
+
+        return email.endsWith("@users.noreply.github.com");
     }
 }
