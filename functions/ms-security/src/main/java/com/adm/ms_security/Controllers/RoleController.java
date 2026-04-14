@@ -2,6 +2,8 @@ package com.adm.ms_security.Controllers;
 
 import java.util.List;
 
+import com.adm.ms_security.Dtos.RolePayloadDto;
+import com.adm.ms_security.Dtos.RoleResponseDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -13,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.adm.ms_security.Models.Role;
 import com.adm.ms_security.Services.RoleService;
 
 @CrossOrigin
@@ -30,26 +31,26 @@ public class RoleController {
 
     // Lista roles.
     @GetMapping("")
-    public List<Role> find() {
-        return this.theRoleService.find();
+    public List<RoleResponseDto> find() {
+        return this.theRoleService.findWithPermissions();
     }
 
     // Consulta rol por id.
     @GetMapping("{id}")
-    public Role findById(@PathVariable String id) {
-        return this.theRoleService.findById(id);
+    public RoleResponseDto findById(@PathVariable String id) {
+        return this.theRoleService.findByIdWithPermissions(id);
     }
 
     // Crea rol nuevo.
     @PostMapping
-    public Role create(@RequestBody Role newRole) {
-        return this.theRoleService.create(newRole);
+    public RoleResponseDto create(@RequestBody RolePayloadDto payload) {
+        return this.theRoleService.createWithPermissions(payload);
     }
 
     // Actualiza nombre/descripcion del rol.
     @PutMapping("{id}")
-    public Role update(@PathVariable String id, @RequestBody Role newRole) {
-        return this.theRoleService.update(id, newRole);
+    public RoleResponseDto update(@PathVariable String id, @RequestBody RolePayloadDto payload) {
+        return this.theRoleService.updateWithPermissions(id, payload);
     }
 
     // Elimina rol (si no esta asignado a usuarios).

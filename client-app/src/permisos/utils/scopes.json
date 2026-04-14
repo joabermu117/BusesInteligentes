@@ -118,5 +118,13 @@
     "url": "/api/mensajes-masivos/?",
     "method": "DELETE",
     "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/profiles/complete",
+    "method": "POST"
+  },
+  {
+    "url": "/api/profiles/user/?/complete",
+    "method": "GET"
   }
 ]

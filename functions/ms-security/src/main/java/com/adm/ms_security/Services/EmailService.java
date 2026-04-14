@@ -68,6 +68,24 @@ public class EmailService {
         mailDeliveryService.sendHtmlBestEffort(user.getEmail(), subject, body);
     }
 
+    // Notifica de forma resumida cambios masivos de permisos en un rol.
+    public void sendRolePermissionsBulkUpdatedEmail(User user, Role role, int addedCount, int removedCount) {
+        if (user == null || role == null || (addedCount <= 0 && removedCount <= 0)) {
+            return;
+        }
+
+        String subject = "Actualizacion masiva de permisos";
+        String body = theTemplateService.buildGenericTemplate(
+                "Cambio de permisos",
+                user.getName(),
+                "Se actualizaron permisos del rol '" + safe(role.getName()) + "'.<br/>"
+                        + "Permisos agregados: <strong>" + Math.max(0, addedCount) + "</strong><br/>"
+                        + "Permisos removidos: <strong>" + Math.max(0, removedCount) + "</strong>",
+                "Este mensaje es informativo sobre cambios de acceso.");
+
+        mailDeliveryService.sendHtmlBestEffort(user.getEmail(), subject, body);
+    }
+
     private String safe(String value) {
         return value == null ? "" : value;
     }

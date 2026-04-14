@@ -1,5 +1,7 @@
 package com.adm.ms_security.Services;
 
+import com.adm.ms_security.Dtos.RolePayloadDto;
+import com.adm.ms_security.Dtos.RoleResponseDto;
 import com.adm.ms_security.Models.Role;
 import com.adm.ms_security.Repositories.RoleRepository;
 import com.adm.ms_security.Repositories.UserRoleRepository;
@@ -8,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -23,6 +26,9 @@ public class RoleService {
     @Autowired
     private UserRoleRepository theUserRoleRepository;
 
+    @Autowired
+    private RolePermissionService theRolePermissionService;
+
     public List<Role> find() {
         return this.theRoleRepository.findAll();
     }
@@ -33,6 +39,53 @@ public class RoleService {
 
     public Role create(Role newRole) {
         return this.theRoleRepository.save(newRole);
+    }
+
+    public List<RoleResponseDto> findWithPermissions() {
+        List<Role> roles = this.theRoleRepository.findAll();
+        List<RoleResponseDto> response = new ArrayList<>();
+        for (Role role : roles) {
+            response.add(toResponse(role));
+        }
+        return response;
+    }
+
+    public RoleResponseDto findByIdWithPermissions(String id) {
+        Role role = this.theRoleRepository.findById(id).orElse(null);
+        if (role == null) {
+            return null;
+        }
+        return toResponse(role);
+    }
+
+    public RoleResponseDto createWithPermissions(RolePayloadDto payload) {
+        Role role = new Role();
+        role.setName(payload.getName());
+        role.setDescription(payload.getDescription());
+        Role createdRole = this.theRoleRepository.save(role);
+
+        if (payload.getPermissionIds() != null) {
+            this.theRolePermissionService.syncPermissionsForRole(createdRole.getId(), payload.getPermissionIds());
+        }
+
+        return findByIdWithPermissions(createdRole.getId());
+    }
+
+    public RoleResponseDto updateWithPermissions(String id, RolePayloadDto payload) {
+        Role role = this.theRoleRepository.findById(id).orElse(null);
+        if (role == null) {
+            return null;
+        }
+
+        role.setName(payload.getName());
+        role.setDescription(payload.getDescription());
+        this.theRoleRepository.save(role);
+
+        if (payload.getPermissionIds() != null) {
+            this.theRolePermissionService.syncPermissionsForRole(id, payload.getPermissionIds());
+        }
+
+        return findByIdWithPermissions(id);
     }
 
     public Role update(String id, Role newRole) {
@@ -63,5 +116,14 @@ public class RoleService {
         }
 
         this.theRoleRepository.delete(theRole);
+    }
+
+    private RoleResponseDto toResponse(Role role) {
+        RoleResponseDto response = new RoleResponseDto();
+        response.setId(role.getId());
+        response.setName(role.getName());
+        response.setDescription(role.getDescription());
+        response.setPermissionIds(this.theRolePermissionService.getPermissionIdsByRole(role.getId()));
+        return response;
     }
 }
