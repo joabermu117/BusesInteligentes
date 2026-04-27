@@ -39,6 +39,14 @@ public class ProfileService {
         return this.theProfileRepository.findByUserId(userId).orElse(null);
     }
 
+    public Profile findByGithubUsername(String githubUsername) {
+        if (githubUsername == null || githubUsername.isBlank()) {
+            return null;
+        }
+
+        return this.theProfileRepository.findByGithubUsernameIgnoreCase(githubUsername.trim()).orElse(null);
+    }
+
     public Profile create(Profile newProfile) {
         return this.theProfileRepository.save(newProfile);
     }

@@ -11,4 +11,6 @@ public interface ProfileRepository extends MongoRepository<Profile, String> {
     @Query("{ 'user.$id' : ObjectId(?0) }")
     Optional<Profile> findByUserId(String userId);
 
+    Optional<Profile> findByGithubUsernameIgnoreCase(String githubUsername);
+
 }

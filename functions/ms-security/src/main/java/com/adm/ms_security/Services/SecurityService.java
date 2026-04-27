@@ -152,9 +152,11 @@ public class SecurityService {
             return null;
         }
 
+        boolean githubProvider = isGithubProvider(provider, firebaseToken);
+
         User byUid = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
         if (byUid != null) {
-            User syncedUser = syncFirebaseFields(byUid, firebaseUid, email, firebaseToken.getName());
+            User syncedUser = syncFirebaseFields(byUid, firebaseUid, email, firebaseToken.getName(), githubProvider);
             this.theProfileService.ensureProfileForUserWithSocialData(
                     syncedUser,
                     resolveProvider(provider, firebaseToken),
@@ -165,13 +167,31 @@ public class SecurityService {
 
         User byEmail = this.theUserRepository.findByEmailIgnoreCase(email).orElse(null);
         if (byEmail != null) {
-            User syncedUser = syncFirebaseFields(byEmail, firebaseUid, email, firebaseToken.getName());
+            User syncedUser = syncFirebaseFields(byEmail, firebaseUid, email, firebaseToken.getName(), githubProvider);
             this.theProfileService.ensureProfileForUserWithSocialData(
                     syncedUser,
                     resolveProvider(provider, firebaseToken),
                     resolvePhotoUrl(photoUrl, firebaseToken),
                     githubUsername);
             return syncedUser;
+        }
+
+        if (isGithubProvider(provider, firebaseToken) && githubUsername != null && !githubUsername.isBlank()) {
+            User byGithubUsername = findUserByGithubUsername(githubUsername);
+            if (byGithubUsername != null) {
+                User syncedUser = syncFirebaseFields(
+                        byGithubUsername,
+                        firebaseUid,
+                        email,
+                        firebaseToken.getName(),
+                        true);
+                this.theProfileService.ensureProfileForUserWithSocialData(
+                        syncedUser,
+                        resolveProvider(provider, firebaseToken),
+                        resolvePhotoUrl(photoUrl, firebaseToken),
+                        githubUsername);
+                return syncedUser;
+            }
         }
 
         User newUser = new User();
@@ -189,7 +209,12 @@ public class SecurityService {
         return created;
     }
 
-    private User syncFirebaseFields(User user, String firebaseUid, String email, String name) {
+    private User syncFirebaseFields(
+            User user,
+            String firebaseUid,
+            String email,
+            String name,
+            boolean preserveUsableEmailForGithub) {
         boolean changed = false;
 
         if (user.getFirebaseUid() == null || !user.getFirebaseUid().equals(firebaseUid)) {
@@ -198,8 +223,14 @@ public class SecurityService {
         }
 
         if (user.getEmail() == null || !user.getEmail().equalsIgnoreCase(email)) {
-            user.setEmail(email);
-            changed = true;
+            boolean shouldPreserveCurrentEmail = preserveUsableEmailForGithub
+                    && user.getEmail() != null
+                    && !isGithubPrivateEmail(normalizeEmail(user.getEmail()));
+
+            if (!shouldPreserveCurrentEmail) {
+                user.setEmail(email);
+                changed = true;
+            }
         }
 
         if (name != null && !name.isBlank()) {
@@ -268,6 +299,33 @@ public class SecurityService {
 
     private String generateFirebasePassword(String firebaseUid) {
         return theEncryptionService.convertSHA256("firebase-user-" + firebaseUid);
+    }
+
+    private boolean isGithubPrivateEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return true;
+        }
+
+        return email.trim().toLowerCase().endsWith("@users.noreply.github.com");
+    }
+
+    public boolean hasUsableGithubIdentity(String firebaseUid, String githubUsername) {
+        User user = null;
+
+        if (firebaseUid != null && !firebaseUid.isBlank()) {
+            user = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
+        }
+
+        if (user == null && githubUsername != null && !githubUsername.isBlank()) {
+            user = findUserByGithubUsername(githubUsername);
+        }
+
+        if (user == null) {
+            return false;
+        }
+
+        String normalizedEmail = normalizeEmail(user.getEmail());
+        return normalizedEmail != null && !isGithubPrivateEmail(normalizedEmail);
     }
     /*
      * public boolean permissionsValidation(final HttpServletRequest request,
@@ -364,6 +422,37 @@ public class SecurityService {
             return syncedUser;
         }
 
+        if (githubUsername != null && !githubUsername.isBlank()) {
+            User byGithubUsername = findUserByGithubUsername(githubUsername);
+            if (byGithubUsername != null) {
+                User emailOwner = this.theUserRepository.findByEmailIgnoreCase(normalizedEmail).orElse(null);
+                if (emailOwner != null
+                        && emailOwner.getId() != null
+                        && !emailOwner.getId().equals(byGithubUsername.getId())) {
+                    return null;
+                }
+
+                if (byGithubUsername.getFirebaseUid() == null
+                        || !byGithubUsername.getFirebaseUid().equals(firebaseUid)) {
+                    byGithubUsername.setFirebaseUid(firebaseUid);
+                }
+
+                if (byGithubUsername.getEmail() == null
+                        || !byGithubUsername.getEmail().equalsIgnoreCase(normalizedEmail)) {
+                    byGithubUsername.setEmail(normalizedEmail);
+                }
+
+                if (name != null && !name.isBlank()) {
+                    byGithubUsername.setName(name.trim());
+                }
+
+                User syncedUser = this.theUserRepository.save(byGithubUsername);
+                this.theProfileService.ensureProfileForUserWithSocialData(
+                        syncedUser, "github", photoUrl, githubUsername);
+                return syncedUser;
+            }
+        }
+
         // Si ya existe por email con otro método, no permitir
         User byEmail = this.theUserRepository.findByEmailIgnoreCase(normalizedEmail).orElse(null);
         if (byEmail != null && byEmail.getFirebaseUid() != null) return null;
@@ -388,5 +477,24 @@ public class SecurityService {
         this.theProfileService.ensureProfileForUserWithSocialData(
                 created, "github", photoUrl, githubUsername);
         return created;
+    }
+
+    private boolean isGithubProvider(String provider, FirebaseToken firebaseToken) {
+        String resolvedProvider = resolveProvider(provider, firebaseToken);
+        if (resolvedProvider == null || resolvedProvider.isBlank()) {
+            return false;
+        }
+
+        String normalized = resolvedProvider.trim().toLowerCase();
+        return normalized.contains("github");
+    }
+
+    private User findUserByGithubUsername(String githubUsername) {
+        var profile = this.theProfileService.findByGithubUsername(githubUsername);
+        if (profile == null || profile.getUser() == null || profile.getUser().getId() == null) {
+            return null;
+        }
+
+        return this.theUserRepository.findById(profile.getUser().getId()).orElse(null);
     }
 }

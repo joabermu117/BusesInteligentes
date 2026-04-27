@@ -15,6 +15,7 @@ public class FirebaseLoginRequest {
     private String provider;
     private String photoUrl;
     private String githubUsername;
+    private Boolean requiresAlternativeEmail;
 
     private String email;
     private String firebaseUid;
