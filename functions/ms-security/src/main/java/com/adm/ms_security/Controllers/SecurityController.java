@@ -1,7 +1,7 @@
 package com.adm.ms_security.Controllers;
 
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +24,7 @@ import com.adm.ms_security.Dtos.RegisterRequest;
 import com.adm.ms_security.Dtos.VerifyOtpRequestDto;
 import com.adm.ms_security.Dtos.VerifyOtpResponseDto;
 import com.adm.ms_security.Exceptions.ApiException;
+import com.adm.ms_security.Models.Permission;
 import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Services.AuthFlowService;
 import com.adm.ms_security.Services.PasswordRecoveryService;
@@ -33,6 +34,7 @@ import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
 
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @CrossOrigin
@@ -67,6 +69,12 @@ public class SecurityController {
     public ResponseEntity<LoginChallengeResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
         return ResponseEntity.ok(authFlowService.startEmailLogin(request));
     }
+
+    @PostMapping("permissions-validation")
+    public boolean permissionsValidation(final HttpServletRequest request, @RequestBody Permission thePermission) {
+       return this.securityService.permissionsValidation(request,thePermission);
+    }
+    
 
     @Operation(summary = "Verifica OTP de 6 digitos y emite JWT")
     @PostMapping("2fa/verify")

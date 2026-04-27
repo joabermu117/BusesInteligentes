@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.adm.ms_security.Models.Permission;
 import com.adm.ms_security.Models.Role;
 import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Models.UserRole;
@@ -14,6 +15,8 @@ import com.adm.ms_security.Repositories.RoleRepository;
 import com.adm.ms_security.Repositories.UserRepository;
 import com.adm.ms_security.Repositories.UserRoleRepository;
 import com.google.firebase.auth.FirebaseToken;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 /**
@@ -36,6 +39,8 @@ public class SecurityService {
     private JwtService theJwtService;
     @Autowired
     private ProfileService theProfileService;
+    @Autowired
+    private  ValidatorService theValidatorsService;
 
     @Autowired
     private EmailService theEmailService;
@@ -47,6 +52,11 @@ public class SecurityService {
         }
 
         return generateToken(authenticatedUser);
+    }
+
+    public boolean permissionsValidation(final HttpServletRequest request, Permission thePermission) {
+        boolean success=this.theValidatorsService.validationRolePermission(request,thePermission.getUrl(),thePermission.getMethod());
+        return success;
     }
 
     public User authenticateLocalUser(String email, String password) {
