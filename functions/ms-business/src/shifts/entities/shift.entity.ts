@@ -1,13 +1,11 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Bus } from '../../buses/entities/bus.entity';
+import { Driver } from '../../driver/entities/driver.entity';
 
 @Entity('shifts')
 export class Shift {
   @PrimaryGeneratedColumn()
   id?: number;
-
-  @Column()
-  driverUserId?: string;
 
   @Column()
   startTime?: Date;
@@ -28,6 +26,18 @@ export class Shift {
   @Column({ nullable: true })
   busCondition?: string;
 
+  /**
+   * Bidirectional N:1 relationship with Driver
+   * Many shifts belong to one driver
+   * Shift acts as an intermediate table for the N:N relationship with Bus
+   */
+  @ManyToOne(() => Driver, (driver) => driver.shifts)
+  driver?: Driver;
+
+  /**
+   * Bidirectional N:1 relationship with Bus
+   * Many shifts belong to one bus
+   */
   @ManyToOne(() => Bus, (bus) => bus.shifts)
   bus?: Bus;
 }

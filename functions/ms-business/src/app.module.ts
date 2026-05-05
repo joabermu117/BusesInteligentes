@@ -9,6 +9,15 @@ import { IncidentsModule } from './incidents/incidents.module';
 import { IncidentsBusesModule } from './incidents-buses/incidents-buses.module';
 import { PhotosModule } from './photos/photos.module';
 import { SchedulesModule } from './schedules/schedules.module';
+import { PersonModule } from './person/person.module';
+import { CitizenModule } from './citizen/citizen.module';
+import { DriverModule } from './driver/driver.module';
+import { AddressModule } from './address/address.module';
+import { PaymentMethodModule } from './payment-method/payment-method.module';
+import { CitizenPaymentMethodModule } from './citizen-payment-method/citizen-payment-method.module';
+import { TicketModule } from './ticket/ticket.module';
+import { HistoryModule } from './history/history.module';
+import { ContractModule } from './contract/contract.module';
 
 @Module({
   imports: [
@@ -35,6 +44,15 @@ import { SchedulesModule } from './schedules/schedules.module';
     IncidentsBusesModule,
     PhotosModule,
     SchedulesModule,
+    PersonModule,
+    CitizenModule,
+    DriverModule,
+    AddressModule,
+    PaymentMethodModule,
+    CitizenPaymentMethodModule,
+    TicketModule,
+    HistoryModule,
+    ContractModule,
   ],
 })
 export class AppModule {}
