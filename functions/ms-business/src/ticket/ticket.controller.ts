@@ -3,7 +3,7 @@ import { TicketService } from './ticket.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 
-@Controller('ticket')
+@Controller('api/tickets')
 export class TicketController {
   constructor(private readonly ticketService: TicketService) {}
 
@@ -15,6 +15,11 @@ export class TicketController {
   @Get()
   findAll() {
     return this.ticketService.findAll();
+    @Get('citizen/:citizenId')
+    findByCitizen(@Param('citizenId') citizenId: string) {
+      return this.ticketService.findByCitizen(+citizenId);
+    }
+
   }
 
   @Get(':id')

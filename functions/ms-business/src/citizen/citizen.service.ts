@@ -1,26 +1,55 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateCitizenDto } from './dto/create-citizen.dto';
 import { UpdateCitizenDto } from './dto/update-citizen.dto';
+import { Citizen } from './entities/citizen.entity';
 
 @Injectable()
 export class CitizenService {
-  create(createCitizenDto: CreateCitizenDto) {
-    return 'This action adds a new citizen';
+  constructor(
+    @InjectRepository(Citizen)
+    private readonly citizenRepository: Repository<Citizen>,
+  ) {}
+
+  async create(createCitizenDto: CreateCitizenDto): Promise<Citizen> {
+    const existing = await this.citizenRepository.findOne({
+      where: { person_id: createCitizenDto.person_id },
+    });
+    if (existing) {
+      throw new BadRequestException(
+        `Citizen with person_id ${createCitizenDto.person_id} already exists`,
+      );
+    }
+
+    const citizen = this.citizenRepository.create(createCitizenDto);
+    return await this.citizenRepository.save(citizen);
   }
 
-  findAll() {
-    return `This action returns all citizen`;
+  async findAll(): Promise<Citizen[]> {
+    return await this.citizenRepository.find({
+      relations: ['addresses', 'tickets', 'paymentMethods'],
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} citizen`;
+  async findOne(person_id: string): Promise<Citizen> {
+    const citizen = await this.citizenRepository.findOne({
+      where: { person_id },
+      relations: ['addresses', 'tickets', 'paymentMethods'],
+    });
+    if (!citizen) throw new NotFoundException(`Citizen #${person_id} not found`);
+    return citizen;
   }
 
-  update(id: number, updateCitizenDto: UpdateCitizenDto) {
-    return `This action updates a #${id} citizen`;
+  async update(person_id: string, updateCitizenDto: UpdateCitizenDto): Promise<Citizen> {
+    const citizen = await this.findOne(person_id);
+    const updated = Object.assign(citizen, updateCitizenDto);
+    return await this.citizenRepository.save(updated);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} citizen`;
+  async remove(person_id: string): Promise<{ message: string }> {
+    const citizen = await this.findOne(person_id);
+    await this.citizenRepository.remove(citizen);
+    return { message: `Citizen #${person_id} deleted successfully` };
   }
 }

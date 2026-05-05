@@ -3,7 +3,7 @@ import { HistoryService } from './history.service';
 import { CreateHistoryDto } from './dto/create-history.dto';
 import { UpdateHistoryDto } from './dto/update-history.dto';
 
-@Controller('history')
+@Controller('api/histories')
 export class HistoryController {
   constructor(private readonly historyService: HistoryService) {}
 
@@ -15,6 +15,16 @@ export class HistoryController {
   @Get()
   findAll() {
     return this.historyService.findAll();
+    @Get('ticket/:ticketId')
+    findByTicket(@Param('ticketId') ticketId: string) {
+      return this.historyService.findByTicket(+ticketId);
+    }
+
+    @Get('person/:personId')
+    findByPerson(@Param('personId') personId: string) {
+      return this.historyService.findByPerson(personId);
+    }
+
   }
 
   @Get(':id')

@@ -1,9 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { PaymentMethodService } from './payment-method.service';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { CreatePaymentMethodDto } from './dto/create-payment-method.dto';
 import { UpdatePaymentMethodDto } from './dto/update-payment-method.dto';
+import { PaymentMethodService } from './payment-method.service';
 
-@Controller('payment-method')
+@Controller('api/payment-methods')
 export class PaymentMethodController {
   constructor(private readonly paymentMethodService: PaymentMethodService) {}
 

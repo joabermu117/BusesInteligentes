@@ -3,7 +3,7 @@ import { CitizenPaymentMethodService } from './citizen-payment-method.service';
 import { CreateCitizenPaymentMethodDto } from './dto/create-citizen-payment-method.dto';
 import { UpdateCitizenPaymentMethodDto } from './dto/update-citizen-payment-method.dto';
 
-@Controller('citizen-payment-method')
+@Controller('api/citizen-payment-methods')
 export class CitizenPaymentMethodController {
   constructor(private readonly citizenPaymentMethodService: CitizenPaymentMethodService) {}
 
@@ -15,6 +15,11 @@ export class CitizenPaymentMethodController {
   @Get()
   findAll() {
     return this.citizenPaymentMethodService.findAll();
+    @Get('citizen/:citizenId')
+    findByCitizen(@Param('citizenId') citizenId: string) {
+      return this.citizenPaymentMethodService.findByCitizen(+citizenId);
+    }
+
   }
 
   @Get(':id')

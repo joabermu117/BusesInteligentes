@@ -3,7 +3,7 @@ import { ContractService } from './contract.service';
 import { CreateContractDto } from './dto/create-contract.dto';
 import { UpdateContractDto } from './dto/update-contract.dto';
 
-@Controller('contract')
+@Controller('api/contracts')
 export class ContractController {
   constructor(private readonly contractService: ContractService) {}
 
@@ -15,6 +15,16 @@ export class ContractController {
   @Get()
   findAll() {
     return this.contractService.findAll();
+    @Get('driver/:driverId')
+    findByDriver(@Param('driverId') driverId: string) {
+      return this.contractService.findByDriver(driverId);
+    }
+
+    @Get('company/:companyId')
+    findByCompany(@Param('companyId') companyId: string) {
+      return this.contractService.findByCompany(+companyId);
+    }
+
   }
 
   @Get(':id')
