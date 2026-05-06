@@ -18,6 +18,13 @@ import { CitizenPaymentMethodModule } from './citizen-payment-method/citizen-pay
 import { TicketModule } from './ticket/ticket.module';
 import { HistoryModule } from './history/history.module';
 import { ContractModule } from './contract/contract.module';
+import { RouteModule } from './route/route.module';
+import { StopModule } from './stop/stop.module';
+import { NodeModule } from './node/node.module';
+import { MessageModule } from './message/message.module';
+import { RecipientPersonModule } from './recipient-person/recipient-person.module';
+import { RecipientGroupModule } from './recipient-group/recipient-group.module';
+import { GroupModule } from './group/group.module';
 
 @Module({
   imports: [
@@ -53,6 +60,13 @@ import { ContractModule } from './contract/contract.module';
     TicketModule,
     HistoryModule,
     ContractModule,
+    RouteModule,
+    StopModule,
+    NodeModule,
+    MessageModule,
+    RecipientPersonModule,
+    RecipientGroupModule,
+    GroupModule,
   ],
 })
 export class AppModule {}

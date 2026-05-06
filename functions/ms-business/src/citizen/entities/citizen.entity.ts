@@ -1,7 +1,10 @@
-import { Entity, JoinColumn, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
+import { Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { Address } from '../../address/entities/address.entity';
 import { CitizenPaymentMethod } from '../../citizen-payment-method/entities/citizen-payment-method.entity';
+import { GroupPerson } from '../../group-person/entities/group-person.entity';
+import { Message } from '../../message/entities/message.entity';
 import { Person } from '../../person/person.base';
+import { RecipientPerson } from '../../recipient-person/entities/recipient-person.entity';
 import { Ticket } from '../../ticket/entities/ticket.entity';
 
 @Entity('citizens')
@@ -33,6 +36,15 @@ export class Citizen extends Person {
     { cascade: true }
   )
   paymentMethods?: CitizenPaymentMethod[];
+
+  @OneToMany(() => Message, (message) => message.sender)
+  sentMessages?: Message[];
+
+  @OneToMany(() => RecipientPerson, (recipientPerson) => recipientPerson.recipient)
+  recipientPersons?: RecipientPerson[];
+
+  @OneToMany(() => GroupPerson, (groupPerson) => groupPerson.person)
+  groupPersons?: GroupPerson[];
 
   constructor(person_id: string) {
     super(person_id);
