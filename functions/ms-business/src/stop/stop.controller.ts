@@ -3,7 +3,7 @@ import { CreateStopDto } from './dto/create-stop.dto';
 import { UpdateStopDto } from './dto/update-stop.dto';
 import { StopService } from './stop.service';
 
-@Controller('api/paraderos')
+@Controller('api/stops')
 export class StopController {
   constructor(private readonly stopService: StopService) {}
 

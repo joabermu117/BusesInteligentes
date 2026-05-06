@@ -5,7 +5,7 @@ import { GroupService } from './group.service';
 import { GroupPersonService } from '../group-person/group-person.service';
 import { CreateGroupPersonDto } from '../group-person/dto/create-group-person.dto';
 
-@Controller('api/grupos')
+@Controller('api/groups')
 export class GroupController {
   constructor(
     private readonly groupService: GroupService,
@@ -39,7 +39,7 @@ export class GroupController {
 
   // ─── Endpoints anidados: personas del grupo ───
 
-  @Post(':id/personas')
+  @Post(':id/persons')
   addPerson(
     @Param('id') id: string,
     @Body() createGroupPersonDto: CreateGroupPersonDto,
@@ -50,12 +50,12 @@ export class GroupController {
     });
   }
 
-  @Get(':id/personas')
+  @Get(':id/persons')
   findPersons(@Param('id') id: string) {
     return this.groupPersonService.findByGroup(+id);
   }
 
-  @Delete(':id/personas/:pid')
+  @Delete(':id/persons/:pid')
   removePerson(
     @Param('id') id: string,
     @Param('pid') pid: string,

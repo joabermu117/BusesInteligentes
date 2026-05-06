@@ -3,7 +3,7 @@ import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { MessageService } from './message.service';
 
-@Controller('api/mensajes')
+@Controller('api/messages')
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 

@@ -3,7 +3,7 @@ import { CreateRecipientGroupDto } from './dto/create-recipient-group.dto';
 import { UpdateRecipientGroupDto } from './dto/update-recipient-group.dto';
 import { RecipientGroupService } from './recipient-group.service';
 
-@Controller('api/destinatarios-grupo')
+@Controller('api/recipient-groups')
 export class RecipientGroupController {
   constructor(private readonly recipientGroupService: RecipientGroupService) {}
 

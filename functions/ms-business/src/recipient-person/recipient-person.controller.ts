@@ -3,7 +3,7 @@ import { CreateRecipientPersonDto } from './dto/create-recipient-person.dto';
 import { UpdateRecipientPersonDto } from './dto/update-recipient-person.dto';
 import { RecipientPersonService } from './recipient-person.service';
 
-@Controller('api/destinatarios-persona')
+@Controller('api/recipient-persons')
 export class RecipientPersonController {
   constructor(private readonly recipientPersonService: RecipientPersonService) {}
 
