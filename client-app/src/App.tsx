@@ -17,6 +17,16 @@ import {
 } from "./config/httpClient";
 import AppShell from "./permisos/common/layout/AppShell";
 import PermisosRoutes from "./permisos/routes/Permisos.routes";
+import RutasList from "./viajes/pages/RutasList";
+import RutaDetalle from "./viajes/pages/RutaDetalle";
+import ParaderosCercanos from "./viajes/pages/ParaderosCercanos";
+import AbordarBus from "./boletos/pages/AbordarBus";
+import DescenderBus from "./boletos/pages/DescenderBus";
+import HistorialViajes from "./boletos/pages/HistorialViajes";
+import DetalleViaje from "./boletos/pages/DetalleViaje";
+import MisTurnos from "./boletos/pages/MisTurnos";
+import IniciarTurno from "./boletos/pages/IniciarTurno";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const RequireAuth = () => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -31,7 +41,8 @@ const RequireAuth = () => {
 
 function App() {
   return (
-    <BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -42,13 +53,23 @@ function App() {
         <Route element={<RequireAuth />}>
           <Route element={<AppShell />}>
             {PermisosRoutes}
+            <Route path="/rutas" element={<RutasList />} />
+            <Route path="/rutas/:id" element={<RutaDetalle />} />
+            <Route path="/paraderos" element={<ParaderosCercanos />} />
+            <Route path="/abordar" element={<AbordarBus />} />
+            <Route path="/descender" element={<DescenderBus />} />
+            <Route path="/viajes/historial" element={<HistorialViajes />} />
+            <Route path="/viajes/:id" element={<DetalleViaje />} />
+            <Route path="/turnos" element={<MisTurnos />} />
+            <Route path="/turnos/:id/iniciar" element={<IniciarTurno />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>
 
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </BrowserRouter>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

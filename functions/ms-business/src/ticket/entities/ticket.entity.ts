@@ -25,6 +25,9 @@ export class Ticket {
   @Column({ nullable: true })
   expirationDate?: Date;
 
+  @Column({ nullable: true })
+  completedDate?: Date;
+
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   price?: number;
 

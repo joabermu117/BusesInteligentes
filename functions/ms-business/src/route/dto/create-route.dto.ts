@@ -24,6 +24,10 @@ export class CreateRouteDto {
   @Min(1)
   estimated_duration: number;
 
+  @IsNumber()
+  @Min(0)
+  tarifa: number;
+
   @IsBoolean()
   is_active: boolean;
 }

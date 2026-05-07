@@ -56,9 +56,9 @@ export class CitizenPaymentMethodService {
     return citizenPaymentMethod;
   }
 
-  async findByCitizen(citizenId: number): Promise<CitizenPaymentMethod[]> {
+  async findByCitizen(citizenId: string): Promise<CitizenPaymentMethod[]> {
     return await this.citizenPaymentMethodRepository.find({
-      where: { citizen: { person_id: citizenId.toString() } },
+      where: { citizen: { person_id: citizenId } },
       relations: ['citizen', 'paymentMethod'],
     });
   }

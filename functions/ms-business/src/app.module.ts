@@ -25,6 +25,7 @@ import { MessageModule } from './message/message.module';
 import { RecipientPersonModule } from './recipient-person/recipient-person.module';
 import { RecipientGroupModule } from './recipient-group/recipient-group.module';
 import { GroupModule } from './group/group.module';
+import { BoardingModule } from './boarding/boarding.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { GroupModule } from './group/group.module';
     RecipientPersonModule,
     RecipientGroupModule,
     GroupModule,
+    BoardingModule,
   ],
 })
 export class AppModule {}

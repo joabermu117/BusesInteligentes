@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { CitizenPaymentMethod } from '../citizen-payment-method/entities/citizen-payment-method.entity';
 import { Citizen } from '../citizen/entities/citizen.entity';
 import { Schedule } from '../schedules/entities/schedule.entity';
+import { History } from '../history/entities/history.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket } from './entities/ticket.entity';
@@ -19,6 +20,8 @@ export class TicketService {
     private readonly citizenPaymentMethodRepository: Repository<CitizenPaymentMethod>,
     @InjectRepository(Schedule)
     private readonly scheduleRepository: Repository<Schedule>,
+    @InjectRepository(History)
+    private readonly historyRepository: Repository<History>,
   ) {}
 
   async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
@@ -53,21 +56,21 @@ export class TicketService {
       ticketNumber,
       citizen,
       schedule,
-      paymentMethod,
+      paymentMethod: paymentMethod ?? undefined,
     });
     return await this.ticketRepository.save(ticket);
   }
 
   async findAll(): Promise<Ticket[]> {
     return await this.ticketRepository.find({
-      relations: ['citizen', 'paymentMethod', 'schedule', 'history'],
+      relations: ['citizen', 'paymentMethod', 'schedule', 'schedule.bus', 'history'],
     });
   }
 
   async findOne(id: number): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { id },
-      relations: ['citizen', 'paymentMethod', 'schedule', 'history'],
+      relations: ['citizen', 'paymentMethod', 'schedule', 'schedule.bus', 'history'],
     });
     if (!ticket) throw new NotFoundException(`Ticket #${id} not found`);
     return ticket;
@@ -76,8 +79,31 @@ export class TicketService {
   async findByCitizen(citizenId: number): Promise<Ticket[]> {
     return await this.ticketRepository.find({
       where: { citizen: { person_id: citizenId.toString() } },
-      relations: ['citizen', 'paymentMethod', 'schedule'],
+      relations: ['citizen', 'paymentMethod', 'schedule', 'schedule.bus', 'history'],
     });
+  }
+
+  async findByPerson(personId: string): Promise<Ticket[]> {
+    return await this.ticketRepository.find({
+      where: { citizen: { person_id: personId } },
+      relations: ['schedule', 'schedule.bus', 'history'],
+      order: { issuedDate: 'DESC' },
+    });
+  }
+
+  async findTravelDetail(id: number): Promise<Ticket> {
+    const ticket = await this.ticketRepository.findOne({
+      where: { id },
+      relations: [
+        'citizen',
+        'schedule',
+        'schedule.bus',
+        'schedule.bus.gps',
+        'history',
+      ],
+    });
+    if (!ticket) throw new NotFoundException(`Ticket #${id} not found`);
+    return ticket;
   }
 
   async update(id: number, updateTicketDto: UpdateTicketDto): Promise<Ticket> {

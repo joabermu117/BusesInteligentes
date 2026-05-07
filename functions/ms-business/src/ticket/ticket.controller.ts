@@ -15,11 +15,16 @@ export class TicketController {
   @Get()
   findAll() {
     return this.ticketService.findAll();
-    @Get('citizen/:citizenId')
-    findByCitizen(@Param('citizenId') citizenId: string) {
-      return this.ticketService.findByCitizen(+citizenId);
-    }
+  }
 
+  @Get('by-person/:personId')
+  findByPerson(@Param('personId') personId: string) {
+    return this.ticketService.findByPerson(personId);
+  }
+
+  @Get(':id/detail')
+  findTravelDetail(@Param('id') id: string) {
+    return this.ticketService.findTravelDetail(+id);
   }
 
   @Get(':id')

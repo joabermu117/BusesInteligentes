@@ -15,16 +15,16 @@ export class ContractController {
   @Get()
   findAll() {
     return this.contractService.findAll();
-    @Get('driver/:driverId')
-    findByDriver(@Param('driverId') driverId: string) {
-      return this.contractService.findByDriver(driverId);
-    }
+  }
 
-    @Get('company/:companyId')
-    findByCompany(@Param('companyId') companyId: string) {
-      return this.contractService.findByCompany(+companyId);
-    }
+  @Get('driver/:driverId')
+  findByDriver(@Param('driverId') driverId: string) {
+    return this.contractService.findByDriver(driverId);
+  }
 
+  @Get('company/:companyId')
+  findByCompany(@Param('companyId') companyId: string) {
+    return this.contractService.findByCompany(+companyId);
   }
 
   @Get(':id')

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { CreateStopDto } from './dto/create-stop.dto';
 import { UpdateStopDto } from './dto/update-stop.dto';
 import { StopService } from './stop.service';
@@ -15,6 +15,11 @@ export class StopController {
   @Get()
   findAll() {
     return this.stopService.findAll();
+  }
+
+  @Get('nearest')
+  findNearest(@Query('lat') lat: string, @Query('lng') lng: string) {
+    return this.stopService.findNearest(+lat, +lng);
   }
 
   @Get(':id')

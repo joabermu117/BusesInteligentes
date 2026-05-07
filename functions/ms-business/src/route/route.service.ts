@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Like, Repository } from 'typeorm';
 import { CreateRouteDto } from './dto/create-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
 import { Route } from './entities/route.entity';
+import { RouteStop } from './entities/route-stop.entity';
 
 @Injectable()
 export class RouteService {
@@ -17,8 +18,12 @@ export class RouteService {
     return await this.routeRepository.save(route);
   }
 
-  async findAll(): Promise<Route[]> {
-    return await this.routeRepository.find({ relations: ['nodes', 'routeStops', 'routeStops.stop'] });
+  async findAll(name?: string): Promise<Route[]> {
+    const where = name ? { name: Like(`%${name}%`) } : {};
+    return await this.routeRepository.find({
+      where,
+      relations: ['nodes', 'routeStops', 'routeStops.stop'],
+    });
   }
 
   async findOne(id: number): Promise<Route> {
@@ -42,5 +47,15 @@ export class RouteService {
     const route = await this.findOne(id);
     await this.routeRepository.remove(route);
     return { message: `Route #${id} deleted successfully` };
+  }
+
+  async findStopsByRoute(routeId: number): Promise<RouteStop[]> {
+    const route = await this.routeRepository.findOne({
+      where: { id: routeId },
+      relations: ['routeStops', 'routeStops.stop'],
+    });
+    if (!route) throw new NotFoundException(`Route #${routeId} not found`);
+    if (!route.routeStops) return [];
+    return route.routeStops.sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
   }
 }

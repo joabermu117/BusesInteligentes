@@ -15,11 +15,11 @@ export class AddressController {
   @Get()
   findAll() {
     return this.addressService.findAll();
-    @Get('citizen/:citizenId')
-    findByCitizen(@Param('citizenId') citizenId: string) {
-      return this.addressService.findByCitizen(+citizenId);
-    }
+  }
 
+  @Get('citizen/:citizenId')
+  findByCitizen(@Param('citizenId') citizenId: string) {
+    return this.addressService.findByCitizen(+citizenId);
   }
 
   @Get(':id')

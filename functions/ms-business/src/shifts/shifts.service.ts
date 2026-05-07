@@ -4,7 +4,9 @@ import { Repository } from 'typeorm';
 import { Shift } from './entities/shift.entity';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
+import { StartShiftDto } from './dto/start-shift.dto';
 import { Bus } from '../buses/entities/bus.entity';
+import { Driver } from '../driver/entities/driver.entity';
 
 @Injectable()
 export class ShiftsService {
@@ -13,6 +15,8 @@ export class ShiftsService {
     private readonly shiftRepository: Repository<Shift>,
     @InjectRepository(Bus)
     private readonly busRepository: Repository<Bus>,
+    @InjectRepository(Driver)
+    private readonly driverRepository: Repository<Driver>,
   ) {}
 
   async create(createShiftDto: CreateShiftDto): Promise<Shift> {
@@ -38,13 +42,13 @@ export class ShiftsService {
   }
 
   async findAll(): Promise<Shift[]> {
-    return await this.shiftRepository.find({ relations: ['bus'] });
+    return await this.shiftRepository.find({ relations: ['bus', 'driver'] });
   }
 
   async findOne(id: number): Promise<Shift> {
     const shift = await this.shiftRepository.findOne({
       where: { id },
-      relations: ['bus'],
+      relations: ['bus', 'driver'],
     });
     if (!shift) throw new NotFoundException(`Shift #${id} not found`);
     return shift;
@@ -60,8 +64,51 @@ export class ShiftsService {
   async findActiveByDriver(driverUserId: string): Promise<Shift | null> {
     return await this.shiftRepository.findOne({
       where: { driverUserId, status: 'in_progress' },
-      relations: ['bus'],
+      relations: ['bus', 'driver'],
     });
+  }
+
+  async findByDriver(driverUserId: string): Promise<Shift[]> {
+    return await this.shiftRepository.find({
+      where: { driverUserId },
+      relations: ['bus', 'driver'],
+      order: { startTime: 'DESC' },
+    });
+  }
+
+  async startShift(shiftId: number, dto: StartShiftDto): Promise<Shift> {
+    const shift = await this.shiftRepository.findOne({
+      where: { id: shiftId },
+      relations: ['bus', 'bus.gps', 'driver'],
+    });
+    if (!shift) throw new NotFoundException(`Turno #${shiftId} no encontrado`);
+
+    // Validar que sea la fecha/hora correcta (+/- 30 min)
+    const now = new Date();
+    const shiftStart = new Date(shift.startTime!);
+    const diffMinutes = Math.abs(now.getTime() - shiftStart.getTime()) / 60000;
+    if (diffMinutes > 30) {
+      throw new BadRequestException('El turno no corresponde a la hora actual (+/- 30 min)');
+    }
+
+    // Validar estado
+    if (shift.status !== 'scheduled') {
+      throw new BadRequestException('El turno no está programado');
+    }
+
+    // Actualizar con datos del conductor
+    shift.status = 'in_progress';
+    shift.busCondition = dto.busCondition || shift.busCondition;
+    shift.observations = dto.observations || shift.observations;
+    shift.startTime = now;
+
+    // Activar GPS del bus
+    if (shift.bus?.gps) {
+      shift.bus.gps.active = true;
+      shift.bus.gps.lastUpdate = now;
+    }
+
+    return await this.shiftRepository.save(shift);
   }
 
   async update(id: number, updateShiftDto: UpdateShiftDto): Promise<Shift> {

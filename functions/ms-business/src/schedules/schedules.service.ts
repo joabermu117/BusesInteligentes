@@ -50,7 +50,7 @@ export class SchedulesService {
 
   async findAll(): Promise<Schedule[]> {
     return await this.scheduleRepository.find({
-      relations: ['bus', 'bus.company'],
+      relations: ['bus', 'bus.company', 'tickets'],
     });
   }
 

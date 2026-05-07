@@ -15,16 +15,16 @@ export class HistoryController {
   @Get()
   findAll() {
     return this.historyService.findAll();
-    @Get('ticket/:ticketId')
-    findByTicket(@Param('ticketId') ticketId: string) {
-      return this.historyService.findByTicket(+ticketId);
-    }
+  }
 
-    @Get('person/:personId')
-    findByPerson(@Param('personId') personId: string) {
-      return this.historyService.findByPerson(personId);
-    }
+  @Get('ticket/:ticketId')
+  findByTicket(@Param('ticketId') ticketId: string) {
+    return this.historyService.findByTicket(+ticketId);
+  }
 
+  @Get('person/:personId')
+  findByPerson(@Param('personId') personId: string) {
+    return this.historyService.findByPerson(personId);
   }
 
   @Get(':id')

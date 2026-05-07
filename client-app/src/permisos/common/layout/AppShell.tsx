@@ -5,8 +5,14 @@ import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import GppGoodRounded from "@mui/icons-material/GppGoodRounded";
 import GroupRounded from "@mui/icons-material/GroupRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
+import MapRounded from "@mui/icons-material/MapRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
+import NearMeRounded from "@mui/icons-material/NearMeRounded";
 import ShieldRounded from "@mui/icons-material/ShieldRounded";
+import ConfirmationNumberRounded from "@mui/icons-material/ConfirmationNumberRounded";
+import ExitToAppRounded from "@mui/icons-material/ExitToAppRounded";
+import HistoryRounded from "@mui/icons-material/HistoryRounded";
+import WorkHistoryRounded from "@mui/icons-material/WorkHistoryRounded";
 import {
   AppBar,
   Box,
@@ -33,16 +39,56 @@ type NavigationItem = {
   label: string;
   description: string;
   icon: ReactNode;
+  matchPath?: string; // custom path to check for active state
 };
 
 const DRAWER_WIDTH = 292;
 
-const dashboardItem: NavigationItem = {
-  path: "/dashboard",
-  label: "Dashboard",
-  description: "Estado general de rutas, flota y seguridad.",
-  icon: <DashboardRounded />,
-};
+const navigationItems: NavigationItem[] = [
+  {
+    path: "/dashboard",
+    label: "Dashboard",
+    description: "Estado general de rutas, flota y seguridad.",
+    icon: <DashboardRounded />,
+  },
+  {
+    path: "/rutas",
+    label: "Rutas",
+    description: "Consulta de rutas disponibles y tarifas.",
+    icon: <MapRounded />,
+  },
+  {
+    path: "/paraderos",
+    label: "Paraderos",
+    description: "Paraderos cercanos a tu ubicación.",
+    icon: <NearMeRounded />,
+  },
+  {
+    path: "/abordar",
+    label: "Abordar",
+    description: "Abordaje y generación de boleto.",
+    icon: <ConfirmationNumberRounded />,
+  },
+  {
+    path: "/descender",
+    label: "Descender",
+    description: "Finalizar viaje y descender.",
+    icon: <ExitToAppRounded />,
+  },
+  {
+    path: "/viajes/historial",
+    label: "Historial",
+    description: "Historial de viajes realizados.",
+    icon: <HistoryRounded />,
+    matchPath: "/viajes",
+  },
+  {
+    path: "/turnos",
+    label: "Mis turnos",
+    description: "Turnos asignados como conductor.",
+    icon: <WorkHistoryRounded />,
+  },
+];
 
 const securityItems: NavigationItem[] = [
   {
@@ -65,27 +111,83 @@ const securityItems: NavigationItem[] = [
   },
 ];
 
+const isItemActive = (item: NavigationItem, currentPath: string): boolean => {
+  const matchPath = item.matchPath ?? item.path;
+
+  if (item.path === "/users/list" && currentPath.startsWith("/users/profile")) {
+    return true;
+  }
+
+  // Special case: /viajes/historial should NOT match /viajes/5 (detalle viaje)
+  // But /viajes/historial should match /viajes/historial, and /viajes/5 should match historial too (children routes)
+  if (matchPath === "/viajes" && item.path === "/viajes/historial") {
+    // historialItem: active for /viajes/historial, /viajes/5 (detalle), etc.
+    return currentPath.startsWith("/viajes");
+  }
+
+  return currentPath.startsWith(matchPath);
+};
+
+const NavListItem = ({
+  item,
+  isSelected,
+  onClick,
+}: {
+  item: NavigationItem;
+  isSelected: boolean;
+  onClick: () => void;
+}) => (
+  <ListItemButton
+    selected={isSelected}
+    onClick={onClick}
+    sx={{
+      borderRadius: 2,
+      py: 1.15,
+      pl: 1.75,
+      pr: 1.5,
+      mb: 0.75,
+      alignItems: "flex-start",
+      "&.Mui-selected": {
+        backgroundColor: "rgba(207,59,35,0.12)",
+        "&:hover": {
+          backgroundColor: "rgba(207,59,35,0.18)",
+        },
+      },
+    }}
+  >
+    <ListItemIcon
+      sx={{
+        minWidth: 36,
+        color: isSelected ? "primary.main" : "text.secondary",
+      }}
+    >
+      {item.icon}
+    </ListItemIcon>
+    <ListItemText
+      primary={item.label}
+      secondary={item.description}
+      primaryTypographyProps={{
+        fontWeight: 700,
+        color: isSelected ? "primary.main" : "text.primary",
+      }}
+      secondaryTypographyProps={{
+        variant: "caption",
+        sx: { display: "block", mt: 0.25 },
+      }}
+    />
+  </ListItemButton>
+);
+
 const AppShell = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isSecurityOpen, setIsSecurityOpen] = useState(true);
 
-  const navigationItems = [dashboardItem, ...securityItems];
-  const isDashboardSelected = location.pathname.startsWith(dashboardItem.path);
-
   const activeItem = useMemo(
     () =>
-      navigationItems.find((item) => {
-        if (
-          item.path === "/users/list" &&
-          location.pathname.startsWith("/users/profile")
-        ) {
-          return true;
-        }
-
-        return location.pathname.startsWith(item.path);
-      }) ?? navigationItems[0],
+      navigationItems.find((item) => isItemActive(item, location.pathname)) ??
+      navigationItems[0],
     [location.pathname],
   );
 
@@ -113,45 +215,14 @@ const AppShell = () => {
       <Divider />
 
       <List sx={{ px: 1.5, py: 1.5 }}>
-        <ListItemButton
-          selected={isDashboardSelected}
-          onClick={() => handleNavigate(dashboardItem.path)}
-          sx={{
-            borderRadius: 2,
-            py: 1.15,
-            pl: 1.75,
-            pr: 1.5,
-            mb: 0.75,
-            alignItems: "flex-start",
-            "&.Mui-selected": {
-              backgroundColor: "rgba(207,59,35,0.12)",
-              "&:hover": {
-                backgroundColor: "rgba(207,59,35,0.18)",
-              },
-            },
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: 36,
-              color: isDashboardSelected ? "primary.main" : "text.secondary",
-            }}
-          >
-            {dashboardItem.icon}
-          </ListItemIcon>
-          <ListItemText
-            primary={dashboardItem.label}
-            secondary={dashboardItem.description}
-            primaryTypographyProps={{
-              fontWeight: 700,
-              color: isDashboardSelected ? "primary.main" : "text.primary",
-            }}
-            secondaryTypographyProps={{
-              variant: "caption",
-              sx: { display: "block", mt: 0.25 },
-            }}
+        {navigationItems.map((item) => (
+          <NavListItem
+            key={item.path}
+            item={item}
+            isSelected={isItemActive(item, location.pathname)}
+            onClick={() => handleNavigate(item.path)}
           />
-        </ListItemButton>
+        ))}
 
         <ListItemButton
           onClick={() => setIsSecurityOpen((prev) => !prev)}
@@ -172,53 +243,14 @@ const AppShell = () => {
 
         <Collapse in={isSecurityOpen} timeout="auto" unmountOnExit>
           <List sx={{ pt: 1, gap: 0.75, display: "grid" }}>
-            {securityItems.map((item) => {
-              const isSelected = location.pathname.startsWith(item.path);
-              const isUsersProfilePath =
-                item.path === "/users/list" &&
-                location.pathname.startsWith("/users/profile");
-              return (
-                <ListItemButton
-                  key={item.path}
-                  selected={isSelected || isUsersProfilePath}
-                  onClick={() => handleNavigate(item.path)}
-                  sx={{
-                    borderRadius: 2,
-                    py: 1.15,
-                    pl: 1.75,
-                    pr: 1.5,
-                    alignItems: "flex-start",
-                    "&.Mui-selected": {
-                      backgroundColor: "rgba(207,59,35,0.12)",
-                      "&:hover": {
-                        backgroundColor: "rgba(207,59,35,0.18)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 36,
-                      color: isSelected ? "primary.main" : "text.secondary",
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.label}
-                    secondary={item.description}
-                    primaryTypographyProps={{
-                      fontWeight: 700,
-                      color: isSelected ? "primary.main" : "text.primary",
-                    }}
-                    secondaryTypographyProps={{
-                      variant: "caption",
-                      sx: { display: "block", mt: 0.25 },
-                    }}
-                  />
-                </ListItemButton>
-              );
-            })}
+            {securityItems.map((item) => (
+              <NavListItem
+                key={item.path}
+                item={item}
+                isSelected={isItemActive(item, location.pathname)}
+                onClick={() => handleNavigate(item.path)}
+              />
+            ))}
           </List>
         </Collapse>
       </List>

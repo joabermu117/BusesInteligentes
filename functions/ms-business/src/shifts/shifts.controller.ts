@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { ShiftsService } from './shifts.service';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
+import { StartShiftDto } from './dto/start-shift.dto';
 
 @Controller('api/shifts')
 export class ShiftsController {
@@ -17,11 +18,6 @@ export class ShiftsController {
     return this.shiftsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.shiftsService.findOne(+id);
-  }
-
   @Get('bus/:busId')
   findByBus(@Param('busId') busId: string) {
     return this.shiftsService.findByBus(+busId);
@@ -30,6 +26,21 @@ export class ShiftsController {
   @Get('driver/:driverUserId/active')
   findActiveByDriver(@Param('driverUserId') driverUserId: string) {
     return this.shiftsService.findActiveByDriver(driverUserId);
+  }
+
+  @Get('driver/:driverUserId')
+  findByDriver(@Param('driverUserId') driverUserId: string) {
+    return this.shiftsService.findByDriver(driverUserId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.shiftsService.findOne(+id);
+  }
+
+  @Patch(':id/start')
+  startShift(@Param('id') id: string, @Body() dto: StartShiftDto) {
+    return this.shiftsService.startShift(+id, dto);
   }
 
   @Patch(':id')

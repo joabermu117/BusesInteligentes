@@ -17,11 +17,6 @@ export class SchedulesController {
     return this.schedulesService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.schedulesService.findOne(+id);
-  }
-
   @Get('bus/:busId')
   findByBus(@Param('busId') busId: string) {
     return this.schedulesService.findByBus(+busId);
@@ -30,6 +25,11 @@ export class SchedulesController {
   @Get('route/:routeId')
   findByRoute(@Param('routeId') routeId: string) {
     return this.schedulesService.findByRoute(+routeId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.schedulesService.findOne(+id);
   }
 
   @Patch(':id')

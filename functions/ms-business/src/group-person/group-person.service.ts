@@ -85,7 +85,7 @@ export class GroupPersonService {
         throw new NotFoundException(`Group #${updateGroupPersonDto.group_id} not found`);
       }
       groupPerson.group = group;
-      groupPerson.group_id = group.id;
+      groupPerson.group_id = group.id!;
     }
 
     if (updateGroupPersonDto.person_id !== undefined) {

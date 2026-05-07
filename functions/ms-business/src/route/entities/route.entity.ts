@@ -22,6 +22,9 @@ export class Route {
   @Column({ type: 'int' })
   estimated_duration?: number;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  tarifa?: number;
+
   @Column({ type: 'boolean', default: true })
   is_active?: boolean;
 

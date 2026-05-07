@@ -15,11 +15,11 @@ export class CitizenPaymentMethodController {
   @Get()
   findAll() {
     return this.citizenPaymentMethodService.findAll();
-    @Get('citizen/:citizenId')
-    findByCitizen(@Param('citizenId') citizenId: string) {
-      return this.citizenPaymentMethodService.findByCitizen(+citizenId);
-    }
+  }
 
+  @Get('citizen/:citizenId')
+  findByCitizen(@Param('citizenId') citizenId: string) {
+    return this.citizenPaymentMethodService.findByCitizen(citizenId);
   }
 
   @Get(':id')

@@ -26,6 +26,9 @@ export class Shift {
   @Column({ nullable: true })
   busCondition?: string;
 
+  @Column({ type: 'varchar', length: 255 })
+  driverUserId?: string;
+
   /**
    * Bidirectional N:1 relationship with Driver
    * Many shifts belong to one driver
