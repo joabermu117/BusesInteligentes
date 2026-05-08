@@ -27,9 +27,9 @@ export class ShiftsController {
     return this.shiftsService.findByBus(+busId);
   }
 
-  @Get('driver/:driverUserId/active')
-  findActiveByDriver(@Param('driverUserId') driverUserId: string) {
-    return this.shiftsService.findActiveByDriver(driverUserId);
+  @Get('driver/:driverId/active')
+  findActiveByDriver(@Param('driverId') driverId: string) {
+    return this.shiftsService.findActiveByDriver(+driverId);
   }
 
   @Patch(':id')

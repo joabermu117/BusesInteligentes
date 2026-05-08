@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Equal, Repository } from 'typeorm';
 import { Shift } from './entities/shift.entity';
 import { CreateShiftDto } from './dto/create-shift.dto';
 import { UpdateShiftDto } from './dto/update-shift.dto';
@@ -21,7 +21,6 @@ export class ShiftsService {
     });
     if (!bus) throw new NotFoundException(`Bus #${createShiftDto.busId} not found`);
 
-    // Verificar que el bus no tenga un turno activo
     const activeShift = await this.shiftRepository.findOne({
       where: { bus: { id: createShiftDto.busId }, status: 'in_progress' },
     });
@@ -38,13 +37,15 @@ export class ShiftsService {
   }
 
   async findAll(): Promise<Shift[]> {
-    return await this.shiftRepository.find({ relations: ['bus'] });
+    return await this.shiftRepository.find({
+      relations: ['bus', 'driver'],
+    });
   }
 
   async findOne(id: number): Promise<Shift> {
     const shift = await this.shiftRepository.findOne({
       where: { id },
-      relations: ['bus'],
+      relations: ['bus', 'driver'],
     });
     if (!shift) throw new NotFoundException(`Shift #${id} not found`);
     return shift;
@@ -53,14 +54,18 @@ export class ShiftsService {
   async findByBus(busId: number): Promise<Shift[]> {
     return await this.shiftRepository.find({
       where: { bus: { id: busId } },
-      relations: ['bus'],
+      relations: ['bus', 'driver'],
     });
   }
 
-  async findActiveByDriver(driverUserId: string): Promise<Shift | null> {
+  // Buscar turno activo por driverId
+  async findActiveByDriver(driverId: number): Promise<Shift | null> {
     return await this.shiftRepository.findOne({
-      where: { driverUserId, status: 'in_progress' },
-      relations: ['bus'],
+      where: {
+        driver: Equal(driverId),
+        status: 'in_progress',
+      },
+      relations: ['bus', 'driver'],
     });
   }
 
