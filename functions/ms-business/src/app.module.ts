@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { APP_GUARD } from '@nestjs/core';
 import { CompaniesModule } from './companies/companies.module';
 import { BusesModule } from './buses/buses.module';
 import { GpsModule } from './gps/gps.module';
@@ -25,9 +26,13 @@ import { MessageModule } from './message/message.module';
 import { RecipientPersonModule } from './recipient-person/recipient-person.module';
 import { RecipientGroupModule } from './recipient-group/recipient-group.module';
 import { GroupModule } from './group/group.module';
+import { NotificationsModule } from './gateways/notifications/notifications.module';
+import { SecurityGuard } from './guards/security/security.guard';
 
 @Module({
+  providers: [{ provide: APP_GUARD, useClass: SecurityGuard }],
   imports: [
+    NotificationsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -40,6 +45,7 @@ import { GroupModule } from './group/group.module';
         password: configService.get<string>('DB_PASS'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
         synchronize: false,
       }),
     }),
