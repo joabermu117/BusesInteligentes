@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -19,31 +19,23 @@ import ExitToAppRounded from "@mui/icons-material/ExitToAppRounded";
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
 import { useActiveTicket, useAlightBus } from "../stores/useBoardingStore";
 import { useParaderosByRuta } from "../../viajes/stores/useRutasStore";
+import { useCitizenGuard } from "../hooks/useCitizenGuard";
 import type { Paradero } from "../../viajes/models/ruta";
 
 const DescenderBus = () => {
   const navigate = useNavigate();
+  const citizenId = useCitizenGuard();
   const [success, setSuccess] = useState(false);
   const [selectedStopId, setSelectedStopId] = useState<number | null>(null);
-  const citizenId = localStorage.getItem("citizenId") ?? "default-citizen";
 
-  useEffect(() => {
-    if (!localStorage.getItem("citizenId")) {
-      navigate("/login", { replace: true });
-    }
-  }, [navigate]);
-
-  const { data: activeTicket, isLoading, error: ticketError } =
-    useActiveTicket(citizenId);
+  const { data: activeTicket, isLoading, error: ticketError } = useActiveTicket(citizenId);
   const alightMutation = useAlightBus();
 
   const routeId = activeTicket?.schedule?.routeId ?? 0;
-  const { data: paraderos, isLoading: paraderosLoading } =
-    useParaderosByRuta(routeId);
+  const { data: paraderos, isLoading: paraderosLoading } = useParaderosByRuta(routeId);
 
   const handleAlight = async () => {
     if (!activeTicket || !selectedStopId) return;
-
     try {
       await alightMutation.mutateAsync({
         ticketId: activeTicket.id,
@@ -52,7 +44,7 @@ const DescenderBus = () => {
       });
       setSuccess(true);
     } catch {
-      // error handled by mutation
+      // Mutation error is shown via alightMutation.error below
     }
   };
 
@@ -60,19 +52,14 @@ const DescenderBus = () => {
     return (
       <Box>
         <Card sx={{ textAlign: "center", py: 6, px: 4 }}>
-          <CheckCircleRounded
-            sx={{ fontSize: 72, color: "success.main", mb: 2 }}
-          />
+          <CheckCircleRounded sx={{ fontSize: 72, color: "success.main", mb: 2 }} />
           <Typography variant="h4" fontWeight={700} gutterBottom>
             Viaje completado
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Gracias por usar nuestro servicio
           </Typography>
-          <Button
-            variant="contained"
-            onClick={() => navigate("/viajes/historial")}
-          >
+          <Button variant="contained" onClick={() => navigate("/viajes/historial")}>
             Ver historial de viajes
           </Button>
         </Card>
@@ -98,8 +85,7 @@ const DescenderBus = () => {
       {alightMutation.error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {(alightMutation.error as { response?: { data?: { message?: string } } })
-            ?.response?.data?.message ??
-            "Error al registrar descenso"}
+            ?.response?.data?.message ?? "Error al registrar descenso"}
         </Alert>
       )}
 
@@ -110,66 +96,24 @@ const DescenderBus = () => {
       ) : activeTicket ? (
         <Card>
           <CardContent>
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 1,
-                mb: 2,
-              }}
-            >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
               <ExitToAppRounded color="action" />
               <Typography variant="h6" fontWeight={600}>
                 Boleto activo
               </Typography>
             </Box>
-
             <Divider sx={{ mb: 2 }} />
-
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
-            >
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between" }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Número de boleto
-                </Typography>
-                <Chip
-                  label={activeTicket.ticketNumber}
-                  color="primary"
-                  variant="outlined"
-                  size="small"
-                />
-              </Box>
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between" }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Estado
-                </Typography>
-                <Chip label="Emitido" color="success" size="small" />
-              </Box>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+              <Row label="Número de boleto" value={<Chip label={activeTicket.ticketNumber} color="primary" variant="outlined" size="small" />} />
+              <Row label="Estado" value={<Chip label="Emitido" color="success" size="small" />} />
               {activeTicket.price && (
-                <Box
-                  sx={{ display: "flex", justifyContent: "space-between" }}
-                >
-                  <Typography variant="body2" color="text.secondary">
-                    Tarifa
-                  </Typography>
-                  <Typography variant="body2" fontWeight={600}>
-                    S/ {Number(activeTicket.price).toFixed(2)}
-                  </Typography>
-                </Box>
+                <Row label="Tarifa" value={`S/ ${Number(activeTicket.price).toFixed(2)}`} />
               )}
             </Box>
-
             <Divider sx={{ my: 2 }} />
-
             <Typography variant="subtitle2" fontWeight={600} gutterBottom>
               Paradero de descenso
             </Typography>
-
             {paraderosLoading ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
                 <CircularProgress size={24} />
@@ -194,7 +138,6 @@ const DescenderBus = () => {
                 No hay paraderos registrados para esta ruta.
               </Typography>
             )}
-
             <Button
               variant="contained"
               size="large"
@@ -220,10 +163,7 @@ const DescenderBus = () => {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               Debes abordar un bus primero para poder descender.
             </Typography>
-            <Button
-              variant="contained"
-              onClick={() => navigate("/abordar")}
-            >
+            <Button variant="contained" onClick={() => navigate("/abordar")}>
               Ir a abordar
             </Button>
           </CardContent>
@@ -232,5 +172,16 @@ const DescenderBus = () => {
     </Box>
   );
 };
+
+const Row = ({ label, value }: { label: string; value: ReactNode }) => (
+  <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <Typography variant="body2" color="text.secondary">
+      {label}
+    </Typography>
+    <Typography variant="body2" fontWeight={600} component="span">
+      {value}
+    </Typography>
+  </Box>
+);
 
 export default DescenderBus;

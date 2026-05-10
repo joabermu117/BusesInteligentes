@@ -39,3 +39,7 @@ export enum RouteRecurrence {
   WEEKENDS = 'weekends',
   DAILY = 'daily',
 }
+
+/** Tipos de método de pago considerados prepago */
+export const PREPAID_METHOD_NAMES = ['prepago', 'prepaid', 'tarjeta'] as const;
+export const SIMULATED_PREPAID_BALANCE = 50;

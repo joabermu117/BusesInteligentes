@@ -8,5 +8,6 @@ export const useParaderosCercanos = (lat: number, lng: number) =>
   useQuery<ParaderoCercano[]>({
     queryKey: ["paraderos-cercanos", lat, lng],
     queryFn: () => fetchParaderosCercanos(lat, lng),
-    enabled: !!lat && !!lng,
+    // Habilitar incluso si lat=0 (ecuador no es inválido)
+    enabled: lat !== undefined && lng !== undefined && !isNaN(lat) && !isNaN(lng),
   });

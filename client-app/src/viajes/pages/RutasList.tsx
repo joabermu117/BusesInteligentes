@@ -16,6 +16,7 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../../permisos/common/components/PageHeader";
 import { useRutas } from "../stores/useRutasStore";
+import { formatCurrency, formatDuration } from "../../shared/utils/format";
 
 const RutasList = () => {
   const navigate = useNavigate();
@@ -29,18 +30,6 @@ const RutasList = () => {
     },
     []
   );
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("es-PE", {
-      style: "currency",
-      currency: "PEN",
-    }).format(value);
-
-  const formatDuration = (minutes: number) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m} min`;
-  };
 
   return (
     <Box className="page-enter">
