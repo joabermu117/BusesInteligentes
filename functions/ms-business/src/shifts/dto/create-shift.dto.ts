@@ -1,8 +1,9 @@
-import { IsDateString, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateShiftDto {
-  @IsString()
-  driverUserId?: string;
+  @IsOptional()
+  @IsInt()
+  driverId?: number;
 
   @IsDateString()
   startTime?: string;

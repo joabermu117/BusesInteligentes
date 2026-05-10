@@ -1,12 +1,16 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Shift } from './entities/shift.entity';
-import { CreateShiftDto } from './dto/create-shift.dto';
-import { UpdateShiftDto } from './dto/update-shift.dto';
-import { StartShiftDto } from './dto/start-shift.dto';
+import { Equal, Repository } from 'typeorm';
 import { Bus } from '../buses/entities/bus.entity';
 import { Driver } from '../driver/entities/driver.entity';
+import { CreateShiftDto } from './dto/create-shift.dto';
+import { StartShiftDto } from './dto/start-shift.dto';
+import { UpdateShiftDto } from './dto/update-shift.dto';
+import { Shift } from './entities/shift.entity';
 
 @Injectable()
 export class ShiftsService {
@@ -23,14 +27,16 @@ export class ShiftsService {
     const bus = await this.busRepository.findOne({
       where: { id: createShiftDto.busId },
     });
-    if (!bus) throw new NotFoundException(`Bus #${createShiftDto.busId} not found`);
+    if (!bus)
+      throw new NotFoundException(`Bus #${createShiftDto.busId} not found`);
 
-    // Verificar que el bus no tenga un turno activo
     const activeShift = await this.shiftRepository.findOne({
       where: { bus: { id: createShiftDto.busId }, status: 'in_progress' },
     });
     if (activeShift) {
-      throw new BadRequestException(`Bus #${createShiftDto.busId} already has an active shift`);
+      throw new BadRequestException(
+        `Bus #${createShiftDto.busId} already has an active shift`,
+      );
     }
 
     const shift = this.shiftRepository.create({
@@ -42,7 +48,9 @@ export class ShiftsService {
   }
 
   async findAll(): Promise<Shift[]> {
-    return await this.shiftRepository.find({ relations: ['bus', 'driver'] });
+    return await this.shiftRepository.find({
+      relations: ['bus', 'driver'],
+    });
   }
 
   async findOne(id: number): Promise<Shift> {
@@ -57,13 +65,17 @@ export class ShiftsService {
   async findByBus(busId: number): Promise<Shift[]> {
     return await this.shiftRepository.find({
       where: { bus: { id: busId } },
-      relations: ['bus'],
+      relations: ['bus', 'driver'],
     });
   }
 
-  async findActiveByDriver(driverUserId: string): Promise<Shift | null> {
+  // Buscar turno activo por driverId
+  async findActiveByDriver(driverId: number): Promise<Shift | null> {
     return await this.shiftRepository.findOne({
-      where: { driverUserId, status: 'in_progress' },
+      where: {
+        driver: Equal(driverId),
+        status: 'in_progress',
+      },
       relations: ['bus', 'driver'],
     });
   }
@@ -88,7 +100,9 @@ export class ShiftsService {
     const shiftStart = new Date(shift.startTime!);
     const diffMinutes = Math.abs(now.getTime() - shiftStart.getTime()) / 60000;
     if (diffMinutes > 30) {
-      throw new BadRequestException('El turno no corresponde a la hora actual (+/- 30 min)');
+      throw new BadRequestException(
+        'El turno no corresponde a la hora actual (+/- 30 min)',
+      );
     }
 
     // Validar estado
@@ -120,7 +134,9 @@ export class ShiftsService {
   async remove(id: number): Promise<{ message: string }> {
     const shift = await this.findOne(id);
     if (shift.status === 'in_progress') {
-      throw new BadRequestException('Cannot delete a shift that is in progress');
+      throw new BadRequestException(
+        'Cannot delete a shift that is in progress',
+      );
     }
     await this.shiftRepository.remove(shift);
     return { message: `Shift #${id} deleted successfully` };

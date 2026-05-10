@@ -1,17 +1,31 @@
-import { IsDate, IsEnum, IsInt, IsNumber, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  Max,
+  Min,
+} from 'class-validator';
 
 export class CreateScheduleDto {
   @IsNumber()
-  busId: number;
+  busId?: number;
 
   @IsNumber()
-  routeId: number;
+  routeId?: number;
 
-  @IsDate()
-  departureTime: Date;
+  @IsDateString()
+  departureTime?: string;
 
   @IsOptional()
-  @IsNumber()
+  @IsDateString()
+  date?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(60)
   toleranceMinutes?: number;
 
   @IsOptional()
@@ -21,8 +35,4 @@ export class CreateScheduleDto {
   @IsOptional()
   @IsEnum(['none', 'weekdays', 'weekends', 'daily'])
   recurrence?: string;
-
-  @IsOptional()
-  @IsDate()
-  date?: Date;
 }

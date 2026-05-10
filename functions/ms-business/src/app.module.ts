@@ -1,34 +1,39 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { CompaniesModule } from './companies/companies.module';
-import { BusesModule } from './buses/buses.module';
-import { GpsModule } from './gps/gps.module';
-import { ShiftsModule } from './shifts/shifts.module';
-import { IncidentsModule } from './incidents/incidents.module';
-import { IncidentsBusesModule } from './incidents-buses/incidents-buses.module';
-import { PhotosModule } from './photos/photos.module';
-import { SchedulesModule } from './schedules/schedules.module';
-import { PersonModule } from './person/person.module';
-import { CitizenModule } from './citizen/citizen.module';
-import { DriverModule } from './driver/driver.module';
 import { AddressModule } from './address/address.module';
-import { PaymentMethodModule } from './payment-method/payment-method.module';
-import { CitizenPaymentMethodModule } from './citizen-payment-method/citizen-payment-method.module';
-import { TicketModule } from './ticket/ticket.module';
-import { HistoryModule } from './history/history.module';
-import { ContractModule } from './contract/contract.module';
-import { RouteModule } from './route/route.module';
-import { StopModule } from './stop/stop.module';
-import { NodeModule } from './node/node.module';
-import { MessageModule } from './message/message.module';
-import { RecipientPersonModule } from './recipient-person/recipient-person.module';
-import { RecipientGroupModule } from './recipient-group/recipient-group.module';
-import { GroupModule } from './group/group.module';
 import { BoardingModule } from './boarding/boarding.module';
+import { BusesModule } from './buses/buses.module';
+import { CitizenPaymentMethodModule } from './citizen-payment-method/citizen-payment-method.module';
+import { CitizenModule } from './citizen/citizen.module';
+import { CompaniesModule } from './companies/companies.module';
+import { ContractModule } from './contract/contract.module';
+import { DriverModule } from './driver/driver.module';
+import { NotificationsModule } from './gateways/notifications/notifications.module';
+import { GpsModule } from './gps/gps.module';
+import { GroupModule } from './group/group.module';
+import { SecurityGuard } from './guards/security/security.guard';
+import { HistoryModule } from './history/history.module';
+import { IncidentsBusesModule } from './incidents-buses/incidents-buses.module';
+import { IncidentsModule } from './incidents/incidents.module';
+import { MessageModule } from './message/message.module';
+import { NodeModule } from './node/node.module';
+import { PaymentMethodModule } from './payment-method/payment-method.module';
+import { PersonModule } from './person/person.module';
+import { PhotosModule } from './photos/photos.module';
+import { RecipientGroupModule } from './recipient-group/recipient-group.module';
+import { RecipientPersonModule } from './recipient-person/recipient-person.module';
+import { RouteModule } from './route/route.module';
+import { SchedulesModule } from './schedules/schedules.module';
+import { ShiftsModule } from './shifts/shifts.module';
+import { StopModule } from './stop/stop.module';
+import { TicketModule } from './ticket/ticket.module';
 
 @Module({
+  providers: [{ provide: APP_GUARD, useClass: SecurityGuard }],
   imports: [
+    NotificationsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -41,6 +46,7 @@ import { BoardingModule } from './boarding/boarding.module';
         password: configService.get<string>('DB_PASS'),
         database: configService.get<string>('DB_NAME'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
         synchronize: false,
       }),
     }),
