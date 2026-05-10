@@ -93,6 +93,20 @@ const RutaDetalle = () => {
                 </Typography>
               </Box>
 
+              {ruta.description && (
+                <>
+                  <Divider />
+                  <Box>
+                    <Typography variant="overline" color="text.secondary">
+                      Descripción
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {ruta.description}
+                    </Typography>
+                  </Box>
+                </>
+              )}
+
               <Divider />
 
               <Stack direction="row" alignItems="center" gap={1}>

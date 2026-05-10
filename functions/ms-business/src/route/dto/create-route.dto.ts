@@ -7,6 +7,10 @@ export class CreateRouteDto {
   name: string;
 
   @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @IsString()
   @IsNotEmpty()
   @MaxLength(255)
   origin: string;

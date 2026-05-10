@@ -11,16 +11,14 @@ import {
   CircularProgress,
   List,
   ListItem,
-  ListItemText,
   Typography,
 } from "@mui/material";
 import L from "leaflet";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 import { useParaderosCercanos } from "../stores/useParaderosStore";
+import { useNearbyStopsWatcher } from "../hooks/useNearbyStopsWatcher";
 import type { ParaderoCercano } from "../services/paraderosService";
-
-type Coordinates = { lat: number; lng: number };
 
 const STOP_ICON = L.divIcon({
   className: "custom-marker-stop",
@@ -108,88 +106,8 @@ const ParaderoCard = ({ paradero }: { paradero: ParaderoCercano }) => (
 );
 
 const ParaderosCercanos = () => {
-  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [isLocating, setIsLocating] = useState(true);
-  const [watchId, setWatchId] = useState<number | null>(null);
-
-  const requestLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setLocationError("Tu navegador no soporta la geolocalización.");
-      setIsLocating(false);
-      return;
-    }
-
-    setIsLocating(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setUserLocation({
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        });
-        setIsLocating(false);
-      },
-      (error) => {
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            setLocationError("Permiso de ubicación denegado. Actívalo en la configuración de tu navegador.");
-            break;
-          case error.POSITION_UNAVAILABLE:
-            setLocationError("No se pudo obtener tu ubicación. Intenta de nuevo.");
-            break;
-          default:
-            setLocationError("Error al obtener ubicación. Intenta de nuevo.");
-        }
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }, []);
-
-  useEffect(() => {
-    requestLocation();
-
-    return () => {
-      if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Watch position for auto-update when moving > 100m
-  useEffect(() => {
-    if (!navigator.geolocation || userLocation === null) return;
-
-    const id = navigator.geolocation.watchPosition(
-      (position) => {
-        const newLat = position.coords.latitude;
-        const newLng = position.coords.longitude;
-        if (userLocation) {
-          const R = 6371000;
-          const dLat = ((newLat - userLocation.lat) * Math.PI) / 180;
-          const dLng = ((newLng - userLocation.lng) * Math.PI) / 180;
-          const a =
-            Math.sin(dLat / 2) ** 2 +
-            Math.cos((userLocation.lat * Math.PI) / 180) *
-              Math.cos((newLat * Math.PI) / 180) *
-              Math.sin(dLng / 2) ** 2;
-          const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-          if (distance > 100) {
-            setUserLocation({ lat: newLat, lng: newLng });
-          }
-        }
-      },
-      () => {},
-      { enableHighAccuracy: true, timeout: 5000 }
-    );
-    setWatchId(id);
-
-    return () => navigator.geolocation.clearWatch(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { userLocation, locationError, isLocating, requestLocation } =
+    useNearbyStopsWatcher();
 
   const { data: paraderos, isLoading, isError } = useParaderosCercanos(
     userLocation?.lat ?? 0,

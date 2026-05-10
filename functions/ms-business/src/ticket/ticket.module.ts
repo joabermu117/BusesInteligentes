@@ -8,8 +8,10 @@ import { Ticket } from './entities/ticket.entity';
 import { TicketController } from './ticket.controller';
 import { TicketService } from './ticket.service';
 
+import { Shift } from '../shifts/entities/shift.entity';
+
 @Module({
-    imports: [TypeOrmModule.forFeature([Ticket, Citizen, CitizenPaymentMethod, Schedule, History])],
+    imports: [TypeOrmModule.forFeature([Ticket, Citizen, CitizenPaymentMethod, Schedule, History, Shift])],
   controllers: [TicketController],
   providers: [TicketService],
   exports: [TicketService],

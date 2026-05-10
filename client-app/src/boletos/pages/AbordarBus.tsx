@@ -30,7 +30,7 @@ import {
 } from "../stores/useBoardingStore";
 import { useParaderosByRuta } from "../../viajes/stores/useRutasStore";
 import { useRuta } from "../../viajes/stores/useRutasStore";
-import type { Schedule } from "../models/boletos";
+import type { BoardBusResponse, Schedule } from "../models/boletos";
 import type { Paradero } from "../../viajes/models/ruta";
 
 const STEPS = ["Seleccionar bus", "Método de pago", "Abordar"];
@@ -46,7 +46,7 @@ const AbordarBus = () => {
   );
   const [selectedStopId, setSelectedStopId] = useState<number | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [confirmData, setConfirmData] = useState<any>(null);
+  const [confirmData, setConfirmData] = useState<BoardBusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const citizenId = localStorage.getItem("citizenId") ?? "default-citizen";
@@ -76,7 +76,7 @@ const AbordarBus = () => {
 
   const activeTicketsCount =
     selectedSchedule?.tickets?.filter(
-      (t) => t.status === "issued" || t.status === "used"
+      (t) => t.status === "issued"
     ).length ?? 0;
   const availableSeats = selectedSchedule
     ? (selectedSchedule.bus?.totalCapacity ?? 0) - activeTicketsCount
@@ -117,9 +117,10 @@ const AbordarBus = () => {
       });
       setConfirmData(result);
       setShowConfirm(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setError(
-        err?.response?.data?.message ?? "Error al realizar el abordaje"
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ?? "Error al realizar el abordaje"
       );
     }
   };
@@ -173,7 +174,7 @@ const AbordarBus = () => {
                     {schedules?.map((schedule) => {
                       const active =
                         schedule.tickets?.filter(
-                          (t) => t.status === "issued" || t.status === "used"
+                          (t) => t.status === "issued"
                         ).length ?? 0;
                       const total = schedule.bus?.totalCapacity ?? 0;
                       const isFull = active >= total;

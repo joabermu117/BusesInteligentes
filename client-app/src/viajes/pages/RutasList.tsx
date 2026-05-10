@@ -66,6 +66,7 @@ const RutasList = () => {
           <TableHead>
             <TableRow>
               <TableCell sx={{ fontWeight: 700 }}>Nombre</TableCell>
+              <TableCell sx={{ fontWeight: 700 }}>Descripción</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Origen</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Destino</TableCell>
               <TableCell sx={{ fontWeight: 700 }}>Distancia</TableCell>
@@ -77,7 +78,7 @@ const RutasList = () => {
           <TableBody>
             {isLoading && (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   <Typography variant="body2" color="text.secondary">
                     Cargando rutas...
                   </Typography>
@@ -86,7 +87,7 @@ const RutasList = () => {
             )}
             {!isLoading && rutas?.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} align="center">
+                <TableCell colSpan={8} align="center">
                   <Typography variant="body2" color="text.secondary">
                     No se encontraron rutas.
                   </Typography>
@@ -101,6 +102,9 @@ const RutasList = () => {
                 onClick={() => navigate(`/rutas/${ruta.id}`)}
               >
                 <TableCell sx={{ fontWeight: 600 }}>{ruta.name}</TableCell>
+                <TableCell sx={{ maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {ruta.description ?? "—"}
+                </TableCell>
                 <TableCell>{ruta.origin}</TableCell>
                 <TableCell>{ruta.destination}</TableCell>
                 <TableCell>{ruta.distance} km</TableCell>

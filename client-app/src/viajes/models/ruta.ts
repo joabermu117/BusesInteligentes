@@ -1,6 +1,7 @@
 export interface Ruta {
   id: number;
   name: string;
+  description?: string;
   origin: string;
   destination: string;
   distance: number;

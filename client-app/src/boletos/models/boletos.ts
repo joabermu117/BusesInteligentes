@@ -34,6 +34,13 @@ export interface Ticket {
   citizen?: Citizen;
   schedule?: Schedule;
   history?: History[];
+  driver?: DriverInfo | null;
+}
+
+export interface DriverInfo {
+  person_id: string;
+  licenseNumber?: string;
+  driverUserId?: string;
 }
 
 export interface Citizen {

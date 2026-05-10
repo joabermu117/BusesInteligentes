@@ -48,9 +48,10 @@ const DescenderBus = () => {
       await alightMutation.mutateAsync({
         ticketId: activeTicket.id,
         stopId: selectedStopId,
+        citizenId,
       });
       setSuccess(true);
-    } catch (err: any) {
+    } catch {
       // error handled by mutation
     }
   };
@@ -96,7 +97,8 @@ const DescenderBus = () => {
 
       {alightMutation.error && (
         <Alert severity="error" sx={{ mb: 2 }}>
-          {(alightMutation.error as any)?.response?.data?.message ??
+          {(alightMutation.error as { response?: { data?: { message?: string } } })
+            ?.response?.data?.message ??
             "Error al registrar descenso"}
         </Alert>
       )}

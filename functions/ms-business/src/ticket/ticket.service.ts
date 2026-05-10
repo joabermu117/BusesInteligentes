@@ -5,6 +5,7 @@ import { CitizenPaymentMethod } from '../citizen-payment-method/entities/citizen
 import { Citizen } from '../citizen/entities/citizen.entity';
 import { Schedule } from '../schedules/entities/schedule.entity';
 import { History } from '../history/entities/history.entity';
+import { Shift } from '../shifts/entities/shift.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket } from './entities/ticket.entity';
@@ -22,6 +23,8 @@ export class TicketService {
     private readonly scheduleRepository: Repository<Schedule>,
     @InjectRepository(History)
     private readonly historyRepository: Repository<History>,
+    @InjectRepository(Shift)
+    private readonly shiftRepository: Repository<Shift>,
   ) {}
 
   async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
@@ -91,7 +94,7 @@ export class TicketService {
     });
   }
 
-  async findTravelDetail(id: number): Promise<Ticket> {
+  async findTravelDetail(id: number) {
     const ticket = await this.ticketRepository.findOne({
       where: { id },
       relations: [
@@ -103,7 +106,30 @@ export class TicketService {
       ],
     });
     if (!ticket) throw new NotFoundException(`Ticket #${id} not found`);
-    return ticket;
+
+    // Buscar turno activo del bus para obtener información del conductor
+    let driverInfo = null;
+    if (ticket.schedule?.bus?.id) {
+      const activeShift = await this.shiftRepository.findOne({
+        where: {
+          bus: { id: ticket.schedule.bus.id },
+          status: 'in_progress',
+        },
+        relations: ['driver'],
+      });
+      if (activeShift?.driver) {
+        driverInfo = {
+          person_id: activeShift.driver.person_id,
+          licenseNumber: activeShift.driver.licenseNumber,
+          driverUserId: activeShift.driverUserId,
+        };
+      }
+    }
+
+    return {
+      ...ticket,
+      driver: driverInfo,
+    };
   }
 
   async update(id: number, updateTicketDto: UpdateTicketDto): Promise<Ticket> {

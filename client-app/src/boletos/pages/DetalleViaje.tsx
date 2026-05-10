@@ -218,8 +218,17 @@ const DetalleViaje = () => {
                     Conductor
                   </Typography>
                   <Typography variant="body1" fontWeight={600}>
-                    {ticket.schedule?.bus?.plate ? "Asignado" : "—"}
+                    {ticket.driver?.driverUserId
+                      ? `Conductor #${ticket.driver.driverUserId}`
+                      : ticket.schedule?.bus?.plate
+                        ? "Asignado"
+                        : "—"}
                   </Typography>
+                  {ticket.driver?.licenseNumber && (
+                    <Typography variant="caption" color="text.secondary">
+                      Licencia: {ticket.driver.licenseNumber}
+                    </Typography>
+                  )}
                 </Box>
               </Stack>
 

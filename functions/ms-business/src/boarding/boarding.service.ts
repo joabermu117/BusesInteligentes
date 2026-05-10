@@ -11,6 +11,10 @@ import { CitizenPaymentMethod } from '../citizen-payment-method/entities/citizen
 import { Schedule } from '../schedules/entities/schedule.entity';
 import { Route } from '../route/entities/route.entity';
 
+/** Saldo simulado para métodos prepago (MVP) */
+const SIMULATED_PREPAID_BALANCE = 50;
+const PREPAID_NAMES = ['prepago', 'prepaid', 'tarjeta'];
+
 @Injectable()
 export class BoardingService {
   constructor(
@@ -45,9 +49,9 @@ export class BoardingService {
       );
     }
 
-    // 3. Verificar capacidad
+    // 3. Verificar capacidad (solo tickets 'issued' están activos a bordo)
     const activeTicketsCount = schedule.tickets?.filter(
-      (t) => t.status === 'issued' || t.status === 'used',
+      (t) => t.status === 'issued',
     ).length ?? 0;
     const busCapacity = schedule.bus?.totalCapacity ?? 0;
     if (activeTicketsCount >= busCapacity) {
@@ -78,12 +82,25 @@ export class BoardingService {
       );
     }
 
-    // 6-7. Simular validación de saldo y descuento de tarifa (MVP)
-    // Obtener tarifa desde la ruta
+    // 6. Obtener tarifa desde la ruta
     const route = await this.routeRepository.findOne({
       where: { id: schedule.routeId },
     });
     const price = route?.tarifa ?? 0;
+
+    // 7. Simular validación de saldo (MVP)
+    const methodName = paymentMethod.paymentMethod?.name?.toLowerCase() ?? '';
+    const isPrepaid = PREPAID_NAMES.some((name) => methodName.includes(name));
+    let remainingBalance = 0;
+
+    if (isPrepaid) {
+      remainingBalance = SIMULATED_PREPAID_BALANCE - price;
+      if (remainingBalance < 0) {
+        throw new BadRequestException(
+          `Saldo insuficiente. Disponible: S/ ${SIMULATED_PREPAID_BALANCE.toFixed(2)}, Tarifa: S/ ${price.toFixed(2)}`,
+        );
+      }
+    }
 
     // 8. Generar el Ticket
     const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
@@ -123,25 +140,40 @@ export class BoardingService {
     return {
       message: 'Abordaje exitoso',
       ticket: savedTicket,
-      remainingBalance: 0,
+      remainingBalance,
     };
   }
 
   async alightBus(dto: AlightBusDto) {
+    // 1. Buscar ticket issued con todas las relaciones necesarias
     const ticket = await this.ticketRepository.findOne({
       where: { id: dto.ticketId, status: 'issued' },
-      relations: ['citizen', 'history'],
+      relations: ['citizen', 'schedule', 'schedule.bus', 'history'],
     });
     if (!ticket) {
       throw new NotFoundException('Boleto activo no encontrado');
     }
 
-    // Actualizar ticket
+    // 2. Validar que el boleto pertenezca al ciudadano
+    if (ticket.citizen?.person_id !== dto.citizenId) {
+      throw new BadRequestException(
+        'Este boleto no pertenece al ciudadano solicitante',
+      );
+    }
+
+    // 3. Validar que el schedule del ticket esté activo (in_progress)
+    if (ticket.schedule?.status !== 'in_progress') {
+      throw new BadRequestException(
+        'El viaje asociado a este boleto ya no está activo',
+      );
+    }
+
+    // 4. Actualizar ticket
     ticket.status = 'used';
     ticket.completedDate = new Date();
     await this.ticketRepository.save(ticket);
 
-    // Registrar historia de descenso
+    // 5. Registrar historia de descenso
     const history = this.historyRepository.create({
       personId: ticket.citizen?.person_id ?? '',
       action: 'validated',
@@ -161,13 +193,18 @@ export class BoardingService {
   async validatePaymentMethod(dto: ValidatePaymentDto) {
     const paymentMethod = await this.citizenPaymentMethodRepository.findOne({
       where: { id: dto.paymentMethodId },
-      relations: ['citizen'],
+      relations: ['citizen', 'paymentMethod'],
     });
 
     if (!paymentMethod || paymentMethod.citizen?.person_id !== dto.citizenId) {
       return { valid: false };
     }
 
-    return { valid: true, balance: 0 };
+    // Simular saldo prepago (MVP)
+    const methodName = paymentMethod.paymentMethod?.name?.toLowerCase() ?? '';
+    const isPrepaid = PREPAID_NAMES.some((name) => methodName.includes(name));
+    const balance = isPrepaid ? SIMULATED_PREPAID_BALANCE : 0;
+
+    return { valid: true, balance };
   }
 }

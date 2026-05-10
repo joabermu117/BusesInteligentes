@@ -10,6 +10,9 @@ export class Route {
   @Column({ type: 'varchar', length: 255 })
   name?: string;
 
+  @Column({ type: 'text', nullable: true })
+  description?: string;
+
   @Column({ type: 'varchar', length: 255 })
   origin?: string;
 

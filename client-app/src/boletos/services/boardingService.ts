@@ -5,6 +5,7 @@ import type {
   ValidatePaymentResponse,
   Schedule,
   CitizenPaymentMethod,
+  Ticket,
 } from "../models/boletos";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
@@ -26,11 +27,13 @@ export const boardBus = async (
 
 export const alightBus = async (
   ticketId: number,
-  stopId: number
+  stopId: number,
+  citizenId: string
 ): Promise<AlightBusResponse> => {
   const { data } = await httpClient.post(`${API_URL}/api/boarding/alight`, {
     ticketId,
     stopId,
+    citizenId,
   });
   return data;
 };
@@ -65,7 +68,7 @@ export const fetchPaymentMethodsByCitizen = async (
 
 export const fetchTicketsByCitizen = async (
   citizenId: string
-): Promise<any[]> => {
+): Promise<Ticket[]> => {
   const { data } = await httpClient.get(
     `${API_URL}/api/tickets/by-person/${citizenId}`
   );
@@ -74,7 +77,7 @@ export const fetchTicketsByCitizen = async (
 
 export const fetchActiveTicket = async (
   citizenId: string
-): Promise<any | null> => {
+): Promise<Ticket | null> => {
   const tickets = await fetchTicketsByCitizen(citizenId);
-  return tickets.find((t: any) => t.status === "issued") ?? null;
+  return tickets.find((t: Ticket) => t.status === "issued") ?? null;
 };

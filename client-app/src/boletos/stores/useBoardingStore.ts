@@ -63,10 +63,12 @@ export const useAlightBus = () => {
     mutationFn: ({
       ticketId,
       stopId,
+      citizenId,
     }: {
       ticketId: number;
       stopId: number;
-    }) => alightBus(ticketId, stopId),
+      citizenId: string;
+    }) => alightBus(ticketId, stopId, citizenId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
     },

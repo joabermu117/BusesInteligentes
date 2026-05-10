@@ -1,4 +1,4 @@
-import { IsNumber } from 'class-validator';
+import { IsNumber, IsString, IsNotEmpty } from 'class-validator';
 
 export class AlightBusDto {
   @IsNumber()
@@ -6,4 +6,8 @@ export class AlightBusDto {
 
   @IsNumber()
   stopId: number;
+
+  @IsString()
+  @IsNotEmpty()
+  citizenId: string;
 }

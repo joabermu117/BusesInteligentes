@@ -22,7 +22,6 @@ export class RouteService {
     const where = name ? { name: Like(`%${name}%`) } : {};
     return await this.routeRepository.find({
       where,
-      relations: ['nodes', 'routeStops', 'routeStops.stop'],
     });
   }
 
