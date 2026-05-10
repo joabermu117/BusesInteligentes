@@ -1,4 +1,12 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+} from '@nestjs/common';
 import { CitizenService } from './citizen.service';
 import { CreateCitizenDto } from './dto/create-citizen.dto';
 import { UpdateCitizenDto } from './dto/update-citizen.dto';
@@ -12,6 +20,16 @@ export class CitizenController {
     return this.citizenService.create(createCitizenDto);
   }
 
+  @Post('activate')
+  activate(@Body() body: { person_id: string }) {
+    return this.citizenService.activate(body.person_id);
+  }
+
+  @Patch(':person_id/deactivate')
+  deactivate(@Param('person_id') person_id: string) {
+    return this.citizenService.deactivate(person_id);
+  }
+
   @Get()
   findAll() {
     return this.citizenService.findAll();
@@ -23,7 +41,10 @@ export class CitizenController {
   }
 
   @Patch(':person_id')
-  update(@Param('person_id') person_id: string, @Body() updateCitizenDto: UpdateCitizenDto) {
+  update(
+    @Param('person_id') person_id: string,
+    @Body() updateCitizenDto: UpdateCitizenDto,
+  ) {
     return this.citizenService.update(person_id, updateCitizenDto);
   }
 

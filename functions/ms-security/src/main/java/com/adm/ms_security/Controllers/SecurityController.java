@@ -29,6 +29,7 @@ import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Services.AuthFlowService;
 import com.adm.ms_security.Services.PasswordRecoveryService;
 import com.adm.ms_security.Services.SecurityService;
+import com.adm.ms_security.Services.UserRoleService;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.FirebaseToken;
@@ -51,14 +52,17 @@ public class SecurityController {
     private final SecurityService securityService;
     private final AuthFlowService authFlowService;
     private final PasswordRecoveryService passwordRecoveryService;
+    private final UserRoleService userRoleService;
 
     public SecurityController(
             SecurityService securityService,
             AuthFlowService authFlowService,
-            PasswordRecoveryService passwordRecoveryService) {
+            PasswordRecoveryService passwordRecoveryService,
+            UserRoleService userRoleService) {
         this.securityService = securityService;
         this.authFlowService = authFlowService;
         this.passwordRecoveryService = passwordRecoveryService;
+        this.userRoleService = userRoleService;
     }
 
     @Operation(summary = "Inicia login y genera challenge OTP por correo")
@@ -70,11 +74,25 @@ public class SecurityController {
         return ResponseEntity.ok(authFlowService.startEmailLogin(request));
     }
 
+    @Operation(summary = "Validates JWT + permission for URL+method (called by NestJS guard)")
     @PostMapping("permissions-validation")
+    /**
+     * Called by the NestJS SecurityGuard to verify if a user's role
+     * grants access to a specific URL+method combination.
+     *
+     * Expects: Bearer JWT in Authorization header,
+     * Permission body with url and method fields.
+     *
+     * Returns strict boolean true on success, throws ApiException on failure.
+     */
     public boolean permissionsValidation(final HttpServletRequest request, @RequestBody Permission thePermission) {
-       return this.securityService.permissionsValidation(request,thePermission);
+        boolean granted = this.securityService.permissionsValidation(request, thePermission);
+        if (!granted) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "PERMISSION_DENIED",
+                    "No tienes permiso para acceder a este recurso");
+        }
+        return true;
     }
-    
 
     @Operation(summary = "Verifica OTP de 6 digitos y emite JWT")
     @PostMapping("2fa/verify")
@@ -128,6 +146,7 @@ public class SecurityController {
     @PostMapping("register")
     /**
      * Registers local user and returns JWT if account is created.
+     * Response includes access_token and user roles for frontend module routing.
      */
     public ResponseEntity<AuthTokenResponse> register(@Valid @RequestBody RegisterRequest request) {
         User user = securityService.registerWithEmailPassword(
@@ -139,8 +158,11 @@ public class SecurityController {
             throw new ApiException(HttpStatus.CONFLICT, "REGISTER_EMAIL_EXISTS", "Ese correo ya esta registrado");
         }
 
+        String token = securityService.generateToken(user);
+        java.util.List<String> roles = userRoleService.getRoleNamesByUser(user.getId());
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new AuthTokenResponse(securityService.generateToken(user)));
+                .body(new AuthTokenResponse(token, roles));
     }
 
     @Operation(summary = "Login social con Firebase e inicio de challenge OTP")
@@ -165,17 +187,17 @@ public class SecurityController {
             }
 
             User githubUser = securityService.findOrCreateFromGithub(
-                decodedToken,
-                request.getPhotoUrl(),
-                request.getGithubUsername());
+                    decodedToken,
+                    request.getPhotoUrl(),
+                    request.getGithubUsername());
             return ResponseEntity.ok(authFlowService.startSocialLogin(githubUser, request.getRecaptchaToken()));
         }
 
         User user = securityService.findOrCreateFromFirebase(
-            decodedToken,
-            mapProviderForProfile(signInProvider),
-            request.getPhotoUrl(),
-            request.getGithubUsername());
+                decodedToken,
+                mapProviderForProfile(signInProvider),
+                request.getPhotoUrl(),
+                request.getGithubUsername());
         return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
     }
 
@@ -190,12 +212,12 @@ public class SecurityController {
         String firebaseEmail = normalizeEmail(decodedToken.getEmail());
         boolean requiresAlternativeByClient = Boolean.TRUE.equals(request.getRequiresAlternativeEmail());
         boolean hasUsableGithubIdentity = securityService.hasUsableGithubIdentity(
-            decodedToken.getUid(),
-            request.getGithubUsername());
+                decodedToken.getUid(),
+                request.getGithubUsername());
 
         // Email privado en GitHub — pedir email alternativo al frontend
         if (isGithubPrivateEmail(firebaseEmail)
-            || (requiresAlternativeByClient && !hasUsableGithubIdentity)) {
+                || (requiresAlternativeByClient && !hasUsableGithubIdentity)) {
             return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                     .body(Map.of(
                             "requiresEmail", true,
@@ -221,7 +243,7 @@ public class SecurityController {
         boolean githubEmailPrivate = isGithubPrivateEmail(normalizeEmail(decodedToken.getEmail()));
         if (!githubEmailPrivate && !request.isAlternateEmailFlow()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "GITHUB_EMAIL_NOT_PRIVATE",
-                "El flujo de email alternativo solo aplica cuando GitHub no entrega un email usable");
+                    "El flujo de email alternativo solo aplica cuando GitHub no entrega un email usable");
         }
 
         // En este caso el email viene del frontend (el alternativo que ingresó el

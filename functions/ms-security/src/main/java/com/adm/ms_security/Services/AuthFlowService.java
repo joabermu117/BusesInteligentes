@@ -11,6 +11,8 @@ import com.adm.ms_security.Exceptions.ApiException;
 import com.adm.ms_security.Models.AuthChallenge;
 import com.adm.ms_security.Models.User;
 
+import java.util.List;
+
 @Service
 /**
  * Orchestrates authentication flow between credentials/social login,
@@ -20,11 +22,14 @@ public class AuthFlowService {
     private final SecurityService securityService;
     private final AntiBotService antiBotService;
     private final EmailOtpService emailOtpService;
+    private final UserRoleService userRoleService;
 
-    public AuthFlowService(SecurityService securityService, AntiBotService antiBotService, EmailOtpService emailOtpService) {
+    public AuthFlowService(SecurityService securityService, AntiBotService antiBotService,
+            EmailOtpService emailOtpService, UserRoleService userRoleService) {
         this.securityService = securityService;
         this.antiBotService = antiBotService;
         this.emailOtpService = emailOtpService;
+        this.userRoleService = userRoleService;
     }
 
     /**
@@ -65,6 +70,8 @@ public class AuthFlowService {
 
     /**
      * Login step 2: verify OTP and issue final JWT for authenticated session.
+     * Returns both the JWT and the user's role list so the frontend
+     * can determine which modules to render.
      */
     public VerifyOtpResponseDto verifyOtp(VerifyOtpRequestDto request) {
         AuthChallenge challenge = emailOtpService.verifyCode(request.getChallengeId(), request.getCode());
@@ -74,7 +81,10 @@ public class AuthFlowService {
                     "La sesion de verificacion no es valida");
         }
 
-        return new VerifyOtpResponseDto(securityService.generateToken(user));
+        String token = securityService.generateToken(user);
+        List<String> roles = userRoleService.getRoleNamesByUser(user.getId());
+
+        return new VerifyOtpResponseDto(token, roles);
     }
 
     /**

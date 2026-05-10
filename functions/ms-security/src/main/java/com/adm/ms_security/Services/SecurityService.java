@@ -40,10 +40,12 @@ public class SecurityService {
     @Autowired
     private ProfileService theProfileService;
     @Autowired
-    private  ValidatorService theValidatorsService;
+    private ValidatorService theValidatorsService;
 
     @Autowired
     private EmailService theEmailService;
+    @Autowired
+    private UserRoleService theUserRoleService;
 
     public String login(User theNewUser) {
         User authenticatedUser = authenticateLocalUser(theNewUser.getEmail(), theNewUser.getPassword());
@@ -55,7 +57,8 @@ public class SecurityService {
     }
 
     public boolean permissionsValidation(final HttpServletRequest request, Permission thePermission) {
-        boolean success=this.theValidatorsService.validationRolePermission(request,thePermission.getUrl(),thePermission.getMethod());
+        boolean success = this.theValidatorsService.validationRolePermission(request, thePermission.getUrl(),
+                thePermission.getMethod());
         return success;
     }
 
@@ -281,7 +284,7 @@ public class SecurityService {
                 .anyMatch(role -> role != null && role.getId() != null && role.getId().equals(citizenRole.getId()));
 
         if (!alreadyAssigned) {
-            this.theUserRoleRepository.save(new UserRole(user, citizenRole));
+            this.theUserRoleService.addUserRole(user.getId(), citizenRole.getId());
         }
     }
 
@@ -387,7 +390,8 @@ public class SecurityService {
         return firebaseToken.getPicture();
     }
 
-    // Login GitHub cuando el usuario tenía email privado y proporcionó uno alternativo
+    // Login GitHub cuando el usuario tenía email privado y proporcionó uno
+    // alternativo
     public User findOrCreateFromGithubWithEmail(
             String firebaseUid,
             String email,
@@ -395,10 +399,12 @@ public class SecurityService {
             String photoUrl,
             String githubUsername) {
 
-        if (firebaseUid == null || firebaseUid.isBlank()) return null;
+        if (firebaseUid == null || firebaseUid.isBlank())
+            return null;
 
         String normalizedEmail = normalizeEmail(email);
-        if (normalizedEmail == null) return null;
+        if (normalizedEmail == null)
+            return null;
 
         // Si ya existe por UID, sincronizar email alternativo y validar colision.
         User byUid = this.theUserRepository.findByFirebaseUid(firebaseUid).orElse(null);
@@ -455,7 +461,8 @@ public class SecurityService {
 
         // Si ya existe por email con otro método, no permitir
         User byEmail = this.theUserRepository.findByEmailIgnoreCase(normalizedEmail).orElse(null);
-        if (byEmail != null && byEmail.getFirebaseUid() != null) return null;
+        if (byEmail != null && byEmail.getFirebaseUid() != null)
+            return null;
 
         // Si existe por email sin Firebase, vincular
         if (byEmail != null) {

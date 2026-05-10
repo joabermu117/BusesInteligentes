@@ -1,4 +1,4 @@
-import { Entity, OneToMany, PrimaryColumn } from 'typeorm';
+import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { Address } from '../../address/entities/address.entity';
 import { CitizenPaymentMethod } from '../../citizen-payment-method/entities/citizen-payment-method.entity';
 import { GroupPerson } from '../../group-person/entities/group-person.entity';
@@ -11,6 +11,9 @@ import { Ticket } from '../../ticket/entities/ticket.entity';
 export class Citizen extends Person {
   @PrimaryColumn({ type: 'varchar', length: 255 })
   person_id: string;
+
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
 
   /**
    * Bidirectional 1:N relationship with Address
@@ -33,14 +36,17 @@ export class Citizen extends Person {
   @OneToMany(
     () => CitizenPaymentMethod,
     (citizenPaymentMethod) => citizenPaymentMethod.citizen,
-    { cascade: true }
+    { cascade: true },
   )
   paymentMethods?: CitizenPaymentMethod[];
 
   @OneToMany(() => Message, (message) => message.sender)
   sentMessages?: Message[];
 
-  @OneToMany(() => RecipientPerson, (recipientPerson) => recipientPerson.recipient)
+  @OneToMany(
+    () => RecipientPerson,
+    (recipientPerson) => recipientPerson.recipient,
+  )
   recipientPersons?: RecipientPerson[];
 
   @OneToMany(() => GroupPerson, (groupPerson) => groupPerson.person)
@@ -49,5 +55,6 @@ export class Citizen extends Person {
   constructor(person_id: string) {
     super(person_id);
     this.person_id = person_id;
+    this.isActive = true;
   }
 }

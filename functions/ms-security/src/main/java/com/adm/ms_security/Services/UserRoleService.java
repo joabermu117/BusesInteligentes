@@ -17,7 +17,8 @@ import java.util.Set;
 @Service
 /**
  * Gestiona relacion N:N entre usuarios y roles.
- * Tambien envia notificaciones cuando cambia el rol asignado al usuario.
+ * Tambien envia notificaciones cuando cambia el rol asignado al usuario
+ * y sincroniza con el microservicio de negocio via RoleSyncService.
  */
 public class UserRoleService {
     @Autowired
@@ -31,6 +32,9 @@ public class UserRoleService {
 
     @Autowired
     private EmailService theEmailService;
+
+    @Autowired
+    private RoleSyncService roleSyncService;
 
     // Asigna rol al usuario evitando reasignaciones duplicadas.
     public boolean addUserRole(String userId,
@@ -49,6 +53,7 @@ public class UserRoleService {
             UserRole theUserRole = new UserRole(user, role);
             this.theUserRoleRepository.save(theUserRole);
             this.theEmailService.sendRoleUpdatedEmail(user, role, "asignado");
+            this.roleSyncService.notifyRoleAssigned(user, role);
             return true;
         } else {
             return false;
@@ -63,6 +68,7 @@ public class UserRoleService {
             Role role = userRole.getRole();
             this.theUserRoleRepository.delete(userRole);
             this.theEmailService.sendRoleUpdatedEmail(user, role, "removido");
+            this.roleSyncService.notifyRoleRemoved(user, role);
             return true;
         } else {
             return false;
@@ -102,6 +108,22 @@ public class UserRoleService {
         }
 
         return new ArrayList<>(roleIds);
+    }
+
+    public List<String> getRoleNamesByUser(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return new ArrayList<>();
+        }
+
+        List<String> roleNames = new ArrayList<>();
+        for (UserRole relation : getRolesByUser(userId)) {
+            if (relation == null || relation.getRole() == null || relation.getRole().getName() == null) {
+                continue;
+            }
+            roleNames.add(relation.getRole().getName());
+        }
+
+        return roleNames;
     }
 
     public boolean syncRolesForUser(String userId, List<String> roleIds) {

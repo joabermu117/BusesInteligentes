@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateDriverDto } from './dto/create-driver.dto';
@@ -22,7 +26,28 @@ export class DriverService {
       );
     }
 
-    const driver = this.driverRepository.create(createDriverDto);
+    const driver = this.driverRepository.create({
+      ...createDriverDto,
+      isActive: true,
+    });
+    return await this.driverRepository.save(driver);
+  }
+
+  async activate(person_id: string): Promise<Driver> {
+    let driver = await this.driverRepository.findOne({
+      where: { person_id },
+    });
+    if (!driver) {
+      driver = this.driverRepository.create({ person_id, isActive: true });
+      return await this.driverRepository.save(driver);
+    }
+    driver.isActive = true;
+    return await this.driverRepository.save(driver);
+  }
+
+  async deactivate(person_id: string): Promise<Driver> {
+    const driver = await this.findOne(person_id);
+    driver.isActive = false;
     return await this.driverRepository.save(driver);
   }
 
@@ -41,7 +66,10 @@ export class DriverService {
     return driver;
   }
 
-  async update(person_id: string, updateDriverDto: UpdateDriverDto): Promise<Driver> {
+  async update(
+    person_id: string,
+    updateDriverDto: UpdateDriverDto,
+  ): Promise<Driver> {
     const driver = await this.findOne(person_id);
     const updated = Object.assign(driver, updateDriverDto);
     return await this.driverRepository.save(updated);

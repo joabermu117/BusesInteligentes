@@ -8,6 +8,9 @@ export class Driver extends Person {
   @PrimaryColumn({ type: 'varchar', length: 255 })
   person_id: string;
 
+  @Column({ type: 'boolean', default: true })
+  isActive: boolean;
+
   @Column({ nullable: true })
   licenseNumber?: string;
 
@@ -40,5 +43,6 @@ export class Driver extends Person {
   constructor(person_id: string) {
     super(person_id);
     this.person_id = person_id;
+    this.isActive = true;
   }
 }
