@@ -3,7 +3,13 @@ import axios from "axios";
 export const AUTH_TOKEN_STORAGE_KEY = "auth_token";
 
 // Public auth routes must stay reachable without forcing JWT redirects.
-const PUBLIC_AUTH_PATHS = new Set(["/login", "/2fa", "/password-recovery", "/reset-password", "/register"]);
+const PUBLIC_AUTH_PATHS = new Set([
+  "/login",
+  "/2fa",
+  "/password-recovery",
+  "/reset-password",
+  "/register",
+]);
 
 const isPublicAuthRoute = (pathName: string): boolean => {
   return PUBLIC_AUTH_PATHS.has(pathName);
@@ -57,7 +63,10 @@ httpClient.interceptors.request.use((config) => {
   if (token) {
     if (isAuthTokenExpired(token)) {
       setAuthToken(null);
-      if (!isPublicAuthRoute(window.location.pathname) && !isPublicSecurityEndpoint(config.url)) {
+      if (
+        !isPublicAuthRoute(window.location.pathname) &&
+        !isPublicSecurityEndpoint(config.url)
+      ) {
         window.location.replace("/login");
       }
 
@@ -90,13 +99,35 @@ httpClient.interceptors.response.use(
   },
 );
 
+export const AUTH_ROLES_STORAGE_KEY = "auth_roles";
+
 export const setAuthToken = (token: string | null): void => {
   if (!token) {
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    localStorage.removeItem(AUTH_ROLES_STORAGE_KEY);
     return;
   }
 
   localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
+};
+
+export const setAuthRoles = (roles: string[] | null): void => {
+  if (!roles || roles.length === 0) {
+    localStorage.removeItem(AUTH_ROLES_STORAGE_KEY);
+    return;
+  }
+
+  localStorage.setItem(AUTH_ROLES_STORAGE_KEY, JSON.stringify(roles));
+};
+
+export const getAuthRoles = (): string[] => {
+  try {
+    const raw = localStorage.getItem(AUTH_ROLES_STORAGE_KEY);
+    if (!raw) return [];
+    return JSON.parse(raw) as string[];
+  } catch {
+    return [];
+  }
 };
 
 export default httpClient;

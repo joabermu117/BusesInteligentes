@@ -1,9 +1,16 @@
 import { API_CONFIG } from "../../config/apiConfig";
-import httpClient, { setAuthToken } from "../../config/httpClient";
+import httpClient, {
+  setAuthRoles,
+  setAuthToken,
+} from "../../config/httpClient";
 
 interface LoginResponse {
   token: string;
+  roles?: string[];
 }
+
+// Clave para persistir los roles del usuario en localStorage
+export const AUTH_ROLES_STORAGE_KEY = "auth_roles";
 
 interface LoginChallengeResponse {
   challengeId: string;
@@ -90,34 +97,36 @@ class SecurityServiceClass {
     return response.data;
   }
 
-  // Register and persist returned JWT.
+  // Register and persist returned JWT + roles.
   async registerWithEmailPassword(payload: RegisterPayload): Promise<void> {
     const response = await httpClient.post<LoginResponse>(
       `${API_CONFIG.securityBaseUrl}/register`,
       payload,
     );
 
-    const token = response.data?.token;
+    const { token, roles } = response.data;
     if (!token) {
       throw new Error("No se recibio token de autenticacion");
     }
 
     setAuthToken(token);
+    setAuthRoles(roles ?? null);
   }
 
-  // Step 2 login: validates OTP and persists final JWT.
+  // Step 2 login: validates OTP and persists final JWT + roles.
   async verifyOtpCode(payload: VerifyOtpPayload): Promise<void> {
     const response = await httpClient.post<LoginResponse>(
       `${API_CONFIG.securityBaseUrl}/2fa/verify`,
       payload,
     );
 
-    const token = response.data?.token;
+    const { token, roles } = response.data;
     if (!token) {
       throw new Error("No se recibio token de autenticacion");
     }
 
     setAuthToken(token);
+    setAuthRoles(roles ?? null);
   }
 
   // Requests a new OTP code under backend resend cooldown policy.

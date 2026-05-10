@@ -8,6 +8,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -22,7 +23,7 @@ import java.util.Map;
  * whenever a citizen or driver role is assigned or removed from a user
  * in the Security microservice (MongoDB source of truth).
  *
- * Uses RestTemplate for HTTP calls to the NestJS endpoints.
+ * Uses RestTemplate with configure timeouts for HTTP calls to NestJS.
  */
 @Service
 public class RoleSyncService {
@@ -34,13 +35,20 @@ public class RoleSyncService {
     private static final String ROLE_DRIVER = "ROLE_DRIVER";
     private static final String ROLE_DRIVER_LEGACY = "Conductor";
 
+    // Timeouts in milliseconds
+    private static final int CONNECT_TIMEOUT = 5000;
+    private static final int READ_TIMEOUT = 10000;
+
     private final RestTemplate restTemplate;
 
     @Value("${business.ms-base-url:http://localhost:3000}")
     private String businessBaseUrl;
 
     public RoleSyncService() {
-        this.restTemplate = new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(CONNECT_TIMEOUT);
+        factory.setReadTimeout(READ_TIMEOUT);
+        this.restTemplate = new RestTemplate(factory);
     }
 
     /**

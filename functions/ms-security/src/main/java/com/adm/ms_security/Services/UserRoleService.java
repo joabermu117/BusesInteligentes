@@ -6,7 +6,6 @@ import com.adm.ms_security.Models.UserRole;
 import com.adm.ms_security.Repositories.RoleRepository;
 import com.adm.ms_security.Repositories.UserRepository;
 import com.adm.ms_security.Repositories.UserRoleRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -21,20 +20,23 @@ import java.util.Set;
  * y sincroniza con el microservicio de negocio via RoleSyncService.
  */
 public class UserRoleService {
-    @Autowired
-    private UserRepository theUserRepository;
+    private final UserRepository theUserRepository;
+    private final RoleRepository theRoleRepository;
+    private final UserRoleRepository theUserRoleRepository;
+    private final EmailService theEmailService;
+    private final RoleSyncService roleSyncService;
 
-    @Autowired
-    private RoleRepository theRoleRepository;
-
-    @Autowired
-    private UserRoleRepository theUserRoleRepository;
-
-    @Autowired
-    private EmailService theEmailService;
-
-    @Autowired
-    private RoleSyncService roleSyncService;
+    public UserRoleService(UserRepository theUserRepository,
+            RoleRepository theRoleRepository,
+            UserRoleRepository theUserRoleRepository,
+            EmailService theEmailService,
+            RoleSyncService roleSyncService) {
+        this.theUserRepository = theUserRepository;
+        this.theRoleRepository = theRoleRepository;
+        this.theUserRoleRepository = theUserRoleRepository;
+        this.theEmailService = theEmailService;
+        this.roleSyncService = roleSyncService;
+    }
 
     // Asigna rol al usuario evitando reasignaciones duplicadas.
     public boolean addUserRole(String userId,
