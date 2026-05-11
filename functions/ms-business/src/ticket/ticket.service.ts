@@ -3,10 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CitizenPaymentMethod } from '../citizen-payment-method/entities/citizen-payment-method.entity';
 import { Citizen } from '../citizen/entities/citizen.entity';
-import { Schedule } from '../schedules/entities/schedule.entity';
-import { History } from '../history/entities/history.entity';
-import { Shift } from '../shifts/entities/shift.entity';
 import { ShiftStatus } from '../common/enums';
+import { History } from '../history/entities/history.entity';
+import { Schedule } from '../schedules/entities/schedule.entity';
+import { Shift } from '../shifts/entities/shift.entity';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket } from './entities/ticket.entity';
@@ -109,7 +109,11 @@ export class TicketService {
     if (!ticket) throw new NotFoundException(`Ticket #${id} not found`);
 
     // Buscar turno activo del bus para obtener información del conductor
-    let driverInfo = null;
+    let driverInfo: {
+      person_id: string;
+      licenseNumber?: string;
+      driverUserId?: string;
+    } | null = null;
     if (ticket.schedule?.bus?.id) {
       const activeShift = await this.shiftRepository.findOne({
         where: {
