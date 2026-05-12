@@ -119,20 +119,21 @@ public class ProfileController {
         User authenticatedUser = this.validatorService.getUser(httpRequest);
         if (authenticatedUser == null || authenticatedUser.getId() == null || authenticatedUser.getId().isBlank()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("message", "No fue posible identificar el usuario autenticado"));
+                    .body(Map.of("message", "No fue posible identificar el usuario autenticado"));
         }
 
         if (request.getUserId() != null
-            && !request.getUserId().isBlank()
-            && !authenticatedUser.getId().equals(request.getUserId())) {
+                && !request.getUserId().isBlank()
+                && !authenticatedUser.getId().equals(request.getUserId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of("message", "No puedes completar el perfil de otro usuario"));
+                    .body(Map.of("message", "No puedes completar el perfil de otro usuario"));
         }
 
         Profile profile = this.theProfileService.completeProfile(
-            authenticatedUser.getId(),
+                authenticatedUser.getId(),
                 request.getPhone(),
-                request.getAddress());
+                request.getAddress(),
+                request.getBirthDate());
 
         if (profile == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)

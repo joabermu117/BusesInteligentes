@@ -21,8 +21,8 @@ export class CitizenController {
   }
 
   @Post('activate')
-  activate(@Body() body: { person_id: string }) {
-    return this.citizenService.activate(body.person_id);
+  activate(@Body() body: { person_id: string; birthDate?: string }) {
+    return this.citizenService.activate(body.person_id, body.birthDate);
   }
 
   @Patch(':person_id/deactivate')

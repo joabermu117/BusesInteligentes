@@ -8,7 +8,7 @@ export class Incident {
 
   @Column({
     type: 'enum',
-    enum: ['mechanical', 'accident', 'delay', 'other'],
+    enum: ['mechanical', 'accident', 'delay', 'passenger', 'other'],
   })
   type?: string;
 

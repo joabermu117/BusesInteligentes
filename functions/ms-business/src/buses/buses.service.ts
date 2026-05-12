@@ -1,10 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Bus } from './entities/bus.entity';
+import { Company } from '../companies/entities/company.entity';
 import { CreateBusDto } from './dto/create-bus.dto';
 import { UpdateBusDto } from './dto/update-bus.dto';
-import { Company } from '../companies/entities/company.entity';
+import { Bus } from './entities/bus.entity';
 
 @Injectable()
 export class BusesService {
@@ -29,18 +33,23 @@ export class BusesService {
       where: { id: createBusDto.companyId },
     });
     if (!company) {
-      throw new NotFoundException(`Company #${createBusDto.companyId} not found`);
+      throw new NotFoundException(
+        `Company #${createBusDto.companyId} not found`,
+      );
     }
 
-    // Generar QR único basado en la placa
-    const qrCode = `BUS-${createBusDto.plate}-${Date.now()}`;
-
+    // Generar QR único: URL a la vista del bus en el frontend
+    // Se genera con el ID temporario que retorna save, por eso se guarda en dos pasos
     const bus = this.busRepository.create({
       ...createBusDto,
       company,
-      qrCode,
     });
-    return await this.busRepository.save(bus);
+    const saved = await this.busRepository.save(bus);
+
+    // QR apunta a la vista del bus en el frontend
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    saved.qrCode = `${frontendUrl}/buses/${saved.id}`;
+    return await this.busRepository.save(saved);
   }
 
   async findAll(): Promise<Bus[]> {

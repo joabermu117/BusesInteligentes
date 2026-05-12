@@ -130,4 +130,37 @@ export const getAuthRoles = (): string[] => {
   }
 };
 
+/** Lee el email del usuario desde el JWT almacenado */
+export const getUserEmailFromToken = (): string | null => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    if (!token) return null;
+    const payload = JSON.parse(
+      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return payload?.email ?? null;
+  } catch {
+    return null;
+  }
+};
+
+/** Hook para obtener el email del usuario desde el JWT */
+export const useUserEmail = (): string | null => {
+  return getUserEmailFromToken();
+};
+
+/** Lee el userId del usuario desde el JWT almacenado */
+export const getAuthUserId = (): string | null => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    if (!token) return null;
+    const payload = JSON.parse(
+      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return payload?.id ?? payload?.userId ?? null;
+  } catch {
+    return null;
+  }
+};
+
 export default httpClient;

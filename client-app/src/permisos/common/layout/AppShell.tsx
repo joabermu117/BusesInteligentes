@@ -1,17 +1,22 @@
 import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
+import BarChartRounded from "@mui/icons-material/BarChartRounded";
+import ConfirmationNumberRounded from "@mui/icons-material/ConfirmationNumberRounded";
 import DashboardRounded from "@mui/icons-material/DashboardRounded";
+import DirectionsBusRounded from "@mui/icons-material/DirectionsBusRounded";
+import DomainRounded from "@mui/icons-material/DomainRounded";
+import ExitToAppRounded from "@mui/icons-material/ExitToAppRounded";
 import ExpandLessRounded from "@mui/icons-material/ExpandLessRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import GppGoodRounded from "@mui/icons-material/GppGoodRounded";
 import GroupRounded from "@mui/icons-material/GroupRounded";
+import HistoryRounded from "@mui/icons-material/HistoryRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import NearMeRounded from "@mui/icons-material/NearMeRounded";
-import ShieldRounded from "@mui/icons-material/ShieldRounded";
-import ConfirmationNumberRounded from "@mui/icons-material/ConfirmationNumberRounded";
-import ExitToAppRounded from "@mui/icons-material/ExitToAppRounded";
-import HistoryRounded from "@mui/icons-material/HistoryRounded";
+import PersonRounded from "@mui/icons-material/PersonRounded";
+import SettingsRounded from "@mui/icons-material/SettingsRounded";
+import TimeToLeaveRounded from "@mui/icons-material/TimeToLeaveRounded";
 import WorkHistoryRounded from "@mui/icons-material/WorkHistoryRounded";
 import {
   AppBar,
@@ -42,9 +47,15 @@ type NavigationItem = {
   matchPath?: string; // custom path to check for active state
 };
 
+type NavigationGroup = {
+  label: string;
+  icon: ReactNode;
+  items: NavigationItem[];
+};
+
 const DRAWER_WIDTH = 292;
 
-const navigationItems: NavigationItem[] = [
+const citizenItems: NavigationItem[] = [
   {
     path: "/dashboard",
     label: "Dashboard",
@@ -83,6 +94,21 @@ const navigationItems: NavigationItem[] = [
     matchPath: "/viajes",
   },
   {
+    path: "/tarjetas",
+    label: "Mis tarjetas",
+    description: "Métodos de pago vinculados.",
+    icon: <ConfirmationNumberRounded />,
+  },
+  {
+    path: "/recargar",
+    label: "Recargar tarjeta",
+    description: "Recarga tu tarjeta con ePayco.",
+    icon: <ConfirmationNumberRounded />,
+  },
+];
+
+const driverItems: NavigationItem[] = [
+  {
     path: "/turnos",
     label: "Mis turnos",
     description: "Turnos asignados como conductor.",
@@ -90,7 +116,7 @@ const navigationItems: NavigationItem[] = [
   },
 ];
 
-const securityItems: NavigationItem[] = [
+const adminItems: NavigationItem[] = [
   {
     path: "/users/list",
     label: "Usuarios",
@@ -108,6 +134,60 @@ const securityItems: NavigationItem[] = [
     label: "Permisos",
     description: "Catalogo de permisos del sistema.",
     icon: <GppGoodRounded />,
+  },
+  {
+    path: "/buses",
+    label: "Buses",
+    description: "Gestion de flota de buses.",
+    icon: <DirectionsBusRounded />,
+  },
+  {
+    path: "/empresas",
+    label: "Empresas",
+    description: "Operadoras de transporte.",
+    icon: <DomainRounded />,
+  },
+  {
+    path: "/payment-methods",
+    label: "Métodos de pago",
+    description: "Catalogo de métodos de pago.",
+    icon: <AdminPanelSettingsRounded />,
+  },
+  {
+    path: "/reportes/ingresos",
+    label: "Reporte ingresos",
+    description: "Ingresos por método de pago.",
+    icon: <BarChartRounded />,
+  },
+  {
+    path: "/reportes/edades",
+    label: "Reporte edades",
+    description: "Distribución por rango etario.",
+    icon: <BarChartRounded />,
+  },
+  {
+    path: "/reportes/incidentes",
+    label: "Reporte incidentes",
+    description: "Tendencia de incidentes por tipo.",
+    icon: <BarChartRounded />,
+  },
+];
+
+const navigationGroups: NavigationGroup[] = [
+  {
+    label: "Ciudadano",
+    icon: <PersonRounded />,
+    items: citizenItems,
+  },
+  {
+    label: "Conductor",
+    icon: <TimeToLeaveRounded />,
+    items: driverItems,
+  },
+  {
+    label: "Administración",
+    icon: <SettingsRounded />,
+    items: adminItems,
   },
 ];
 
@@ -178,18 +258,66 @@ const NavListItem = ({
   </ListItemButton>
 );
 
+const NavGroup = ({
+  group,
+  isOpen,
+  onToggle,
+  currentPath,
+  onNavigate,
+}: {
+  group: NavigationGroup;
+  isOpen: boolean;
+  onToggle: () => void;
+  currentPath: string;
+  onNavigate: (path: string) => void;
+}) => (
+  <>
+    <ListItemButton onClick={onToggle} sx={{ borderRadius: 2, py: 1, px: 1.5 }}>
+      <ListItemIcon sx={{ minWidth: 36, color: "text.secondary" }}>
+        {group.icon}
+      </ListItemIcon>
+      <ListItemText
+        primary={group.label}
+        primaryTypographyProps={{
+          fontWeight: 800,
+          letterSpacing: "0.02em",
+        }}
+      />
+      {isOpen ? <ExpandLessRounded /> : <ExpandMoreRounded />}
+    </ListItemButton>
+
+    <Collapse in={isOpen} timeout="auto" unmountOnExit>
+      <List sx={{ pt: 1, gap: 0.75, display: "grid" }}>
+        {group.items.map((item) => (
+          <NavListItem
+            key={item.path}
+            item={item}
+            isSelected={isItemActive(item, currentPath)}
+            onClick={() => onNavigate(item.path)}
+          />
+        ))}
+      </List>
+    </Collapse>
+  </>
+);
+
 const AppShell = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
-  const [isSecurityOpen, setIsSecurityOpen] = useState(true);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    Ciudadano: true,
+    Conductor: true,
+    Administración: true,
+  });
 
-  const activeItem = useMemo(
-    () =>
-      navigationItems.find((item) => isItemActive(item, location.pathname)) ??
-      navigationItems[0],
-    [location.pathname],
-  );
+  const activeItem = useMemo(() => {
+    const allItems = navigationGroups.flatMap((g) => g.items);
+    return (
+      allItems.find((item) => isItemActive(item, location.pathname)) ??
+      allItems[0]
+    );
+  }, [location.pathname]);
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -199,6 +327,10 @@ const AppShell = () => {
   const handleLogout = () => {
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
     navigate("/login", { replace: true });
+  };
+
+  const toggleGroup = (label: string) => {
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
   const navContent = (
@@ -215,44 +347,16 @@ const AppShell = () => {
       <Divider />
 
       <List sx={{ px: 1.5, py: 1.5 }}>
-        {navigationItems.map((item) => (
-          <NavListItem
-            key={item.path}
-            item={item}
-            isSelected={isItemActive(item, location.pathname)}
-            onClick={() => handleNavigate(item.path)}
+        {navigationGroups.map((group) => (
+          <NavGroup
+            key={group.label}
+            group={group}
+            isOpen={openGroups[group.label]}
+            onToggle={() => toggleGroup(group.label)}
+            currentPath={location.pathname}
+            onNavigate={handleNavigate}
           />
         ))}
-
-        <ListItemButton
-          onClick={() => setIsSecurityOpen((prev) => !prev)}
-          sx={{ borderRadius: 2, py: 1, px: 1.5 }}
-        >
-          <ListItemIcon sx={{ minWidth: 36, color: "text.secondary" }}>
-            <ShieldRounded />
-          </ListItemIcon>
-          <ListItemText
-            primary="Seguridad"
-            primaryTypographyProps={{
-              fontWeight: 800,
-              letterSpacing: "0.02em",
-            }}
-          />
-          {isSecurityOpen ? <ExpandLessRounded /> : <ExpandMoreRounded />}
-        </ListItemButton>
-
-        <Collapse in={isSecurityOpen} timeout="auto" unmountOnExit>
-          <List sx={{ pt: 1, gap: 0.75, display: "grid" }}>
-            {securityItems.map((item) => (
-              <NavListItem
-                key={item.path}
-                item={item}
-                isSelected={isItemActive(item, location.pathname)}
-                onClick={() => handleNavigate(item.path)}
-              />
-            ))}
-          </List>
-        </Collapse>
       </List>
     </Stack>
   );

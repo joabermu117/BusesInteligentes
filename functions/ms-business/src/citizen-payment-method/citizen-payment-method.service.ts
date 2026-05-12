@@ -18,19 +18,25 @@ export class CitizenPaymentMethodService {
     private readonly paymentMethodRepository: Repository<PaymentMethod>,
   ) {}
 
-  async create(createCitizenPaymentMethodDto: CreateCitizenPaymentMethodDto): Promise<CitizenPaymentMethod> {
+  async create(
+    createCitizenPaymentMethodDto: CreateCitizenPaymentMethodDto,
+  ): Promise<CitizenPaymentMethod> {
     const citizen = await this.citizenRepository.findOne({
       where: { person_id: createCitizenPaymentMethodDto.citizenId.toString() },
     });
     if (!citizen) {
-      throw new NotFoundException(`Citizen #${createCitizenPaymentMethodDto.citizenId} not found`);
+      throw new NotFoundException(
+        `Citizen #${createCitizenPaymentMethodDto.citizenId} not found`,
+      );
     }
 
     const paymentMethod = await this.paymentMethodRepository.findOne({
       where: { id: createCitizenPaymentMethodDto.paymentMethodId },
     });
     if (!paymentMethod) {
-      throw new NotFoundException(`Payment method #${createCitizenPaymentMethodDto.paymentMethodId} not found`);
+      throw new NotFoundException(
+        `Payment method #${createCitizenPaymentMethodDto.paymentMethodId} not found`,
+      );
     }
 
     const citizenPaymentMethod = this.citizenPaymentMethodRepository.create({
@@ -48,11 +54,13 @@ export class CitizenPaymentMethodService {
   }
 
   async findOne(id: number): Promise<CitizenPaymentMethod> {
-    const citizenPaymentMethod = await this.citizenPaymentMethodRepository.findOne({
-      where: { id },
-      relations: ['citizen', 'paymentMethod'],
-    });
-    if (!citizenPaymentMethod) throw new NotFoundException(`Citizen payment method #${id} not found`);
+    const citizenPaymentMethod =
+      await this.citizenPaymentMethodRepository.findOne({
+        where: { id },
+        relations: ['citizen', 'paymentMethod'],
+      });
+    if (!citizenPaymentMethod)
+      throw new NotFoundException(`Citizen payment method #${id} not found`);
     return citizenPaymentMethod;
   }
 
@@ -63,9 +71,15 @@ export class CitizenPaymentMethodService {
     });
   }
 
-  async update(id: number, updateCitizenPaymentMethodDto: UpdateCitizenPaymentMethodDto): Promise<CitizenPaymentMethod> {
+  async update(
+    id: number,
+    updateCitizenPaymentMethodDto: UpdateCitizenPaymentMethodDto,
+  ): Promise<CitizenPaymentMethod> {
     const citizenPaymentMethod = await this.findOne(id);
-    const updated = Object.assign(citizenPaymentMethod, updateCitizenPaymentMethodDto);
+    const updated = Object.assign(
+      citizenPaymentMethod,
+      updateCitizenPaymentMethodDto,
+    );
     return await this.citizenPaymentMethodRepository.save(updated);
   }
 

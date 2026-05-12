@@ -33,14 +33,18 @@ export class TicketService {
       where: { person_id: createTicketDto.citizenId.toString() },
     });
     if (!citizen) {
-      throw new NotFoundException(`Citizen #${createTicketDto.citizenId} not found`);
+      throw new NotFoundException(
+        `Citizen #${createTicketDto.citizenId} not found`,
+      );
     }
 
     const schedule = await this.scheduleRepository.findOne({
       where: { id: createTicketDto.scheduleId },
     });
     if (!schedule) {
-      throw new NotFoundException(`Schedule #${createTicketDto.scheduleId} not found`);
+      throw new NotFoundException(
+        `Schedule #${createTicketDto.scheduleId} not found`,
+      );
     }
 
     let paymentMethod: CitizenPaymentMethod | null = null;
@@ -49,7 +53,9 @@ export class TicketService {
         where: { id: createTicketDto.paymentMethodId },
       });
       if (!paymentMethod) {
-        throw new NotFoundException(`Payment method #${createTicketDto.paymentMethodId} not found`);
+        throw new NotFoundException(
+          `Payment method #${createTicketDto.paymentMethodId} not found`,
+        );
       }
     }
 
@@ -67,14 +73,26 @@ export class TicketService {
 
   async findAll(): Promise<Ticket[]> {
     return await this.ticketRepository.find({
-      relations: ['citizen', 'paymentMethod', 'schedule', 'schedule.bus', 'history'],
+      relations: [
+        'citizen',
+        'paymentMethod',
+        'schedule',
+        'schedule.bus',
+        'history',
+      ],
     });
   }
 
   async findOne(id: number): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { id },
-      relations: ['citizen', 'paymentMethod', 'schedule', 'schedule.bus', 'history'],
+      relations: [
+        'citizen',
+        'paymentMethod',
+        'schedule',
+        'schedule.bus',
+        'history',
+      ],
     });
     if (!ticket) throw new NotFoundException(`Ticket #${id} not found`);
     return ticket;
@@ -83,7 +101,13 @@ export class TicketService {
   async findByCitizen(citizenId: number): Promise<Ticket[]> {
     return await this.ticketRepository.find({
       where: { citizen: { person_id: citizenId.toString() } },
-      relations: ['citizen', 'paymentMethod', 'schedule', 'schedule.bus', 'history'],
+      relations: [
+        'citizen',
+        'paymentMethod',
+        'schedule',
+        'schedule.bus',
+        'history',
+      ],
     });
   }
 
@@ -109,27 +133,28 @@ export class TicketService {
     if (!ticket) throw new NotFoundException(`Ticket #${id} not found`);
 
     // Buscar turno activo del bus para obtener información del conductor
-    let driverInfo: {
+    const driverInfo: {
       person_id: string;
       licenseNumber?: string;
       driverUserId?: string;
-    } | null = null;
-    if (ticket.schedule?.bus?.id) {
-      const activeShift = await this.shiftRepository.findOne({
-        where: {
-          bus: { id: ticket.schedule.bus.id },
-          status: ShiftStatus.IN_PROGRESS,
-        },
-        relations: ['driver'],
-      });
-      if (activeShift?.driver) {
-        driverInfo = {
-          person_id: activeShift.driver.person_id,
-          licenseNumber: activeShift.driver.licenseNumber,
-          driverUserId: activeShift.driverUserId,
-        };
-      }
-    }
+    } | null = ticket.schedule?.bus?.id
+      ? await (async () => {
+          const activeShift = await this.shiftRepository.findOne({
+            where: {
+              bus: { id: ticket.schedule!.bus!.id! },
+              status: ShiftStatus.IN_PROGRESS,
+            },
+            relations: ['driver'],
+          });
+          return activeShift?.driver
+            ? {
+                person_id: activeShift.driver.person_id,
+                licenseNumber: activeShift.driver.licenseNumber,
+                driverUserId: activeShift.driverUserId,
+              }
+            : null;
+        })()
+      : null;
 
     return {
       ...ticket,

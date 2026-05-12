@@ -51,12 +51,19 @@ class ProfileServiceClass {
     userId: string,
     phone: string,
     address: string,
+    birthDate: string,
   ): Promise<void> {
+    // Guarda en MongoDB (Spring Boot)
     await httpClient.post(`${PROFILES_API_URL}/complete`, {
       userId,
       phone,
       address,
+      birthDate,
     });
+
+    // Sincroniza birthDate a NestJS (MySQL)
+    const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+    await httpClient.patch(`${apiUrl}/api/citizens/${userId}`, { birthDate });
   }
 
   async unlinkProvider(

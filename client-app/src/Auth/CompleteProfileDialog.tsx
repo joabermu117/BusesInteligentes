@@ -25,6 +25,7 @@ const CompleteProfileDialog = ({
 }: CompleteProfileDialogProps) => {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -41,9 +42,19 @@ const CompleteProfileDialog = ({
       return;
     }
 
+    if (!birthDate) {
+      setError("Selecciona tu fecha de nacimiento.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      await ProfileService.completeProfile(userId, phone.trim(), address.trim());
+      await ProfileService.completeProfile(
+        userId,
+        phone.trim(),
+        address.trim(),
+        birthDate,
+      );
       onCompleted();
     } catch {
       setError("No fue posible guardar la información. Intenta de nuevo.");
@@ -70,6 +81,16 @@ const CompleteProfileDialog = ({
             size="small"
             autoFocus
             inputProps={{ inputMode: "tel" }}
+          />
+          <TextField
+            label="Fecha de nacimiento"
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            fullWidth
+            size="small"
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ max: new Date().toISOString().split("T")[0] }}
           />
           <TextField
             label="Dirección"

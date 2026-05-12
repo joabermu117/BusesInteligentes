@@ -3,6 +3,8 @@
  * This is a reference class - NOT a physical table in MySQL
  * Used for inheritance by Citizen and Driver entities
  */
+import { Column } from 'typeorm';
+
 export abstract class Person {
   /**
    * MongoDB ObjectId from Security microservice
@@ -14,6 +16,9 @@ export abstract class Person {
    * Shared attributes between Citizen and Driver
    * Additional attributes are stored in MongoDB
    */
+  @Column({ nullable: true })
+  birthDate?: Date;
+
   constructor(person_id: string) {
     this.person_id = person_id;
   }

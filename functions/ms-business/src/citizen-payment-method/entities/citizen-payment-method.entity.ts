@@ -22,6 +22,9 @@ export class CitizenPaymentMethod {
   @Column({ default: true })
   isActive?: boolean;
 
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  balance?: number;
+
   /**
    * Bidirectional N:1 relationship with Citizen
    * Many payment methods belong to one citizen
@@ -35,7 +38,7 @@ export class CitizenPaymentMethod {
    */
   @ManyToOne(
     () => PaymentMethod,
-    (paymentMethod) => paymentMethod.citizenPaymentMethods
+    (paymentMethod) => paymentMethod.citizenPaymentMethods,
   )
   paymentMethod?: PaymentMethod;
 }

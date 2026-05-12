@@ -15,6 +15,7 @@ public class Profile {
     private String phone;
     private String address;
     private String photo;
+    private String birthDate;
     private String githubUsername;
     private boolean googleLinked;
     private boolean githubLinked;

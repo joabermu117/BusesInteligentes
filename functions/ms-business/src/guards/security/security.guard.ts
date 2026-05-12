@@ -24,6 +24,15 @@ const isServiceRoute = (method: string, url: string): boolean => {
   return false;
 };
 
+const WEBHOOK_ROUTES: ReadonlySet<string> = new Set([
+  '/api/recharge/epayco/webhook',
+]);
+
+const isPublicRoute = (method: string, url: string): boolean => {
+  if (method === 'POST' && WEBHOOK_ROUTES.has(url)) return true;
+  return false;
+};
+
 @Injectable()
 export class SecurityGuard implements CanActivate {
   private readonly logger = new Logger('SecurityGuard');

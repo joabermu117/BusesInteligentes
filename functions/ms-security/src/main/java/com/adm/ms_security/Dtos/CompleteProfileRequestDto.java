@@ -14,4 +14,6 @@ public class CompleteProfileRequestDto {
 
     @NotBlank(message = "La dirección es obligatoria")
     private String address;
+
+    private String birthDate;
 }
