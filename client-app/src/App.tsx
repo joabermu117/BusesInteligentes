@@ -40,6 +40,7 @@ import IncidentsList from "./incidents/pages/IncidentsList";
 import BusIncidentsDetail from "./incidents/pages/BusIncidentsDetail";
 import StopsList from "./viajes/pages/StopsList";
 import AdminRoutesList from "./viajes/pages/AdminRoutesList";
+import SchedulesList from "./schedules/pages/SchedulesList";
 
 const RequireAuth = () => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -88,6 +89,7 @@ function App() {
               <Route path="/incidentes/bus/:busId" element={<BusIncidentsDetail />} />
               <Route path="/paraderos/admin" element={<StopsList />} />
               <Route path="/rutas/admin" element={<AdminRoutesList />} />
+              <Route path="/programaciones" element={<SchedulesList />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </Route>
