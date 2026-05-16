@@ -1,7 +1,7 @@
 import { MenuItem, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useBuses } from "../../buses/stores/useBusesStore";
-import FormDialog from "../../permisos/common/components/FormDialog";
+import FormDialog from "../../permisos/common/components/forms/FormDialog";
 import type { CreateIncidentPayload } from "../models/incident";
 import {
   INCIDENT_SEVERITY_OPTIONS,
