@@ -3,6 +3,7 @@ export interface Profile {
   userId: string;
   phone: string;
   address: string;
+  birthDate: string;
   photo: string;
   githubUsername: string;
   googleLinked: boolean;

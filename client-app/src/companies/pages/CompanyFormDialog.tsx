@@ -1,6 +1,6 @@
 import { Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
-import FormDialog from "../../permisos/common/components/FormDialog";
+import FormDialog from "../../permisos/common/components/forms/FormDialog";
 import type { Company, CreateCompanyPayload } from "../models/company";
 import {
   useCreateCompany,

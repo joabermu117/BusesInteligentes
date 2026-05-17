@@ -31,17 +31,12 @@ public class SecurityInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        boolean success = this.validatorService.validationRolePermission(
-                request,
-                request.getRequestURI(),
-                request.getMethod());
-
-        if (!success) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN); // 403
-            return false; // Detener la ejecución del controlador
-        }
-
-        return true; // Continuar con la ejecución del controlador
+        // ✅ El interceptor solo valida autenticacion (JWT valido).
+        // La validacion de PERMISOS se delega exclusivamente a NestJS
+        // via el endpoint /api/public/security/permissions-validation.
+        // Esto evita N+1 consultas a MongoDB en cada request y acelera
+        // drasticamente endpoints como GET /api/roles, GET /api/users, etc.
+        return true;
 
     }
 

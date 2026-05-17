@@ -1,0 +1,63 @@
+[
+  { "url": "/api/rutas", "method": "GET", "model": "rutas" },
+  { "url": "/api/rutas/?", "method": "GET", "model": "rutas" },
+  { "url": "/api/rutas", "method": "POST", "model": "rutas" },
+  { "url": "/api/rutas/?", "method": "PUT", "model": "rutas" },
+  { "url": "/api/rutas/?", "method": "DELETE", "model": "rutas" },
+
+  { "url": "/api/programaciones", "method": "GET", "model": "programaciones" },
+  {
+    "url": "/api/programaciones/?",
+    "method": "GET",
+    "model": "programaciones"
+  },
+  { "url": "/api/programaciones", "method": "POST", "model": "programaciones" },
+  {
+    "url": "/api/programaciones/?",
+    "method": "PUT",
+    "model": "programaciones"
+  },
+  {
+    "url": "/api/programaciones/?",
+    "method": "DELETE",
+    "model": "programaciones"
+  },
+
+  { "url": "/api/reportes", "method": "GET", "model": "reportes" },
+  { "url": "/api/reportes/?", "method": "GET", "model": "reportes" },
+  { "url": "/api/reportes", "method": "POST", "model": "reportes" },
+  { "url": "/api/reportes/?", "method": "PUT", "model": "reportes" },
+  { "url": "/api/reportes/?", "method": "DELETE", "model": "reportes" },
+
+  { "url": "/api/incidentes", "method": "GET", "model": "incidentes" },
+  { "url": "/api/incidentes/?", "method": "GET", "model": "incidentes" },
+  { "url": "/api/incidentes", "method": "POST", "model": "incidentes" },
+  { "url": "/api/incidentes/?", "method": "PUT", "model": "incidentes" },
+  { "url": "/api/incidentes/?", "method": "DELETE", "model": "incidentes" },
+
+  {
+    "url": "/api/mensajes-masivos",
+    "method": "GET",
+    "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/mensajes-masivos/?",
+    "method": "GET",
+    "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/mensajes-masivos",
+    "method": "POST",
+    "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/mensajes-masivos/?",
+    "method": "PUT",
+    "model": "mensajes masivos"
+  },
+  {
+    "url": "/api/mensajes-masivos/?",
+    "method": "DELETE",
+    "model": "mensajes masivos"
+  }
+]

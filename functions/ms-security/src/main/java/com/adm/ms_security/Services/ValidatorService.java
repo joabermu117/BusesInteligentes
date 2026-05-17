@@ -6,7 +6,6 @@ import com.adm.ms_security.Repositories.RolePermissionRepository;
 import com.adm.ms_security.Repositories.UserRepository;
 import com.adm.ms_security.Repositories.UserRoleRepository;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
@@ -29,8 +28,9 @@ import java.util.concurrent.TimeUnit;
 public class ValidatorService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ValidatorService.class);
 
-    // Cache TTL por defecto (5 minutos)
-    private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(5);
+    // Cache TTL: 15 minutos - los permisos cambian poco, no tiene sentido
+    // invalidar tan seguido. Si se requiere refresco manual se puede reiniciar.
+    private static final long CACHE_TTL_MS = TimeUnit.MINUTES.toMillis(15);
 
     @Value("${security.authorization.enabled:false}")
     private boolean authorizationEnabled;
@@ -45,10 +45,8 @@ public class ValidatorService {
     // valor = Boolean
     private final ConcurrentHashMap<String, CacheEntry<Boolean>> permissionCache = new ConcurrentHashMap<>();
 
-    // Cache para evitar consultas repetidas de count()
-    private volatile long lastPermissionCountCheck = 0;
-    private static final long PERMISSION_COUNT_CACHE_TTL_MS = TimeUnit.SECONDS.toMillis(30);
-    private volatile Boolean cachedHasPermissions = null;
+    // Bootstrap: se verifica UNA SOLA VEZ y nunca mas
+    private volatile boolean bootstrapModeActive = true;
 
     public ValidatorService(JwtService jwtService,
             PermissionRepository thePermissionRepository,
@@ -67,10 +65,9 @@ public class ValidatorService {
     // Flujo principal ACL: usuario -> roles -> role_permission -> permiso
     // solicitado.
     // Usa cache en memoria para evitar consultas repetidas a MongoDB.
-    public boolean validationRolePermission(HttpServletRequest request,
-            String url,
-            String method) {
-        User theUser = this.getUser(request);
+    // AHORA RECIBE EL USUARIO YA RESUELTO, EVITANDO LA DOBLE CONSULTA getUser().
+    public boolean validationRolePermission(User theUser, String url, String method) {
+        // El usuario ya fue resuelto por el interceptor o quien llame
         if (theUser == null) {
             LOGGER.warn("ACL deny: no authenticated user. method={}, url={}", method, url);
             return false;
@@ -83,7 +80,6 @@ public class ValidatorService {
         }
 
         // Bootstrap mode: while ACL tables are empty, let authenticated users in.
-        // Usamos cache de conteo para no consultar MongoDB en cada request.
         if (isBootstrapMode()) {
             return true;
         }
@@ -92,7 +88,7 @@ public class ValidatorService {
         String normalizedUrl = normalizeRequestUrl(url);
         String cacheKey = theUser.getId() + ":" + normalizedMethod + ":" + normalizedUrl;
 
-        // Consultar cache primero
+        // Consultar cache primero (TTL 15 min)
         CacheEntry<Boolean> cached = permissionCache.get(cacheKey);
         if (cached != null && !cached.isExpired()) {
             Boolean result = cached.getValue();
@@ -106,30 +102,45 @@ public class ValidatorService {
         // Cache miss: realizar la validacion completa
         boolean success = performFullValidation(theUser, normalizedMethod, normalizedUrl);
 
-        // Almacenar en cache
+        // Almacenar en cache (TANTO true COMO false para evitar consultas repetidas)
         permissionCache.put(cacheKey, new CacheEntry<>(success, CACHE_TTL_MS));
 
         return success;
     }
 
-    // Verifica si el sistema esta en modo bootstrap (sin permisos cargados)
-    private boolean isBootstrapMode() {
-        long now = System.currentTimeMillis();
-        if (now - lastPermissionCountCheck > PERMISSION_COUNT_CACHE_TTL_MS) {
-            long permCount = this.thePermissionRepository.count();
-            long rpCount = this.theRolePermissionRepository.count();
-            cachedHasPermissions = permCount > 0 && rpCount > 0;
-            lastPermissionCountCheck = now;
-        }
-        return cachedHasPermissions != null && !cachedHasPermissions;
+    // Versión legacy que acepta HttpServletRequest (para compatibilidad).
+    // Extrae el usuario del JWT y delega al método principal.
+    // Úsalo solo cuando no tengas el User pre-resuelto.
+    @Deprecated
+    public boolean validationRolePermission(HttpServletRequest request,
+            String url,
+            String method) {
+        User theUser = this.getUser(request);
+        return validationRolePermission(theUser, url, method);
     }
 
-    // Ejecuta la validacion completa sin cache
-    private boolean performFullValidation(User theUser, String normalizedMethod, String normalizedUrl) {
-        List<UserRole> roles = this.theUserRoleRepository.findAllByUser(theUser);
+    // Verifica UNA SOLA VEZ si hay permisos en BD.
+    // Si los hay, desactiva bootstrap mode permanentemente.
+    // Si no, se mantiene en bootstrap hasta que se recargue el servicio.
+    private boolean isBootstrapMode() {
+        if (!bootstrapModeActive) {
+            return false;
+        }
 
-        // Buscar al permiso solicitado con y sin slash final para evitar falsos
-        // negativos por formato de URL.
+        boolean hasPerms = this.thePermissionRepository.count() > 0
+                && this.theRolePermissionRepository.count() > 0;
+        if (hasPerms) {
+            bootstrapModeActive = false;
+            return false;
+        }
+
+        return true;
+    }
+
+    // Ejecuta la validacion completa sin cache.
+    // Usa el metodo findByRoleAndPermission (N consultas) pero se mitiga con cache.
+    private boolean performFullValidation(User theUser, String normalizedMethod, String normalizedUrl) {
+        // 1) Buscar el permiso solicitado (con y sin slash final)
         Permission thePermission = this.thePermissionRepository.getPermission(normalizedUrl, normalizedMethod);
         if (thePermission == null) {
             String alternateUrl = normalizedUrl.endsWith("/")
@@ -140,41 +151,46 @@ public class ValidatorService {
 
         if (thePermission == null) {
             LOGGER.warn(
-                    "ACL deny: permission not found for userId={}, email={}, method={}, normalizedUrl={}, rolesCount={}",
+                    "ACL deny: permission not found for userId={}, email={}, method={}, normalizedUrl={}",
                     theUser.getId(),
                     maskEmail(theUser.getEmail()),
                     normalizedMethod,
-                    normalizedUrl,
-                    roles.size());
+                    normalizedUrl);
             return false;
         }
 
+        // 2) Obtener roles del usuario (solo una consulta, getRolesByUser es por
+        // ObjectId)
+        List<UserRole> roles = this.theUserRoleRepository.getRolesByUser(theUser.getId());
+        if (roles.isEmpty()) {
+            LOGGER.warn("ACL deny: user has no roles. userId={}", theUser.getId());
+            return false;
+        }
+
+        // 3) Recorrer roles (N consultas, pero se cachea por 5 min + rolesCount bajo)
         boolean success = false;
-        int i = 0;
-        while (i < roles.size() && !success) {
-            UserRole actual = roles.get(i);
+        for (UserRole actual : roles) {
             Role theRole = actual.getRole();
-            if (theRole != null) {
-                RolePermission theRolePermission = this.theRolePermissionRepository
-                        .findByRoleAndPermission(theRole, thePermission);
-                if (theRolePermission != null) {
+            if (theRole != null && theRole.getId() != null) {
+                RolePermission rp = this.theRolePermissionRepository
+                        .getRolePermission(theRole.getId(), thePermission.getId());
+                if (rp != null) {
                     success = true;
+                    break;
                 }
             }
-            i += 1;
         }
 
         if (!success) {
             LOGGER.warn(
-                    "ACL deny: missing role-permission mapping. userId={}, email={}, permissionId={}, method={}, normalizedUrl={}, roleIds={}",
+                    "ACL deny: missing role-permission mapping. userId={}, permissionId={}, method={}, normalizedUrl={}, roleIds={}",
                     theUser.getId(),
-                    maskEmail(theUser.getEmail()),
                     thePermission.getId(),
                     normalizedMethod,
                     normalizedUrl,
                     roles.stream()
                             .map(UserRole::getRole)
-                            .filter(role -> role != null)
+                            .filter(r -> r != null)
                             .map(Role::getId)
                             .toList());
         } else {

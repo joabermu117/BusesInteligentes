@@ -14,6 +14,7 @@ const normalizeProfile = (profile: ProfileApiShape): Profile => ({
   userId: profile.userId ?? profile.user?.id ?? profile.user?._id ?? "",
   phone: profile.phone ?? "",
   address: profile.address ?? "",
+  birthDate: profile.birthDate ?? "",
   photo: profile.photo ?? "",
   githubUsername: profile.githubUsername ?? "",
   googleLinked: Boolean(profile.googleLinked),
@@ -64,6 +65,32 @@ class ProfileServiceClass {
     // Sincroniza birthDate a NestJS (MySQL)
     const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
     await httpClient.patch(`${apiUrl}/api/citizens/${userId}`, { birthDate });
+  }
+
+  // Actualiza datos del perfil (teléfono, dirección, fecha de nacimiento)
+  // Sincroniza birthDate también a NestJS (citizen) si se proporciona.
+  async updateProfile(
+    profileId: string,
+    userId: string,
+    data: { phone?: string; address?: string; birthDate?: string },
+  ): Promise<void> {
+    // 1. Guardar en MongoDB (Spring Boot - Profile)
+    await httpClient.put(`${PROFILES_API_URL}/${profileId}`, data);
+
+    // 2. Si cambió birthDate, sincronizar a NestJS (MySQL - citizen)
+    //    El person_id del ciudadano es el mismo userId de MongoDB Security.
+    if (data.birthDate) {
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
+      await httpClient
+        .patch(`${apiUrl}/api/citizens/${userId}`, {
+          birthDate: data.birthDate,
+        })
+        .catch(() => {
+          console.warn(
+            "No se pudo sincronizar birthDate con NestJS. Queda en MongoDB.",
+          );
+        });
+    }
   }
 
   async unlinkProvider(

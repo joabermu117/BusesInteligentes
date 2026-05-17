@@ -32,6 +32,7 @@ const UserProfilePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMutating, setIsMutating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
@@ -40,6 +41,12 @@ const UserProfilePage = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+
+  // Estados para edición de perfil
+  const [editMode, setEditMode] = useState(false);
+  const [editPhone, setEditPhone] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editBirthDate, setEditBirthDate] = useState("");
 
   useEffect(() => {
     const loadData = async () => {
@@ -137,6 +144,51 @@ const UserProfilePage = () => {
     }
   };
 
+  // Activa modo edición con los valores actuales del perfil
+  const handleStartEdit = () => {
+    setEditPhone(profile?.phone ?? "");
+    setEditAddress(profile?.address ?? "");
+    setEditBirthDate(profile?.birthDate ?? "");
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setEditMode(true);
+  };
+
+  // Guarda los cambios del perfil
+  const handleSaveProfile = async () => {
+    if (!profile?.id || !user) return;
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsMutating(true);
+
+    try {
+      await ProfileService.updateProfile(profile.id, user.id, {
+        phone: editPhone.trim() || undefined,
+        address: editAddress.trim() || undefined,
+        birthDate: editBirthDate || undefined,
+      });
+
+      // Refrescar perfil
+      const updated = await ProfileService.getProfileByUserId(user.id);
+      if (updated) setProfile(updated);
+
+      setSuccessMessage("Perfil actualizado correctamente.");
+      setEditMode(false);
+    } catch {
+      setErrorMessage("No fue posible guardar los cambios.");
+    } finally {
+      setIsMutating(false);
+    }
+  };
+
+  // Cancela la edición sin guardar
+  const handleCancelEdit = () => {
+    setEditMode(false);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  };
+
   if (isLoading) {
     return <Loader message="Cargando configuracion del perfil..." />;
   }
@@ -214,6 +266,119 @@ const UserProfilePage = () => {
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>
             Asignados: {assignedRoles.length} de {roles.length}
           </Typography>
+        </Paper>
+
+        {/* Información del perfil (editable) */}
+        <Paper sx={{ p: 3 }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            sx={{ mb: 1.5 }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Información del perfil
+            </Typography>
+            {!editMode && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={handleStartEdit}
+                disabled={isMutating}
+              >
+                Editar
+              </Button>
+            )}
+          </Stack>
+
+          {successMessage && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {successMessage}
+            </Alert>
+          )}
+
+          {editMode ? (
+            <Stack spacing={2}>
+              <TextField
+                label="Teléfono"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                fullWidth
+                size="small"
+              />
+              <TextField
+                label="Dirección"
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                fullWidth
+                size="small"
+              />
+              <TextField
+                label="Fecha de nacimiento"
+                type="date"
+                value={editBirthDate}
+                onChange={(e) => setEditBirthDate(e.target.value)}
+                fullWidth
+                size="small"
+                InputLabelProps={{ shrink: true }}
+              />
+              <Stack direction="row" spacing={1} justifyContent="flex-end">
+                <Button
+                  variant="outlined"
+                  onClick={handleCancelEdit}
+                  disabled={isMutating}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  variant="contained"
+                  onClick={handleSaveProfile}
+                  disabled={isMutating}
+                >
+                  {isMutating ? "Guardando..." : "Guardar cambios"}
+                </Button>
+              </Stack>
+            </Stack>
+          ) : (
+            <Stack spacing={1}>
+              <Typography variant="body2">
+                <strong>Teléfono:</strong>{" "}
+                {profile?.phone || (
+                  <Typography
+                    component="span"
+                    color="text.secondary"
+                    sx={{ fontStyle: "italic" }}
+                  >
+                    No registrado
+                  </Typography>
+                )}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Dirección:</strong>{" "}
+                {profile?.address || (
+                  <Typography
+                    component="span"
+                    color="text.secondary"
+                    sx={{ fontStyle: "italic" }}
+                  >
+                    No registrada
+                  </Typography>
+                )}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Fecha de nacimiento:</strong>{" "}
+                {profile?.birthDate || (
+                  <Typography
+                    component="span"
+                    color="text.secondary"
+                    sx={{ fontStyle: "italic" }}
+                  >
+                    No registrada
+                  </Typography>
+                )}
+              </Typography>
+            </Stack>
+          )}
         </Paper>
 
         <Paper sx={{ p: 3 }}>

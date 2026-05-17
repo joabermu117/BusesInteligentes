@@ -1,7 +1,7 @@
 import { MenuItem, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useCompanies } from "../../companies/stores/useCompaniesStore";
-import FormDialog from "../../permisos/common/components/FormDialog";
+import FormDialog from "../../permisos/common/components/forms/FormDialog";
 import type { Bus, CreateBusPayload } from "../models/bus";
 import { BUS_STATUS_OPTIONS } from "../models/bus";
 import { useCreateBus, useUpdateBus } from "../stores/useBusesStore";

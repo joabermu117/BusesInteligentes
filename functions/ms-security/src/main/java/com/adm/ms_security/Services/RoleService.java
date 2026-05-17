@@ -43,9 +43,21 @@ public class RoleService {
 
     public List<RoleResponseDto> findWithPermissions() {
         List<Role> roles = this.theRoleRepository.findAll();
+
+        // Batch: obtener permissionIds de TODOS los roles en UNA SOLA consulta
+        java.util.Map<String, List<String>> permissionsByRole = this.theRolePermissionService
+                .getPermissionIdsByRoles(roles);
+
         List<RoleResponseDto> response = new ArrayList<>();
         for (Role role : roles) {
-            response.add(toResponse(role));
+            if (role == null)
+                continue;
+            RoleResponseDto dto = new RoleResponseDto();
+            dto.setId(role.getId());
+            dto.setName(role.getName());
+            dto.setDescription(role.getDescription());
+            dto.setPermissionIds(permissionsByRole.getOrDefault(role.getId(), List.of()));
+            response.add(dto);
         }
         return response;
     }

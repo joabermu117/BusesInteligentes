@@ -18,7 +18,10 @@ public class WebConfig implements WebMvcConfigurer {
 
         registry.addInterceptor(securityInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/public/**");
+                .excludePathPatterns(
+                        "/api/public/**",
+                        "/api/profiles/complete",
+                        "/api/profiles/user/*/complete");
 
     }
 
@@ -26,7 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
                 .allowedOrigins("http://localhost:5173")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("Authorization")
                 .allowCredentials(false);

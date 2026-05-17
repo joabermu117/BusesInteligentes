@@ -125,9 +125,16 @@ public class ProfileService {
         Profile actualProfile = this.theProfileRepository.findById(id).orElse(null);
 
         if (actualProfile != null) {
-            actualProfile.setPhone(newProfile.getPhone());
-            actualProfile.setPhoto(newProfile.getPhoto());
-            actualProfile.setGithubUsername(newProfile.getGithubUsername());
+            if (newProfile.getPhone() != null)
+                actualProfile.setPhone(newProfile.getPhone());
+            if (newProfile.getAddress() != null)
+                actualProfile.setAddress(newProfile.getAddress());
+            if (newProfile.getBirthDate() != null)
+                actualProfile.setBirthDate(newProfile.getBirthDate());
+            if (newProfile.getPhoto() != null)
+                actualProfile.setPhoto(newProfile.getPhoto());
+            if (newProfile.getGithubUsername() != null)
+                actualProfile.setGithubUsername(newProfile.getGithubUsername());
             actualProfile.setGoogleLinked(newProfile.isGoogleLinked());
             actualProfile.setGithubLinked(newProfile.isGithubLinked());
             actualProfile.setMicrosoftLinked(newProfile.isMicrosoftLinked());

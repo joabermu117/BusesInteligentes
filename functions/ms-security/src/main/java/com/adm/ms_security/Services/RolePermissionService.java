@@ -39,6 +39,9 @@ public class RolePermissionService {
     private EmailService theEmailService;
 
     // Asocia permiso a rol evitando duplicados y notificando impacto.
+    // Invalida el cache de rolePermissions para que la vista de roles
+    // refleje el cambio inmediatamente.
+    @org.springframework.cache.annotation.CacheEvict(value = "rolePermissions", allEntries = true)
     public boolean addRolePermission(String roleId,
             String permissionId) {
         Role role = this.theRoleRepository.findById(roleId).orElse(null);
@@ -58,6 +61,7 @@ public class RolePermissionService {
     }
 
     // Elimina relacion rol-permiso y dispara notificacion a usuarios del rol.
+    @org.springframework.cache.annotation.CacheEvict(value = "rolePermissions", allEntries = true)
     public boolean removeRolePermission(String rolePermissionId) {
         RolePermission rolePermission = this.theRolePermissionRepository.findById(rolePermissionId).orElse(null);
         if (rolePermission != null) {
@@ -107,6 +111,54 @@ public class RolePermissionService {
         return new ArrayList<>(permissionIds);
     }
 
+    /**
+     * Batch: Obtiene los permissionIds de MULTIPLES roles en UNA SOLA consulta.
+     * Los resultados se cachean con Caffeine (TTL 5 min) para evitar consultas
+     * repetidas a MongoDB.
+     * 
+     * Estrategia:
+     * 1. findAll() de RolePermission para TODOS los roles en UNA consulta
+     * 2. Agrupar en Java por role.getRole().getId()
+     * 
+     * @param roles Lista de objetos Role (ya resueltos desde BD)
+     * @return Mapa roleId -> lista de permissionIds
+     */
+    @org.springframework.cache.annotation.Cacheable(value = "rolePermissions", key = "'all'")
+    public java.util.Map<String, List<String>> getPermissionIdsByRoles(List<Role> roles) {
+        java.util.Map<String, List<String>> result = new java.util.LinkedHashMap<>();
+        if (roles == null || roles.isEmpty()) {
+            return result;
+        }
+
+        // Inicializar mapa vacío para todos los roles
+        for (Role role : roles) {
+            if (role != null && role.getId() != null) {
+                result.put(role.getId(), new ArrayList<>());
+            }
+        }
+
+        // UNA SOLA CONSULTA: findAll() trae todos los role_permission en 1 query.
+        // Spring Data resuelve los @DBRef con consultas internas, pero como esto
+        // se cachea con Caffeine (TTL 5 min), solo se paga el costo una vez.
+        Set<String> targetRoleIds = result.keySet();
+        List<RolePermission> allFromDb = this.theRolePermissionRepository.findAll();
+
+        for (RolePermission rp : allFromDb) {
+            if (rp == null || rp.getRole() == null || rp.getRole().getId() == null)
+                continue;
+            if (rp.getPermission() == null || rp.getPermission().getId() == null)
+                continue;
+
+            String roleId = rp.getRole().getId();
+            if (targetRoleIds.contains(roleId)) {
+                result.get(roleId).add(rp.getPermission().getId());
+            }
+        }
+
+        return result;
+    }
+
+    @org.springframework.cache.annotation.CacheEvict(value = "rolePermissions", allEntries = true)
     public boolean syncPermissionsForRole(String roleId, List<String> permissionIds) {
         Role role = this.theRoleRepository.findById(roleId).orElse(null);
         if (role == null) {
