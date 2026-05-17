@@ -8,12 +8,13 @@ export interface Bus {
   totalCapacity: number;
   seatedCapacity?: number;
   standingCapacity?: number;
-  photoUrl?: string;
+  photo?: string;
   qrCode?: string;
   status: BusStatus;
   company?: {
     id: number;
-    name: string;
+    nombre: string;
+    nit: string;
   };
   gps?: {
     id: number;
@@ -29,7 +30,7 @@ export interface CreateBusPayload {
   totalCapacity: number;
   seatedCapacity?: number;
   standingCapacity?: number;
-  photoUrl?: string;
+  photo?: string;
   status?: BusStatus;
   companyId: number;
 }
@@ -41,7 +42,7 @@ export interface UpdateBusPayload {
   totalCapacity?: number;
   seatedCapacity?: number;
   standingCapacity?: number;
-  photoUrl?: string;
+  photo?: string;
   status?: BusStatus;
   companyId?: number;
 }

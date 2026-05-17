@@ -1,9 +1,16 @@
-import { Column, Entity, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 import { Company } from '../../companies/entities/company.entity';
 import { Gps } from '../../gps/entities/gps.entity';
-import { Shift } from '../../shifts/entities/shift.entity';
 import { IncidentBus } from '../../incidents-buses/entities/incident-bus.entity';
 import { Schedule } from '../../schedules/entities/schedule.entity';
+import { Shift } from '../../shifts/entities/shift.entity';
 
 @Entity('buses')
 export class Bus {
@@ -28,8 +35,8 @@ export class Bus {
   @Column({ nullable: true })
   standingCapacity?: number;
 
-  @Column({ nullable: true })
-  photoUrl?: string;
+  @Column({ type: 'longtext', nullable: true })
+  photo?: string;
 
   @Column({ nullable: true })
   qrCode?: string;

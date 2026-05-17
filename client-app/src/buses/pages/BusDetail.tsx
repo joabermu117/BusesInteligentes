@@ -1,3 +1,4 @@
+import DownloadRounded from "@mui/icons-material/DownloadRounded";
 import {
   Avatar,
   Box,
@@ -8,7 +9,9 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
+import { useSnackbar } from "notistack";
+import { QRCodeCanvas } from "qrcode.react";
+import { useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import httpClient from "../../config/httpClient";
 import { BUS_STATUS_LABELS } from "../models/bus";
@@ -19,8 +22,11 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const BusDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { data: bus, isLoading } = useBus(Number(id));
+  const { enqueueSnackbar } = useSnackbar();
+  const { data: bus, isLoading, refetch } = useBus(Number(id));
   const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrRef = useRef<HTMLCanvasElement>(null);
 
   const handleUploadPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -28,14 +34,34 @@ const BusDetail = () => {
     setUploading(true);
     const reader = new FileReader();
     reader.onload = async () => {
-      const base64 = reader.result as string;
-      await httpClient.patch(`${API_URL}/api/buses/${bus.id}`, {
-        photoUrl: base64,
-      });
-      window.location.reload();
+      try {
+        const base64 = reader.result as string;
+        await httpClient.patch(`${API_URL}/api/buses/${bus.id}`, {
+          photo: base64,
+        });
+        refetch();
+        enqueueSnackbar("Foto actualizada correctamente", {
+          variant: "success",
+        });
+      } catch {
+        enqueueSnackbar("Error al subir la foto", { variant: "error" });
+      } finally {
+        setUploading(false);
+      }
     };
     reader.readAsDataURL(file);
-    setUploading(false);
+  };
+
+  const handleDownloadQR = () => {
+    if (!qrRef.current) return;
+    const canvas = qrRef.current;
+    const url = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `QR-${bus?.plate}.png`;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (isLoading) return <Typography>Cargando...</Typography>;
@@ -59,7 +85,7 @@ const BusDetail = () => {
           >
             <Box textAlign="center">
               <Avatar
-                src={bus.photoUrl}
+                src={bus.photo}
                 sx={{
                   width: 160,
                   height: 160,
@@ -78,6 +104,7 @@ const BusDetail = () => {
               >
                 {uploading ? "Subiendo..." : "Subir foto"}
                 <input
+                  ref={fileInputRef}
                   type="file"
                   hidden
                   accept="image/*"
@@ -121,18 +148,43 @@ const BusDetail = () => {
                 />
               </Stack>
               <Typography variant="body2" color="text.secondary">
-                Empresa: {bus.company?.name ?? "—"}
+                Empresa:{" "}
+                {bus.company?.nombre
+                  ? `${bus.company.nombre} (${bus.company.nit ?? ""})`
+                  : "—"}
               </Typography>
-              {bus.qrCode && (
-                <Typography variant="body2" color="text.secondary">
-                  QR:{" "}
-                  <code style={{ fontSize: "0.8rem", wordBreak: "break-all" }}>
-                    {bus.qrCode}
-                  </code>
-                </Typography>
-              )}
             </Stack>
           </Stack>
+
+          {bus.qrCode && (
+            <Box
+              sx={{
+                mt: 4,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1.5,
+              }}
+            >
+              <Typography variant="subtitle1" fontWeight={600}>
+                Código QR del bus
+              </Typography>
+              <QRCodeCanvas
+                ref={qrRef}
+                value={bus.qrCode}
+                size={200}
+                level="M"
+              />
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<DownloadRounded />}
+                onClick={handleDownloadQR}
+              >
+                Descargar QR
+              </Button>
+            </Box>
+          )}
         </CardContent>
       </Card>
     </Box>

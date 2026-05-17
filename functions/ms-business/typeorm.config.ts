@@ -1,14 +1,5 @@
-import { DataSource } from 'typeorm';
 import 'dotenv/config';
-
-import 'reflect-metadata';
-import { register } from 'tsconfig-paths';
-import { compilerOptions } from './tsconfig.json';
-
-register({
-  baseUrl: './',
-  paths: compilerOptions.paths,
-});
+import { DataSource } from 'typeorm';
 
 const dataSource = new DataSource({
   type: 'mysql',
