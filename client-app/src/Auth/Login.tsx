@@ -18,7 +18,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { executeRecaptcha } from "../config/recaptcha";
 import { FirebaseAuthService } from "../permisos/services/FirebaseAuthService";
-import { SecurityService } from "../permisos/services/SecurityService";
+import {
+  SecurityService,
+  isChallengeResponse,
+} from "../permisos/services/SecurityService";
 import GithubPrivateEmailDialog from "./GithubPrivateEmailDialog";
 
 const GitHubIcon = () => (
@@ -105,14 +108,22 @@ const LoginPage = () => {
     setErrorMessage(null);
     setIsSubmitting(true);
     try {
-      // Local credentials + anti-bot, then redirect to 2FA challenge.
+      // Local credentials + anti-bot, then redirect to 2FA challenge or dashboard.
       const recaptchaToken = await executeRecaptcha("login");
-      const challenge = await SecurityService.loginWithEmailPassword(
+      const response = await SecurityService.loginWithEmailPassword(
         email,
         password,
         recaptchaToken,
       );
-      navigate("/2fa", { replace: true, state: challenge });
+
+      // If 2FA is disabled, login returns JWT directly.
+      if (!isChallengeResponse(response)) {
+        SecurityService.persistTokenResponse(response);
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      navigate("/2fa", { replace: true, state: response });
     } catch (error) {
       setErrorMessage(getLoginErrorMessage(error, "email"));
     } finally {
@@ -129,7 +140,7 @@ const LoginPage = () => {
       const credential = await FirebaseAuthService.signInWithGoogle();
       const idToken = await FirebaseAuthService.getIdToken(credential);
       const socialMetadata = FirebaseAuthService.getSocialMetadata(credential);
-      const challenge = await SecurityService.exchangeFirebaseToken(
+      const response = await SecurityService.exchangeFirebaseToken(
         idToken,
         recaptchaToken,
         {
@@ -137,7 +148,15 @@ const LoginPage = () => {
           photoUrl: socialMetadata.photoUrl,
         },
       );
-      navigate("/2fa", { replace: true, state: challenge });
+
+      // If 2FA is disabled, login returns JWT directly.
+      if (!isChallengeResponse(response)) {
+        SecurityService.persistTokenResponse(response);
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      navigate("/2fa", { replace: true, state: response });
     } catch (error) {
       setErrorMessage(getLoginErrorMessage(error, "google"));
     } finally {
@@ -158,7 +177,7 @@ const LoginPage = () => {
       const requiresAlternativeEmail =
         await FirebaseAuthService.requiresGithubAlternativeEmail(credential);
 
-      const challenge = await SecurityService.exchangeGithubToken(
+      const response = await SecurityService.exchangeGithubToken(
         idToken,
         recaptchaToken,
         {
@@ -167,7 +186,15 @@ const LoginPage = () => {
           requiresAlternativeEmail,
         },
       );
-      navigate("/2fa", { replace: true, state: challenge });
+
+      // If 2FA is disabled, login returns JWT directly.
+      if (!isChallengeResponse(response)) {
+        SecurityService.persistTokenResponse(response);
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      navigate("/2fa", { replace: true, state: response });
     } catch (error: any) {
       if (error?.code === "auth/popup-closed-by-user") return;
 
@@ -208,7 +235,7 @@ const LoginPage = () => {
       const idToken = await FirebaseAuthService.getIdToken(credential);
       const socialMetadata =
         await FirebaseAuthService.getMicrosoftSocialMetadata(credential);
-      const challenge = await SecurityService.exchangeFirebaseToken(
+      const response = await SecurityService.exchangeFirebaseToken(
         idToken,
         recaptchaToken,
         {
@@ -216,7 +243,15 @@ const LoginPage = () => {
           photoUrl: socialMetadata.photoUrl,
         },
       );
-      navigate("/2fa", { replace: true, state: challenge });
+
+      // If 2FA is disabled, login returns JWT directly.
+      if (!isChallengeResponse(response)) {
+        SecurityService.persistTokenResponse(response);
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      navigate("/2fa", { replace: true, state: response });
     } catch (error) {
       setErrorMessage(getLoginErrorMessage(error, "microsoft"));
     } finally {

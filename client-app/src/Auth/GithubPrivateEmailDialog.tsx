@@ -12,7 +12,10 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { executeRecaptcha } from "../config/recaptcha";
-import { SecurityService } from "../permisos/services/SecurityService";
+import {
+  SecurityService,
+  isChallengeResponse,
+} from "../permisos/services/SecurityService";
 
 interface GithubPrivateEmailDialogProps {
   open: boolean;
@@ -46,7 +49,7 @@ const GithubPrivateEmailDialog = ({
     setIsSubmitting(true);
     try {
       const recaptchaToken = await executeRecaptcha("login");
-      const challenge = await SecurityService.completeGithubLoginWithEmail({
+      const response = await SecurityService.completeGithubLoginWithEmail({
         idToken,
         email,
         name,
@@ -55,7 +58,15 @@ const GithubPrivateEmailDialog = ({
         recaptchaToken,
       });
       onClose();
-      navigate("/2fa", { replace: true, state: challenge });
+
+      // If 2FA is disabled, login returns JWT directly.
+      if (!isChallengeResponse(response)) {
+        SecurityService.persistTokenResponse(response);
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+
+      navigate("/2fa", { replace: true, state: response });
     } catch (e: any) {
       const status = e?.response?.status;
       if (status === 409) {

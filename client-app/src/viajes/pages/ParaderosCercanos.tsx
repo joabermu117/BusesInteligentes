@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useMemo } from "react";
+import PageHeader from "../../permisos/common/components/PageHeader";
 import { useParaderosCercanos } from "../stores/useParaderosStore";
 import { useNearbyStopsWatcher } from "../hooks/useNearbyStopsWatcher";
 import MapaParaderosCercanos from "../components/MapaParaderosCercanos";
@@ -72,21 +73,25 @@ const ParaderosCercanos = () => {
 
   if (isLocating) {
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, py: 8 }}>
-        <CircularProgress />
-        <Typography variant="body1" color="text.secondary">
-          Obteniendo tu ubicación...
-        </Typography>
+      <Box className="page-enter">
+        <PageHeader
+          title="Paraderos cercanos"
+          subtitle="Obteniendo tu ubicación..."
+        />
+        <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
+          <CircularProgress />
+        </Box>
       </Box>
     );
   }
 
   if (locationError) {
     return (
-      <Box sx={{ py: 4 }}>
-        <Typography variant="h5" fontWeight={700} gutterBottom>
-          Paraderos cercanos
-        </Typography>
+      <Box className="page-enter">
+        <PageHeader
+          title="Paraderos cercanos"
+          subtitle="Activa tu ubicación para ver paraderos cercanos."
+        />
         <Card variant="outlined" sx={{ p: 3, textAlign: "center" }}>
           <Typography color="error" sx={{ mb: 2 }}>
             {locationError}
@@ -105,19 +110,14 @@ const ParaderosCercanos = () => {
 
   return (
     <Box>
-      <Typography variant="h5" fontWeight={700} gutterBottom>
-        Paraderos cercanos
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        {userLocation && (
-          <>
-            {userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)} &mdash;
-            {isLoading
-              ? " buscando paraderos..."
-              : ` ${paraderos?.length ?? 0} paradero(s) encontrado(s)`}
-          </>
-        )}
-      </Typography>
+      <PageHeader
+        title="Paraderos cercanos"
+        subtitle={
+          userLocation
+            ? `${userLocation.lat.toFixed(4)}, ${userLocation.lng.toFixed(4)} — ${isLoading ? "buscando paraderos..." : `${paraderos?.length ?? 0} paradero(s) encontrado(s)`}`
+            : "Activa tu ubicación para ver paraderos cercanos."
+        }
+      />
 
       <Box
         sx={{

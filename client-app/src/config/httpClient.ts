@@ -79,7 +79,37 @@ httpClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Checks if error.response?.data indicates a genuine auth failure vs a permission denial.
+// - SecurityGuard (NestJS) returns 401 with "Permisos insuficientes" when token is valid
+//   but the user's role lacks the required permission.
+// - A real auth failure (invalid/expired token) returns a different message.
+const isRealAuthFailure = (error: unknown): boolean => {
+  if (!axios.isAxiosError(error) || !error.response) return true;
+
+  const message =
+    error.response.data?.message ??
+    (typeof error.response.data === "string"
+      ? error.response.data
+      : "");
+
+  // SecurityGuard (NestJS) throws UnauthorizedException("Permisos insuficientes")
+  // or UnauthorizedException("Error al validar permisos") — these mean the token
+  // was actually valid but the ACL check rejected the URL+method.
+  if (
+    typeof message === "string" &&
+    (message.includes("Permisos insuficientes") ||
+      message.includes("Error al validar permisos") ||
+      message.includes("PERMISSION_DENIED") ||
+      message.includes("No tienes permiso"))
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
 // Handles unauthorized responses while preserving expected behavior on public auth endpoints.
+// Only logs out on *real* auth failures (invalid/expired token), not on permission denials.
 httpClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -88,6 +118,17 @@ httpClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // Token was valid but user lacks permission — don't log them out
+      if (!isRealAuthFailure(error)) {
+        console.warn(
+          "Permiso denegado para",
+          error.config?.url,
+          "— la sesión sigue activa",
+        );
+        return Promise.reject(error);
+      }
+
+      // Real auth failure — clear session
       setAuthToken(null);
 
       if (!isPublicAuthRoute(window.location.pathname)) {

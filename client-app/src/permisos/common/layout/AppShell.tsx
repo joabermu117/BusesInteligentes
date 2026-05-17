@@ -15,8 +15,10 @@ import MapRounded from "@mui/icons-material/MapRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import NearMeRounded from "@mui/icons-material/NearMeRounded";
 import PersonRounded from "@mui/icons-material/PersonRounded";
+import ScheduleRounded from "@mui/icons-material/ScheduleRounded";
 import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import TimeToLeaveRounded from "@mui/icons-material/TimeToLeaveRounded";
+import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import WorkHistoryRounded from "@mui/icons-material/WorkHistoryRounded";
 import {
   AppBar,
@@ -140,6 +142,30 @@ const adminItems: NavigationItem[] = [
     label: "Buses",
     description: "Gestion de flota de buses.",
     icon: <DirectionsBusRounded />,
+  },
+  {
+    path: "/rutas/admin",
+    label: "Rutas",
+    description: "CRUD de rutas y paraderos.",
+    icon: <MapRounded />,
+  },
+  {
+    path: "/paraderos/admin",
+    label: "Paraderos",
+    description: "Registrar y gestionar paraderos.",
+    icon: <NearMeRounded />,
+  },
+  {
+    path: "/programaciones",
+    label: "Programaciones",
+    description: "Asignar buses a rutas y horarios.",
+    icon: <ScheduleRounded />,
+  },
+  {
+    path: "/incidentes",
+    label: "Incidentes",
+    description: "Registro de incidentes y novedades.",
+    icon: <WarningAmberRounded />,
   },
   {
     path: "/empresas",

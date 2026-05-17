@@ -21,6 +21,7 @@ import {
 import DirectionsBusRounded from "@mui/icons-material/DirectionsBusRounded";
 import GpsFixedRounded from "@mui/icons-material/GpsFixedRounded";
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
+import PageHeader from "../../permisos/common/components/PageHeader";
 import { useShiftsByDriver, useStartShift } from "../stores/useShiftStore";
 
 const IniciarTurno = () => {
@@ -123,13 +124,11 @@ const IniciarTurno = () => {
   }
 
   return (
-    <Box sx={{ maxWidth: 600, mx: "auto" }}>
-      <Typography variant="h4" fontWeight={700} gutterBottom>
-        Iniciar turno
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Confirma los datos y el estado del bus para comenzar tu turno.
-      </Typography>
+    <Box sx={{ maxWidth: 600, mx: "auto", mb: 4 }}>
+      <PageHeader
+        title="Iniciar turno"
+        subtitle="Confirma los datos y el estado del bus para comenzar tu turno."
+      />
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>

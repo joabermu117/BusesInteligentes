@@ -4,19 +4,29 @@ import httpClient, {
   setAuthToken,
 } from "../../config/httpClient";
 
-interface LoginResponse {
+// Clave para persistir los roles del usuario en localStorage
+export const AUTH_ROLES_STORAGE_KEY = "auth_roles";
+
+interface TokenResponse {
   token: string;
   roles?: string[];
 }
 
-// Clave para persistir los roles del usuario en localStorage
-export const AUTH_ROLES_STORAGE_KEY = "auth_roles";
+// When 2FA is enabled, login returns challenge data to redirect to OTP page.
+// When 2FA is disabled via SECURITY_2FA_ENABLED=false, login returns the JWT directly.
+type LoginResponse =
+  | TokenResponse
+  | { challengeId: string; maskedEmail: string; expiresInSeconds: number; resendCooldownSeconds: number };
 
-interface LoginChallengeResponse {
+export function isChallengeResponse(
+  response: LoginResponse,
+): response is {
   challengeId: string;
   maskedEmail: string;
   expiresInSeconds: number;
   resendCooldownSeconds: number;
+} {
+  return "challengeId" in response;
 }
 
 interface SocialLoginPayload {
@@ -43,13 +53,14 @@ interface RegisterPayload {
 
 // Frontend gateway for auth, 2FA and password recovery endpoints.
 class SecurityServiceClass {
-  // Step 1 local login: returns challenge metadata for OTP screen.
+  // Step 1 local login: returns challenge metadata for OTP screen,
+  // or direct JWT + roles when 2FA is disabled.
   async loginWithEmailPassword(
     email: string,
     password: string,
     recaptchaToken: string,
-  ): Promise<LoginChallengeResponse> {
-    const response = await httpClient.post<LoginChallengeResponse>(
+  ): Promise<LoginResponse> {
+    const response = await httpClient.post<LoginResponse>(
       `${API_CONFIG.securityBaseUrl}/login`,
       { email, password, recaptchaToken },
     );
@@ -61,8 +72,8 @@ class SecurityServiceClass {
     idToken: string,
     recaptchaToken: string,
     socialPayload?: SocialLoginPayload,
-  ): Promise<LoginChallengeResponse> {
-    const response = await httpClient.post<LoginChallengeResponse>(
+  ): Promise<LoginResponse> {
+    const response = await httpClient.post<LoginResponse>(
       `${API_CONFIG.securityBaseUrl}/firebase-login`,
       {
         idToken,
@@ -81,8 +92,8 @@ class SecurityServiceClass {
     idToken: string,
     recaptchaToken: string,
     socialPayload?: Omit<SocialLoginPayload, "provider">,
-  ): Promise<LoginChallengeResponse> {
-    const response = await httpClient.post<LoginChallengeResponse>(
+  ): Promise<LoginResponse> {
+    const response = await httpClient.post<LoginResponse>(
       `${API_CONFIG.securityBaseUrl}/github-login`,
       {
         idToken,
@@ -99,7 +110,7 @@ class SecurityServiceClass {
 
   // Register and persist returned JWT + roles.
   async registerWithEmailPassword(payload: RegisterPayload): Promise<void> {
-    const response = await httpClient.post<LoginResponse>(
+    const response = await httpClient.post<TokenResponse>(
       `${API_CONFIG.securityBaseUrl}/register`,
       payload,
     );
@@ -115,7 +126,7 @@ class SecurityServiceClass {
 
   // Step 2 login: validates OTP and persists final JWT + roles.
   async verifyOtpCode(payload: VerifyOtpPayload): Promise<void> {
-    const response = await httpClient.post<LoginResponse>(
+    const response = await httpClient.post<TokenResponse>(
       `${API_CONFIG.securityBaseUrl}/2fa/verify`,
       payload,
     );
@@ -130,11 +141,18 @@ class SecurityServiceClass {
   }
 
   // Requests a new OTP code under backend resend cooldown policy.
-  async resendOtpCode(challengeId: string): Promise<LoginChallengeResponse> {
-    const response = await httpClient.post<LoginChallengeResponse>(
-      `${API_CONFIG.securityBaseUrl}/2fa/resend`,
-      { challengeId },
-    );
+  async resendOtpCode(challengeId: string): Promise<{
+    challengeId: string;
+    maskedEmail: string;
+    expiresInSeconds: number;
+    resendCooldownSeconds: number;
+  }> {
+    const response = await httpClient.post<{
+      challengeId: string;
+      maskedEmail: string;
+      expiresInSeconds: number;
+      resendCooldownSeconds: number;
+    }>(`${API_CONFIG.securityBaseUrl}/2fa/resend`, { challengeId });
 
     return response.data;
   }
@@ -144,6 +162,14 @@ class SecurityServiceClass {
     await httpClient.post(`${API_CONFIG.securityBaseUrl}/2fa/cancel`, {
       challengeId,
     });
+  }
+
+  // Persist JWT + roles received directly (without 2FA flow).
+  persistTokenResponse(response: TokenResponse): void {
+    if (response.token) {
+      setAuthToken(response.token);
+      setAuthRoles(response.roles ?? null);
+    }
   }
 
   // Best-effort cancellation used during beforeunload events.
@@ -191,8 +217,8 @@ class SecurityServiceClass {
     photoUrl: string;
     githubUsername: string;
     recaptchaToken: string;
-  }): Promise<LoginChallengeResponse> {
-    const response = await httpClient.post<LoginChallengeResponse>(
+  }): Promise<LoginResponse> {
+    const response = await httpClient.post<LoginResponse>(
       `${API_CONFIG.securityBaseUrl}/github-login/complete`,
       {
         idToken: payload.idToken,

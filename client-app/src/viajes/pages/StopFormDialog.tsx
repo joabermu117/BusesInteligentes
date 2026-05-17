@@ -1,25 +1,25 @@
 import {
   Box,
+  Button,
   Stack,
   TextField,
   Typography,
 } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import FormDialog from "../../permisos/common/components/forms/FormDialog";
 import type { CreateStopPayload, Stop } from "../models/stop";
 import { useCreateStop, useUpdateStop } from "../stores/useStopsStore";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
-import { MapContainer, Marker, TileLayer, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, TileLayer, useMapEvents, useMap } from "react-leaflet";
 
 const PIN_ICON = L.divIcon({
   className: "custom-marker-pin",
-  html: `<div style="background:#cf3b23;color:white;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);">P</div>`,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
+  html: `<div style="background:#cf3b23;color:white;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);">📍</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
 });
 
-// Componente interno que captura clics en el mapa
 const MapClickHandler = ({
   onSelect,
 }: {
@@ -30,6 +30,14 @@ const MapClickHandler = ({
       onSelect(e.latlng.lat, e.latlng.lng);
     },
   });
+  return null;
+};
+
+const MapCenterUpdater = ({ center }: { center: [number, number] }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
   return null;
 };
 
@@ -57,6 +65,8 @@ const StopFormDialog = ({ open, stop, onClose }: StopFormDialogProps) => {
 
   const [form, setForm] = useState<CreateStopPayload>(emptyForm);
   const [markerPos, setMarkerPos] = useState<[number, number] | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(DEFAULT_CENTER);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (stop) {
@@ -68,10 +78,25 @@ const StopFormDialog = ({ open, stop, onClose }: StopFormDialogProps) => {
         is_active: stop.is_active,
       });
       setMarkerPos([stop.latitude, stop.longitude]);
+      setMapCenter([stop.latitude, stop.longitude]);
     } else {
       setForm(emptyForm);
       setMarkerPos(null);
+
+      // Try getting user location for default center
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setMapCenter([lat, lng]);
+          },
+          () => {},
+          { enableHighAccuracy: false, timeout: 5000 },
+        );
+      }
     }
+    setSearchQuery("");
   }, [stop, open]);
 
   const handleChange =
@@ -84,13 +109,54 @@ const StopFormDialog = ({ open, stop, onClose }: StopFormDialogProps) => {
       setForm((prev) => ({ ...prev, [field]: value }));
     };
 
-  const handleMapSelect = (lat: number, lng: number) => {
+  const handleMapSelect = useCallback((lat: number, lng: number) => {
     setMarkerPos([lat, lng]);
+    setMapCenter([lat, lng]);
     setForm((prev) => ({
       ...prev,
       latitude: parseFloat(lat.toFixed(7)),
       longitude: parseFloat(lng.toFixed(7)),
     }));
+
+    // Reverse geocode using Nominatim
+    fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.display_name) {
+          setForm((prev) => ({
+            ...prev,
+            address: data.display_name.split(",").slice(0, 3).join(","),
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSearchLocation = async () => {
+    if (!searchQuery.trim()) return;
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=5`,
+      );
+      const results = await res.json();
+      if (results.length > 0) {
+        const { lat, lon, display_name } = results[0];
+        const latNum = parseFloat(lat);
+        const lngNum = parseFloat(lon);
+        setMarkerPos([latNum, lngNum]);
+        setMapCenter([latNum, lngNum]);
+        setForm((prev) => ({
+          ...prev,
+          latitude: parseFloat(latNum.toFixed(7)),
+          longitude: parseFloat(lngNum.toFixed(7)),
+          address: display_name.split(",").slice(0, 3).join(","),
+        }));
+      }
+    } catch {
+      // Search failed silently
+    }
   };
 
   const handleSubmit = async () => {
@@ -136,8 +202,10 @@ const StopFormDialog = ({ open, stop, onClose }: StopFormDialogProps) => {
           onChange={handleChange("address")}
           required
           fullWidth
-          inputProps={{ maxLength: 255 }}
-          placeholder="Ej: Calle 10 # 5-20"
+          inputProps={{ maxLength: 500 }}
+          placeholder="Se autocompleta al hacer clic en el mapa"
+          multiline
+          rows={2}
         />
 
         <Stack direction="row" spacing={2}>
@@ -149,7 +217,7 @@ const StopFormDialog = ({ open, stop, onClose }: StopFormDialogProps) => {
             required
             fullWidth
             inputProps={{ step: 0.0000001 }}
-            helperText="Puedes hacer clic en el mapa"
+            helperText="Haz clic en el mapa o usa la búsqueda"
           />
           <TextField
             label="Longitud"
@@ -162,14 +230,45 @@ const StopFormDialog = ({ open, stop, onClose }: StopFormDialogProps) => {
           />
         </Stack>
 
+        {/* Search bar */}
+        <Stack direction="row" spacing={1} alignItems="center">
+          <TextField
+            label="Buscar ubicación"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSearchLocation();
+            }}
+            size="small"
+            fullWidth
+            placeholder="Ej: Plaza Mayor, Bogotá"
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleSearchLocation}
+            sx={{ flexShrink: 0, height: 40 }}
+          >
+            Buscar
+          </Button>
+        </Stack>
+
         <Box>
           <Typography variant="body2" color="text.secondary" mb={1}>
-            Haz clic en el mapa para marcar la ubicación del paradero
+            Haz clic en el mapa para marcar la ubicación del paradero. También puedes arrastrar el marcador.
           </Typography>
-          <Box sx={{ height: 300, borderRadius: 2, overflow: "hidden", border: "1px solid", borderColor: "divider" }}>
+          <Box
+            sx={{
+              height: 350,
+              borderRadius: 2,
+              overflow: "hidden",
+              border: "1px solid",
+              borderColor: "divider",
+            }}
+          >
             <MapContainer
-              center={markerPos ?? DEFAULT_CENTER}
-              zoom={13}
+              center={mapCenter}
+              zoom={14}
               style={{ height: "100%", width: "100%" }}
               scrollWheelZoom
             >
@@ -178,8 +277,20 @@ const StopFormDialog = ({ open, stop, onClose }: StopFormDialogProps) => {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               <MapClickHandler onSelect={handleMapSelect} />
+              <MapCenterUpdater center={mapCenter} />
               {markerPos && (
-                <Marker position={markerPos} icon={PIN_ICON} />
+                <Marker
+                  position={markerPos}
+                  icon={PIN_ICON}
+                  draggable
+                  eventHandlers={{
+                    dragend: (e) => {
+                      const marker = e.target;
+                      const pos = marker.getLatLng();
+                      handleMapSelect(pos.lat, pos.lng);
+                    },
+                  }}
+                />
               )}
             </MapContainer>
           </Box>

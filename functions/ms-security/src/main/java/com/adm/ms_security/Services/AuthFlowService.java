@@ -3,6 +3,7 @@ package com.adm.ms_security.Services;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import com.adm.ms_security.Configurations.SecurityProperties;
 import com.adm.ms_security.Dtos.LoginChallengeResponseDto;
 import com.adm.ms_security.Dtos.LoginRequestDto;
 import com.adm.ms_security.Dtos.VerifyOtpRequestDto;
@@ -17,49 +18,64 @@ import java.util.List;
 /**
  * Orchestrates authentication flow between credentials/social login,
  * anti-bot checks, OTP challenge lifecycle and final JWT issuance.
+ *
+ * When security.tfa.enabled is false, login directly returns JWT + roles
+ * skipping the OTP step entirely.
  */
 public class AuthFlowService {
     private final SecurityService securityService;
     private final AntiBotService antiBotService;
     private final EmailOtpService emailOtpService;
     private final UserRoleService userRoleService;
+    private final SecurityProperties securityProperties;
 
     public AuthFlowService(SecurityService securityService, AntiBotService antiBotService,
-            EmailOtpService emailOtpService, UserRoleService userRoleService) {
+            EmailOtpService emailOtpService, UserRoleService userRoleService,
+            SecurityProperties securityProperties) {
         this.securityService = securityService;
         this.antiBotService = antiBotService;
         this.emailOtpService = emailOtpService;
         this.userRoleService = userRoleService;
+        this.securityProperties = securityProperties;
     }
 
     /**
      * Local login step 1: validate credentials and create OTP challenge.
+     * When 2FA is disabled, returns JWT + roles directly.
      */
-    public LoginChallengeResponseDto startEmailLogin(LoginRequestDto request) {
+    public Object startEmailLogin(LoginRequestDto request) {
         User user = securityService.authenticateLocalUser(request.getEmail(), request.getPassword());
         if (user == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_CREDENTIALS",
                     "Credenciales invalidas");
         }
 
-        return createLoginChallenge(user, request.getRecaptchaToken());
+        return createLoginChallengeOrDirectToken(user, request.getRecaptchaToken());
     }
 
     /**
      * Social login step 1: receives resolved user and creates OTP challenge.
+     * When 2FA is disabled, returns JWT + roles directly.
      */
-    public LoginChallengeResponseDto startSocialLogin(User user, String recaptchaToken) {
+    public Object startSocialLogin(User user, String recaptchaToken) {
         if (user == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "AUTH_INVALID_CREDENTIALS",
                     "No fue posible validar la cuenta");
         }
 
-        return createLoginChallenge(user, recaptchaToken);
+        return createLoginChallengeOrDirectToken(user, recaptchaToken);
     }
 
-    // Shared challenge creation for local and social providers.
-    private LoginChallengeResponseDto createLoginChallenge(User user, String recaptchaToken) {
+    // Creates OTP challenge or directly issues JWT depending on 2FA configuration.
+    private Object createLoginChallengeOrDirectToken(User user, String recaptchaToken) {
         antiBotService.validate(recaptchaToken, "login");
+
+        if (!securityProperties.isEnabled()) {
+            String token = securityService.generateToken(user);
+            List<String> roles = userRoleService.getRoleNamesByUser(user.getId());
+            return new VerifyOtpResponseDto(token, roles);
+        }
+
         AuthChallenge challenge = emailOtpService.startChallenge(user);
         return new LoginChallengeResponseDto(
                 challenge.getId(),

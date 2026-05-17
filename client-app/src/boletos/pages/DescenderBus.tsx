@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import ExitToAppRounded from "@mui/icons-material/ExitToAppRounded";
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
+import PageHeader from "../../permisos/common/components/PageHeader";
 import { useActiveTicket, useAlightBus } from "../stores/useBoardingStore";
 import { useParaderosByRuta } from "../../viajes/stores/useRutasStore";
 import { useCitizenGuard } from "../hooks/useCitizenGuard";
@@ -69,12 +70,10 @@ const DescenderBus = () => {
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight={700} gutterBottom>
-        Descender del Bus
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Registra tu salida del bus cuando llegues a tu destino.
-      </Typography>
+      <PageHeader
+        title="Descender del Bus"
+        subtitle="Registra tu salida del bus cuando llegues a tu destino."
+      />
 
       {ticketError && (
         <Alert severity="error" sx={{ mb: 2 }}>

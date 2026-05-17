@@ -17,14 +17,13 @@ import {
   Typography,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import httpClient from "../../config/httpClient";
 import PageHeader from "../../permisos/common/components/PageHeader";
-import { formatCurrency } from "../../shared/utils/format";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const MONTH_OPTIONS = [
-  { value: undefined, label: "Todo" },
+  { value: -1, label: "Todo" },
   { value: 3, label: "3 meses" },
   { value: 6, label: "6 meses" },
   { value: 12, label: "12 meses" },
@@ -39,12 +38,12 @@ const COLORS = [
 ];
 
 const ReporteEdades = () => {
-  const [period, setPeriod] = useState<number | undefined>(undefined);
+  const [period, setPeriod] = useState<number>(-1);
   const { data, isLoading } = useQuery({
     queryKey: ["age-distribution", period],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (period) params.set("months", period.toString());
+      if (period > 0) params.set("months", period.toString());
       const res = await httpClient.get(
         `${API_URL}/api/reports/passenger-age-distribution?${params}`,
       );
@@ -129,7 +128,7 @@ const ReporteEdades = () => {
           size="small"
         >
           {MONTH_OPTIONS.map((o) => (
-            <ToggleButton key={o.value ?? "all"} value={o.value}>
+            <ToggleButton key={o.value} value={o.value}>
               {o.label}
             </ToggleButton>
           ))}
@@ -203,7 +202,7 @@ const ReporteEdades = () => {
                         flexShrink: 0,
                       }}
                     >
-                      {segmentos.map((s: any, i: number) => {
+                      {segmentos.map((s: any) => {
                         const pct = (s.pasajerosUnicos / totalTorta) * 100;
                         return pct > 0 ? (
                           <Tooltip

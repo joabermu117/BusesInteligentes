@@ -9,6 +9,7 @@ import {
   Step,
   StepLabel,
 } from "@mui/material";
+import PageHeader from "../../permisos/common/components/PageHeader";
 import {
   useActiveSchedules,
   usePaymentMethods,
@@ -102,12 +103,10 @@ const AbordarBus = () => {
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight={700} gutterBottom>
-        Abordar Bus
-      </Typography>
-      <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-        Selecciona una ruta activa y tu método de pago para abordar.
-      </Typography>
+      <PageHeader
+        title="Abordar Bus"
+        subtitle="Selecciona una ruta activa y tu método de pago para abordar."
+      />
 
       <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
         {STEPS.map((label) => (

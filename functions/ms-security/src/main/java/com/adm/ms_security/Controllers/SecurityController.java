@@ -70,8 +70,9 @@ public class SecurityController {
     /**
      * Starts local login flow and returns an OTP challenge id.
      */
-    public ResponseEntity<LoginChallengeResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
-        return ResponseEntity.ok(authFlowService.startEmailLogin(request));
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDto request) {
+        Object result = authFlowService.startEmailLogin(request);
+        return ResponseEntity.ok(result);
     }
 
     @Operation(summary = "Validates JWT + permission for URL+method (called by NestJS guard)")
@@ -235,7 +236,7 @@ public class SecurityController {
 
     @Operation(summary = "Completa login GitHub cuando el email era privado")
     @PostMapping("github-login/complete")
-    public ResponseEntity<LoginChallengeResponseDto> githubLoginComplete(
+    public ResponseEntity<?> githubLoginComplete(
             @Valid @RequestBody GithubPrivateEmailCompleteRequest request) {
 
         FirebaseToken decodedToken = verifyFirebaseIdToken(request.getIdToken());
@@ -265,7 +266,8 @@ public class SecurityController {
                     "Ese correo ya esta registrado con otro metodo de acceso");
         }
 
-        return ResponseEntity.ok(authFlowService.startSocialLogin(user, request.getRecaptchaToken()));
+        Object result = authFlowService.startSocialLogin(user, request.getRecaptchaToken());
+        return ResponseEntity.ok(result);
     }
 
     private FirebaseToken verifyFirebaseIdToken(String idToken) {

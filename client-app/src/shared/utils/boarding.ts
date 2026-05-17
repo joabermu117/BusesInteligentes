@@ -1,26 +1,29 @@
 import type { Ticket, History } from "../../boletos/models/boletos";
 
-export enum TicketStatus {
-  ISSUED = "issued",
-  USED = "used",
-  EXPIRED = "expired",
-  CANCELLED = "cancelled",
-}
+export const TicketStatus = {
+  ISSUED: "issued",
+  USED: "used",
+  EXPIRED: "expired",
+  CANCELLED: "cancelled",
+} as const;
+export type TicketStatus = (typeof TicketStatus)[keyof typeof TicketStatus];
 
-export enum ScheduleStatus {
-  SCHEDULED = "scheduled",
-  IN_PROGRESS = "in_progress",
-  COMPLETED = "completed",
-  CANCELLED = "cancelled",
-}
+export const ScheduleStatus = {
+  SCHEDULED: "scheduled",
+  IN_PROGRESS: "in_progress",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
+} as const;
+export type ScheduleStatus = (typeof ScheduleStatus)[keyof typeof ScheduleStatus];
 
-export enum HistoryAction {
-  BOARDED = "boarded",
-  VALIDATED = "validated",
-  CREATED = "created",
-  UPDATED = "updated",
-  DELETED = "deleted",
-}
+export const HistoryAction = {
+  BOARDED: "boarded",
+  VALIDATED: "validated",
+  CREATED: "created",
+  UPDATED: "updated",
+  DELETED: "deleted",
+} as const;
+export type HistoryAction = (typeof HistoryAction)[keyof typeof HistoryAction];
 
 /** Lee citizenId de localStorage con fallback */
 export const getCitizenId = (): string =>

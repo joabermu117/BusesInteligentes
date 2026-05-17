@@ -66,6 +66,11 @@ export class SecurityGuard implements CanActivate {
       else throw new UnauthorizedException('Permisos insuficientes');
     } catch (error: any) {
       this.logger.error(`Error al validar permisos: ${error.message}`);
+      if (axios.isAxiosError(error) && error.response) {
+        this.logger.error(
+          `Respuesta de ms-security: status=${error.response.status}, data=${JSON.stringify(error.response.data)}`,
+        );
+      }
       throw new UnauthorizedException('Error al validar permisos');
     }
   }

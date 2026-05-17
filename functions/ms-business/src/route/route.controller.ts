@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { CreateRouteDto } from './dto/create-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
+import { AddRouteStopDto } from './dto/add-route-stop.dto';
 import { RouteService } from './route.service';
 
 @Controller('api/routes')
@@ -13,7 +14,7 @@ export class RouteController {
   }
 
   @Get()
-  findAll(@Query('name') name?: string) {
+  findAll(@Param('name') name?: string) {
     return this.routeService.findAll(name);
   }
 
@@ -35,5 +36,15 @@ export class RouteController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.routeService.remove(+id);
+  }
+
+  @Post(':id/stops')
+  addStop(@Param('id') id: string, @Body() addRouteStopDto: AddRouteStopDto) {
+    return this.routeService.addStop(+id, addRouteStopDto);
+  }
+
+  @Delete(':id/stops/:stopId')
+  removeStop(@Param('id') id: string, @Param('stopId') stopId: string) {
+    return this.routeService.removeStop(+id, +stopId);
   }
 }

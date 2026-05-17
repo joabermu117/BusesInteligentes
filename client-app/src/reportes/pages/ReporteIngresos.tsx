@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   Chip,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -12,7 +11,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Typography,
@@ -165,7 +163,6 @@ const ReporteIngresos = () => {
                         >
                           {report.series.map((s, si) => {
                             const height = (s.data[mi] / maxRevenue) * 220;
-                            const bottom = cumulative;
                             cumulative += height;
                             return (
                               <Box

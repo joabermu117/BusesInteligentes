@@ -1,26 +1,20 @@
-import AddRounded from "@mui/icons-material/AddRounded";
-import DeleteRounded from "@mui/icons-material/DeleteRounded";
-import DragIndicatorRounded from "@mui/icons-material/DragIndicatorRounded";
+import RouteRounded from "@mui/icons-material/RouteRounded";
 import {
   Alert,
   Box,
   Chip,
+  CircularProgress,
   Divider,
   FormControlLabel,
-  IconButton,
-  List,
-  ListItem,
-  ListItemText,
-  MenuItem,
   Stack,
   Switch,
   TextField,
-  Tooltip,
   Typography,
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import FormDialog from "../../permisos/common/components/forms/FormDialog";
 import type { CreateRoutePayload, Ruta } from "../models/ruta";
+import type { Stop } from "../models/stop";
 import { useStops } from "../stores/useStopsStore";
 import {
   useAddStopToRoute,
@@ -28,20 +22,11 @@ import {
   useRemoveStopFromRoute,
   useUpdateRoute,
 } from "../stores/useAdminRoutesStore";
+import ListaParaderosRuta from "../components/ListaParaderosRuta";
+import MapaSeleccionRuta from "../components/MapaSeleccionRuta";
+import { useRouteRoadGeometry } from "../hooks/useRouteRoadGeometry";
 
-type SelectedStop = {
-  stop_id: number;
-  name: string;
-  address: string;
-};
-
-type RouteFormDialogProps = {
-  open: boolean;
-  route: Ruta | null;
-  onClose: () => void;
-};
-
-const emptyForm: CreateRoutePayload = {
+const EMPTY_FORM: CreateRoutePayload = {
   name: "",
   description: "",
   origin: "",
@@ -52,20 +37,49 @@ const emptyForm: CreateRoutePayload = {
   is_active: true,
 };
 
+type SelectedStopData = {
+  stop_id: number;
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+};
+
+type RouteFormDialogProps = {
+  open: boolean;
+  route: Ruta | null;
+  onClose: () => void;
+};
+
+const StopInfoRow = ({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  color?: string;
+}) => (
+  <Typography variant="body2" sx={{ color, fontWeight: 600 }}>
+    {label}: <Box component="span" sx={{ fontWeight: 400 }}>{value}</Box>
+  </Typography>
+);
+
 const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
   const isEditing = !!route;
   const { mutateAsync: createRoute, isPending: isCreating } = useCreateRoute();
   const { mutateAsync: updateRoute, isPending: isUpdating } = useUpdateRoute();
   const { mutateAsync: addStop } = useAddStopToRoute();
   const { mutateAsync: removeStop } = useRemoveStopFromRoute();
-  const { data: availableStops } = useStops();
+  const { data: allStops } = useStops();
+  const { geometry, isLoading: geomLoading, fetchRoute } = useRouteRoadGeometry();
   const isSubmitting = isCreating || isUpdating;
 
-  const [form, setForm] = useState<CreateRoutePayload>(emptyForm);
-  const [selectedStops, setSelectedStops] = useState<SelectedStop[]>([]);
-  const [stopToAdd, setStopToAdd] = useState<number | "">("");
+  const [form, setForm] = useState<CreateRoutePayload>(EMPTY_FORM);
+  const [selectedStops, setSelectedStops] = useState<SelectedStopData[]>([]);
   const [stopError, setStopError] = useState<string | null>(null);
 
+  // ── Inicializar ────────────────────────────────────────────────
   useEffect(() => {
     if (route) {
       setForm({
@@ -85,51 +99,96 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
             stop_id: rs.stop_id,
             name: rs.stop?.name ?? "",
             address: rs.stop?.address ?? "",
+            latitude: rs.stop?.latitude ?? 0,
+            longitude: rs.stop?.longitude ?? 0,
           })),
       );
     } else {
-      setForm(emptyForm);
+      setForm(EMPTY_FORM);
       setSelectedStops([]);
     }
-    setStopToAdd("");
     setStopError(null);
   }, [route, open]);
 
+  // ── Consultar OSRM cuando cambien los stops seleccionados ──────
+  useEffect(() => {
+    if (selectedStops.length >= 2) {
+      fetchRoute(
+        selectedStops.map((s) => ({ lat: s.latitude, lng: s.longitude })),
+      );
+    }
+  }, [selectedStops, fetchRoute]);
+
+  // ── Autocompletar campos con datos de OSRM ─────────────────────
+  useEffect(() => {
+    if (!geometry) return;
+
+    setForm((prev) => {
+      const first = selectedStops[0];
+      const last = selectedStops[selectedStops.length - 1];
+      return {
+        ...prev,
+        origin: prev.origin || (first?.name ?? ""),
+        destination: prev.destination || (last?.name ?? ""),
+        distance: prev.distance || geometry.distanceKm,
+        estimated_duration: prev.estimated_duration || geometry.durationMin,
+      };
+    });
+  }, [geometry, selectedStops]);
+
+  // ── Handlers ───────────────────────────────────────────────────
   const handleChange =
     (field: keyof CreateRoutePayload) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value =
-        field === "distance" ||
-        field === "estimated_duration" ||
-        field === "tarifa"
+        ["distance", "estimated_duration", "tarifa"].includes(field)
           ? Number(e.target.value)
           : e.target.value;
       setForm((prev) => ({ ...prev, [field]: value }));
     };
 
-  const handleAddStop = () => {
-    if (!stopToAdd) return;
-    if (selectedStops.some((s) => s.stop_id === stopToAdd)) {
-      setStopError("Este paradero ya fue agregado.");
-      return;
-    }
-    const stop = availableStops?.find((s) => s.id === stopToAdd);
-    if (!stop) return;
-    setSelectedStops((prev) => [
-      ...prev,
-      { stop_id: stop.id, name: stop.name, address: stop.address },
-    ]);
-    setStopToAdd("");
+  const handleToggleStop = useCallback((stop: Stop) => {
+    setSelectedStops((prev) => {
+      const exists = prev.find((s) => s.stop_id === stop.id);
+      if (exists) return prev.filter((s) => s.stop_id !== stop.id);
+      return [
+        ...prev,
+        {
+          stop_id: stop.id!,
+          name: stop.name,
+          address: stop.address,
+          latitude: stop.latitude,
+          longitude: stop.longitude,
+        },
+      ];
+    });
     setStopError(null);
+  }, []);
+
+  const handleRemoveStop = (stopId: number) =>
+    setSelectedStops((prev) => prev.filter((s) => s.stop_id !== stopId));
+
+  const handleMoveUp = (index: number) => {
+    if (index === 0) return;
+    setSelectedStops((prev) => {
+      const next = [...prev];
+      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+      return next;
+    });
   };
 
-  const handleRemoveStop = (stopId: number) => {
-    setSelectedStops((prev) => prev.filter((s) => s.stop_id !== stopId));
+  const handleMoveDown = (index: number) => {
+    if (index === selectedStops.length - 1) return;
+    setSelectedStops((prev) => {
+      const next = [...prev];
+      [next[index], next[index + 1]] = [next[index + 1], next[index]];
+      return next;
+    });
   };
 
   const handleSubmit = async () => {
-    if (selectedStops.length < 3) {
-      setStopError("La ruta debe tener al menos 3 paraderos.");
+    if (selectedStops.length < 2) {
+      setStopError("La ruta debe tener al menos 2 paraderos.");
       return;
     }
 
@@ -138,19 +197,22 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
     if (isEditing && route) {
       const updated = await updateRoute({ id: route.id, payload: form });
       routeId = updated.id;
+      for (const rs of route.routeStops ?? []) {
+        try {
+          await removeStop({ routeId, stopId: rs.stop_id });
+        } catch {
+          /* ignorar */
+        }
+      }
     } else {
       const created = await createRoute(form);
       routeId = created.id;
     }
 
-    // Agregar paraderos en orden secuencial
     for (let i = 0; i < selectedStops.length; i++) {
       await addStop({
         routeId,
-        payload: {
-          stop_id: selectedStops[i].stop_id,
-          order_index: i + 1,
-        },
+        payload: { stop_id: selectedStops[i].stop_id, order_index: i + 1 },
       });
     }
 
@@ -164,9 +226,7 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
     form.distance > 0 &&
     form.estimated_duration > 0;
 
-  const filteredStops = availableStops?.filter(
-    (s) => !selectedStops.some((sel) => sel.stop_id === s.id),
-  );
+  const allStopsList = useMemo(() => allStops ?? [], [allStops]);
 
   return (
     <FormDialog
@@ -177,65 +237,65 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
       submitLabel={isEditing ? "Guardar cambios" : "Crear ruta"}
       submitting={isSubmitting}
       canSubmit={isFormValid && !isSubmitting}
-      maxWidth="md"
+      maxWidth="lg"
     >
       <Stack spacing={2.5}>
-        <TextField
-          label="Nombre de la ruta"
-          value={form.name}
-          onChange={handleChange("name")}
-          required
-          fullWidth
-          inputProps={{ maxLength: 255 }}
-          placeholder="Ej: Ruta Norte-Sur"
-        />
-
-        <TextField
-          label="Descripción"
-          value={form.description}
-          onChange={handleChange("description")}
-          fullWidth
-          multiline
-          rows={2}
-          inputProps={{ maxLength: 500 }}
-        />
-
+        {/* ── Fila superior: info de la ruta ── */}
         <Stack direction="row" spacing={2}>
+          <TextField
+            label="Nombre de la ruta"
+            value={form.name}
+            onChange={handleChange("name")}
+            required
+            fullWidth
+            inputProps={{ maxLength: 255 }}
+            placeholder="Ej: Ruta Norte-Sur"
+          />
+          <TextField
+            label="Descripción"
+            value={form.description}
+            onChange={handleChange("description")}
+            fullWidth
+            multiline
+            rows={1}
+            inputProps={{ maxLength: 500 }}
+          />
+        </Stack>
+
+        {/* ── Fila: origen, destino, distancia, duración, tarifa ── */}
+        <Stack direction="row" spacing={1.5}>
           <TextField
             label="Origen"
             value={form.origin}
             onChange={handleChange("origin")}
             required
-            fullWidth
-            placeholder="Ej: Terminal Norte"
+            size="small"
+            sx={{ flex: 2 }}
           />
           <TextField
             label="Destino"
             value={form.destination}
             onChange={handleChange("destination")}
             required
-            fullWidth
-            placeholder="Ej: Terminal Sur"
+            size="small"
+            sx={{ flex: 2 }}
           />
-        </Stack>
-
-        <Stack direction="row" spacing={2}>
           <TextField
             label="Distancia (km)"
             type="number"
             value={form.distance || ""}
             onChange={handleChange("distance")}
-            required
-            fullWidth
+            size="small"
+            sx={{ flex: 1 }}
             inputProps={{ min: 0, step: 0.1 }}
           />
           <TextField
-            label="Duración estimada (min)"
+            label="Duración (min)"
             type="number"
             value={form.estimated_duration || ""}
             onChange={handleChange("estimated_duration")}
-            required
-            fullWidth
+            size="small"
+            sx={{ flex: 1 }}
             inputProps={{ min: 1 }}
           />
           <TextField
@@ -243,8 +303,8 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
             type="number"
             value={form.tarifa || ""}
             onChange={handleChange("tarifa")}
-            required
-            fullWidth
+            size="small"
+            sx={{ flex: 1 }}
             inputProps={{ min: 0, step: 100 }}
           />
         </Stack>
@@ -263,18 +323,58 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
 
         <Divider />
 
+        {/* ── Sección de paraderos con mapa ── */}
         <Box>
-          <Typography variant="subtitle1" fontWeight={700} mb={1}>
-            Paraderos en orden secuencial
-            <Chip
-              label={`${selectedStops.length} seleccionados`}
-              size="small"
-              sx={{ ml: 1 }}
-              color={selectedStops.length >= 3 ? "success" : "warning"}
-            />
-          </Typography>
-          <Typography variant="caption" color="text.secondary" mb={2} display="block">
-            Agrega al menos 3 paraderos. El orden en que los agregues define la secuencia de la ruta.
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            mb={1}
+          >
+            <Typography variant="subtitle1" fontWeight={700}>
+              Paraderos de la ruta
+              <Chip
+                label={`${selectedStops.length} seleccionados`}
+                size="small"
+                sx={{ ml: 1 }}
+                color={selectedStops.length >= 2 ? "success" : "warning"}
+              />
+            </Typography>
+
+            {/* Info de ruta calculada */}
+            {selectedStops.length >= 2 && (
+              <Stack direction="row" spacing={1} alignItems="center">
+                {geomLoading ? (
+                  <CircularProgress size={16} />
+                ) : geometry ? (
+                  <>
+                    <Chip
+                      icon={<RouteRounded sx={{ fontSize: 14 }} />}
+                      label={`${geometry.distanceKm} km`}
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                    />
+                    <Chip
+                      label={`~${geometry.durationMin} min`}
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                    />
+                  </>
+                ) : null}
+              </Stack>
+            )}
+          </Stack>
+
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            mb={1.5}
+            display="block"
+          >
+            Haz clic en los marcadores del mapa para agregar o quitar paraderos.
+            La ruta se calcula automáticamente por las calles usando OSRM.
           </Typography>
 
           {stopError && (
@@ -283,72 +383,53 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
             </Alert>
           )}
 
-          <Stack direction="row" spacing={1} mb={2}>
-            <TextField
-              label="Agregar paradero"
-              value={stopToAdd}
-              onChange={(e) => setStopToAdd(Number(e.target.value))}
-              select
-              fullWidth
-              size="small"
-            >
-              {filteredStops?.map((s) => (
-                <MenuItem key={s.id} value={s.id}>
-                  {s.name} — {s.address}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Tooltip title="Agregar paradero">
-              <span>
-                <IconButton
-                  onClick={handleAddStop}
-                  disabled={!stopToAdd}
-                  color="primary"
-                >
-                  <AddRounded />
-                </IconButton>
-              </span>
-            </Tooltip>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            alignItems="stretch"
+          >
+            {/* Mapa */}
+            <Box sx={{ flex: 1.3, minHeight: 420 }}>
+              <MapaSeleccionRuta
+                allStops={allStopsList}
+                selectedStops={selectedStops}
+                geometry={geometry}
+                isGeometryLoading={geomLoading}
+                onToggleStop={handleToggleStop}
+              />
+            </Box>
+
+            {/* Lista lateral */}
+            <ListaParaderosRuta
+              selectedStops={selectedStops}
+              availableStops={allStopsList}
+              onToggleStop={handleToggleStop}
+              onRemoveStop={handleRemoveStop}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
+            />
           </Stack>
 
-          {selectedStops.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" textAlign="center" py={2}>
-              No hay paraderos seleccionados aún.
-            </Typography>
-          ) : (
-            <List dense sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1 }}>
-              {selectedStops.map((stop, index) => (
-                <ListItem
-                  key={stop.stop_id}
-                  divider={index < selectedStops.length - 1}
-                  secondaryAction={
-                    <Tooltip title="Quitar paradero">
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleRemoveStop(stop.stop_id)}
-                      >
-                        <DeleteRounded fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  }
-                >
-                  <Box sx={{ mr: 1, color: "text.secondary" }}>
-                    <DragIndicatorRounded fontSize="small" />
-                  </Box>
-                  <Chip
-                    label={index + 1}
-                    size="small"
-                    color="primary"
-                    sx={{ mr: 1.5, minWidth: 32 }}
-                  />
-                  <ListItemText
-                    primary={stop.name}
-                    secondary={stop.address}
-                  />
-                </ListItem>
-              ))}
-            </List>
+          {/* Indicador de ruta real contra línea recta */}
+          {geometry && selectedStops.length >= 2 && (
+            <Box sx={{ mt: 1.5 }}>
+              <Stack direction="row" spacing={3} flexWrap="wrap" useFlexGap>
+                <StopInfoRow
+                  label="Distancia por calles"
+                  value={`${geometry.distanceKm} km`}
+                  color="primary.main"
+                />
+                <StopInfoRow
+                  label="Tiempo estimado"
+                  value={`~${geometry.durationMin} min`}
+                  color="primary.main"
+                />
+                <StopInfoRow
+                  label="Paraderos"
+                  value={`${selectedStops.length}`}
+                />
+              </Stack>
+            </Box>
           )}
         </Box>
       </Stack>
