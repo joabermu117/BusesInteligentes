@@ -8,6 +8,7 @@ export interface Ruta {
   estimated_duration: number;
   tarifa: number;
   is_active: boolean;
+  routeStops?: Paradero[];
 }
 
 export interface Paradero {
@@ -21,4 +22,31 @@ export interface Paradero {
     longitude: number;
     address: string;
   };
+}
+
+export interface CreateRoutePayload {
+  name: string;
+  description?: string;
+  origin: string;
+  destination: string;
+  distance: number;
+  estimated_duration: number;
+  tarifa: number;
+  is_active: boolean;
+}
+
+export interface UpdateRoutePayload {
+  name?: string;
+  description?: string;
+  origin?: string;
+  destination?: string;
+  distance?: number;
+  estimated_duration?: number;
+  tarifa?: number;
+  is_active?: boolean;
+}
+
+export interface AddRouteStopPayload {
+  stop_id: number;
+  order_index: number;
 }
