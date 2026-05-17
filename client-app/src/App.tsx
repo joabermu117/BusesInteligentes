@@ -25,22 +25,23 @@ import {
   isAuthTokenExpired,
   setAuthToken,
 } from "./config/httpClient";
+import BusIncidentsDetail from "./incidents/pages/BusIncidentsDetail";
+import IncidentsList from "./incidents/pages/IncidentsList";
 import PaymentMethodsList from "./payment-methods/pages/PaymentMethodsList";
 import AppShell from "./permisos/common/layout/AppShell";
 import PermisosRoutes from "./permisos/routes/Permisos.routes";
+import ConfirmacionRecarga from "./recarga/pages/ConfirmacionRecarga";
 import RecargaEpayco from "./recarga/pages/RecargaEpayco";
 import ReporteEdades from "./reportes/pages/ReporteEdades";
 import ReporteIncidentes from "./reportes/pages/ReporteIncidentes";
 import ReporteIngresos from "./reportes/pages/ReporteIngresos";
+import SchedulesList from "./schedules/pages/SchedulesList";
 import MisTarjetas from "./tarjetas/pages/MisTarjetas";
+import AdminRoutesList from "./viajes/pages/AdminRoutesList";
 import ParaderosCercanos from "./viajes/pages/ParaderosCercanos";
 import RutaDetalle from "./viajes/pages/RutaDetalle";
 import RutasList from "./viajes/pages/RutasList";
-import IncidentsList from "./incidents/pages/IncidentsList";
-import BusIncidentsDetail from "./incidents/pages/BusIncidentsDetail";
 import StopsList from "./viajes/pages/StopsList";
-import AdminRoutesList from "./viajes/pages/AdminRoutesList";
-import SchedulesList from "./schedules/pages/SchedulesList";
 
 const RequireAuth = () => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -74,6 +75,10 @@ function App() {
               <Route path="/descender" element={<DescenderBus />} />
               <Route path="/tarjetas" element={<MisTarjetas />} />
               <Route path="/recargar" element={<RecargaEpayco />} />
+              <Route
+                path="/recarga/confirmacion"
+                element={<ConfirmacionRecarga />}
+              />
               <Route path="/viajes/historial" element={<HistorialViajes />} />
               <Route path="/viajes/:id" element={<DetalleViaje />} />
               <Route path="/turnos" element={<MisTurnos />} />
@@ -84,9 +89,15 @@ function App() {
               <Route path="/payment-methods" element={<PaymentMethodsList />} />
               <Route path="/reportes/ingresos" element={<ReporteIngresos />} />
               <Route path="/reportes/edades" element={<ReporteEdades />} />
-              <Route path="/reportes/incidentes" element={<ReporteIncidentes />} />
+              <Route
+                path="/reportes/incidentes"
+                element={<ReporteIncidentes />}
+              />
               <Route path="/incidentes" element={<IncidentsList />} />
-              <Route path="/incidentes/bus/:busId" element={<BusIncidentsDetail />} />
+              <Route
+                path="/incidentes/bus/:busId"
+                element={<BusIncidentsDetail />}
+              />
               <Route path="/paraderos/admin" element={<StopsList />} />
               <Route path="/rutas/admin" element={<AdminRoutesList />} />
               <Route path="/programaciones" element={<SchedulesList />} />

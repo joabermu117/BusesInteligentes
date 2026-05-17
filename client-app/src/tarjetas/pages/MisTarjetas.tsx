@@ -11,10 +11,11 @@ import {
   Tooltip,
 } from "@mui/material";
 import { useState } from "react";
+import { getAuthUserId } from "../../config/httpClient";
 import ConfirmActionDialog from "../../permisos/common/components/ConfirmActionDialog";
 import DataTable from "../../permisos/common/components/DataTable";
 import PageHeader from "../../permisos/common/components/PageHeader";
-import { getCitizenId } from "../../shared/utils/boarding";
+import { formatCurrency } from "../../shared/utils/format";
 import type { Tarjeta } from "../models/tarjeta";
 import {
   useDeleteTarjeta,
@@ -23,7 +24,7 @@ import {
 import TarjetaFormDialog from "./TarjetaFormDialog";
 
 const MisTarjetas = () => {
-  const citizenId = getCitizenId();
+  const citizenId = getAuthUserId() ?? "";
   const { data: tarjetas, isLoading } = useTarjetasByCitizen(citizenId);
   const { mutateAsync: deleteTarjeta, isPending: isDeleting } =
     useDeleteTarjeta();
@@ -85,6 +86,7 @@ const MisTarjetas = () => {
           "Número",
           "Titular",
           "Vencimiento",
+          "Saldo",
           "Preferida",
           "Estado",
           "Acciones",
@@ -93,7 +95,7 @@ const MisTarjetas = () => {
         emptyMessage={
           isLoading ? "Cargando tarjetas..." : "No tienes tarjetas vinculadas."
         }
-        colSpan={7}
+        colSpan={8}
       >
         {tarjetas?.map((t) => (
           <TableRow key={t.id} hover>
@@ -111,6 +113,9 @@ const MisTarjetas = () => {
                     year: "2-digit",
                   })
                 : "—"}
+            </TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>
+              {formatCurrency(t.balance ?? 0)}
             </TableCell>
             <TableCell>
               <Chip

@@ -1,14 +1,19 @@
-import { IsBoolean, IsDate, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsDateString,
+  IsNumber,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
 export class CreateCitizenPaymentMethodDto {
-  @IsNumber()
-  citizenId: number;
+  @IsString()
+  citizenId: string;
 
   @IsNumber()
   paymentMethodId: number;
 
   @IsOptional()
-  @IsString()
   @IsString()
   cardNumber?: string;
 
@@ -17,7 +22,7 @@ export class CreateCitizenPaymentMethodDto {
   cardHolder?: string;
 
   @IsOptional()
-  @IsDate()
+  @IsDateString()
   expirationDate?: Date;
 
   @IsOptional()

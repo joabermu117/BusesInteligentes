@@ -22,7 +22,7 @@ export class CitizenPaymentMethodService {
     createCitizenPaymentMethodDto: CreateCitizenPaymentMethodDto,
   ): Promise<CitizenPaymentMethod> {
     const citizen = await this.citizenRepository.findOne({
-      where: { person_id: createCitizenPaymentMethodDto.citizenId.toString() },
+      where: { person_id: createCitizenPaymentMethodDto.citizenId },
     });
     if (!citizen) {
       throw new NotFoundException(
@@ -87,5 +87,16 @@ export class CitizenPaymentMethodService {
     const citizenPaymentMethod = await this.findOne(id);
     await this.citizenPaymentMethodRepository.remove(citizenPaymentMethod);
     return { message: `Citizen payment method #${id} deleted successfully` };
+  }
+
+  async rechargeBalance(
+    cardId: number,
+    amount: number,
+    reference: string,
+  ): Promise<CitizenPaymentMethod> {
+    const card = await this.findOne(cardId);
+    const currentBalance = Number(card.balance ?? 0);
+    card.balance = currentBalance + amount;
+    return await this.citizenPaymentMethodRepository.save(card);
   }
 }

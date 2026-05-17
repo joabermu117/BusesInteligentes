@@ -54,4 +54,15 @@ export class CitizenPaymentMethodController {
   remove(@Param('id') id: string) {
     return this.citizenPaymentMethodService.remove(+id);
   }
+
+  @Post('recharge-balance')
+  rechargeBalance(
+    @Body() body: { cardId: number; amount: number; reference: string },
+  ) {
+    return this.citizenPaymentMethodService.rechargeBalance(
+      body.cardId,
+      body.amount,
+      body.reference,
+    );
+  }
 }

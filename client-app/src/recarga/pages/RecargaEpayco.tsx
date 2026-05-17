@@ -11,23 +11,64 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUserEmail } from "../../config/httpClient";
+import httpClient, {
+  getAuthUserId,
+  useUserEmail,
+} from "../../config/httpClient";
 import PageHeader from "../../permisos/common/components/PageHeader";
-import { getCitizenId } from "../../shared/utils/boarding";
 import { formatCurrency } from "../../shared/utils/format";
 import { useTarjetasByCitizen } from "../../tarjetas/stores/useTarjetasStore";
 import { MAX_AMOUNT, MIN_AMOUNT, PRESET_AMOUNTS } from "../models/recarga";
 
 const COMMISSION_RATE = 0.035; // 3.5% comisión ePayco
 
+// Carga el script del SDK de ePayco una sola vez
+const loadEpaycoSdk = (): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if ((window as any).ePayco?.checkout?.open) {
+      resolve();
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.epayco.co/checkout.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () =>
+      reject(new Error("No se pudo cargar el SDK de ePayco"));
+    document.head.appendChild(script);
+  });
+
+declare global {
+  interface Window {
+    ePayco?: {
+      checkout: {
+        configure: (config: Record<string, any>) => {
+          open: (data: Record<string, any>) => void;
+        };
+        open: (data: Record<string, any>) => void;
+      };
+    };
+  }
+}
+
 const RecargaEpayco = () => {
   const navigate = useNavigate();
-  const citizenId = getCitizenId();
+  const citizenId = getAuthUserId() ?? "";
   const { data: tarjetas } = useTarjetasByCitizen(citizenId);
   const userEmail = useUserEmail();
   const [isPending, setIsPending] = useState(false);
+  const sdkLoadingRef = useRef(false);
+
+  // Cargar SDK al montar el componente
+  useEffect(() => {
+    if (sdkLoadingRef.current) return;
+    sdkLoadingRef.current = true;
+    loadEpaycoSdk().catch(() => {
+      // Si falla, el modal simulado seguirá funcionando
+    });
+  }, []);
 
   // Todas las tarjetas activas
   const tarjetasActivas = useMemo(
@@ -61,29 +102,88 @@ const RecargaEpayco = () => {
       (amount >= MIN_AMOUNT && amount <= MAX_AMOUNT)) &&
     amount > 0;
 
-  const handleContinue = () => {
+  const handleContinue = useCallback(() => {
     if (!selectedCardId || !isAmountValid) return;
     setError(null);
     setIsPending(true);
 
-    // Genera referencia local
     const refCorta = Math.random().toString(36).substr(2, 8).toUpperCase();
     const reference = `RCH-${Date.now()}-${refCorta}`;
-    const descripcion = `Recarga+tarjeta+transporte+${refCorta}`;
-    setSuccessRef(reference);
+    const description = `Recarga tarjeta transporte ${refCorta}`;
+    const publicKey =
+      import.meta.env.VITE_EPAYCO_PUBLIC_KEY || "TU_LLAVE_PUBLICA_AQUI";
 
-    // URL de ePayco con email y descripción formateada
-    const epaycoCheckoutUrl =
-      import.meta.env.VITE_EPAYCO_URL ||
-      "https://checkout.epayco.co/checkout.js";
-    const epaycoUrl = `${epaycoCheckoutUrl}?key=${
-      import.meta.env.VITE_EPAYCO_PUBLIC_KEY || "TEST_KEY"
-    }&amount=${amount}&reference=${reference}&description=${descripcion}&currency=COP${
-      userEmail ? `&email=${encodeURIComponent(userEmail)}` : ""
-    }`;
-    window.open(epaycoUrl, "_blank");
-    setIsPending(false);
-  };
+    const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+    const ePaycoHandler = () => {
+      const epayco = (window as any).ePayco;
+      if (epayco?.checkout) {
+        // Primero configure con la llave pública y test mode
+        const handler = epayco.checkout.configure({
+          key: publicKey,
+          test: true,
+        });
+        // Luego open con los datos de la transacción
+        handler.open({
+          amount: amount,
+          reference: reference,
+          description: description,
+          currency: "COP",
+          email: userEmail ?? "",
+          "external-version": "1",
+          name: "Recarga saldo transporte",
+          tax: "0",
+          tax_base: "0",
+          methods: [
+            "TARJETA_CREDITO",
+            "TARJETA_DEBITO",
+            "PSE",
+            "NEQUI",
+            "BANCOLOMBIA",
+          ],
+          autoclose: true,
+          lang: "es",
+        });
+        setSuccessRef(reference);
+      } else {
+        console.log("[ePayco simulado] Abriendo checkout con:", {
+          reference,
+          amount,
+          description,
+        });
+        setSuccessRef(reference);
+      }
+
+      // Aplicar recarga inmediatamente
+      if (selectedCardId) {
+        httpClient
+          .post(`${API_URL}/api/citizen-payment-methods/recharge-balance`, {
+            cardId: selectedCardId,
+            amount,
+            reference,
+          })
+          .catch((err) =>
+            console.error("[Recarga] Error al aplicar recarga:", err),
+          );
+      }
+      setIsPending(false);
+    };
+
+    // Si el SDK ya está cargado, abrir checkout directamente
+    if ((window as any).ePayco?.checkout?.open) {
+      ePaycoHandler();
+    } else {
+      // Si no, esperar a que se cargue y luego abrir
+      loadEpaycoSdk()
+        .then(ePaycoHandler)
+        .catch(() => {
+          // Fallback a simulación
+          console.log("[ePayco fallback] SDK no disponible, modo simulación");
+          setSuccessRef(reference);
+          setIsPending(false);
+        });
+    }
+  }, [selectedCardId, isAmountValid, amount, userEmail]);
 
   return (
     <Box className="page-enter">
@@ -94,10 +194,11 @@ const RecargaEpayco = () => {
 
       {successRef && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          ✅ Recarga iniciada. Referencia: {successRef}.
-          {import.meta.env.VITE_EPAYCO_URL
-            ? " Complete el pago en la ventana de ePayco."
-            : " Modo simulación: en un entorno real se abriría la pasarela de pago."}
+          ✅ Recarga iniciada. Referencia: <strong>{successRef}</strong>.
+          {import.meta.env.VITE_EPAYCO_PUBLIC_KEY &&
+          import.meta.env.VITE_EPAYCO_PUBLIC_KEY !== "TU_LLAVE_PUBLICA_AQUI"
+            ? " Complete el pago en la ventana modal de ePayco."
+            : " Modo simulación: configura VITE_EPAYCO_PUBLIC_KEY en tu .env para probar con ePayco real."}
         </Alert>
       )}
 

@@ -1,8 +1,8 @@
 import { MenuItem, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
+import { getAuthUserId } from "../../config/httpClient";
 import { usePaymentMethods } from "../../payment-methods/stores/usePaymentMethodsStore";
 import FormDialog from "../../permisos/common/components/forms/FormDialog";
-import { getCitizenId } from "../../shared/utils/boarding";
 import type { CreateTarjetaPayload, Tarjeta } from "../models/tarjeta";
 import { useCreateTarjeta, useUpdateTarjeta } from "../stores/useTarjetasStore";
 
@@ -13,7 +13,7 @@ type Props = {
 };
 
 const emptyForm = (): CreateTarjetaPayload => ({
-  citizenId: 0,
+  citizenId: "",
   paymentMethodId: 0,
   cardNumber: "",
   cardHolder: "",
@@ -32,10 +32,13 @@ const TarjetaFormDialog = ({ open, tarjeta, onClose }: Props) => {
 
   const [form, setForm] = useState<CreateTarjetaPayload>(emptyForm());
 
+  const currentUserId = getAuthUserId();
+
   useEffect(() => {
+    const userId = currentUserId || "";
     if (tarjeta) {
       setForm({
-        citizenId: parseInt(getCitizenId()) || 0,
+        citizenId: userId,
         paymentMethodId: tarjeta.paymentMethod?.id ?? 0,
         cardNumber: tarjeta.cardNumber ?? "",
         cardHolder: tarjeta.cardHolder ?? "",
@@ -43,17 +46,15 @@ const TarjetaFormDialog = ({ open, tarjeta, onClose }: Props) => {
         isDefault: tarjeta.isDefault,
       });
     } else {
-      setForm(emptyForm());
+      setForm({ ...emptyForm(), citizenId: userId });
     }
-  }, [tarjeta, open]);
+  }, [tarjeta, open, currentUserId]);
 
   const handleChange =
     (field: keyof CreateTarjetaPayload) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value =
-        field === "citizenId" ||
-        field === "paymentMethodId" ||
-        field === "isDefault"
+        field === "paymentMethodId" || field === "isDefault"
           ? field === "isDefault"
             ? e.target.value === "true"
             : Number(e.target.value)
@@ -62,14 +63,10 @@ const TarjetaFormDialog = ({ open, tarjeta, onClose }: Props) => {
     };
 
   const handleSubmit = async () => {
-    const payload = {
-      ...form,
-      citizenId: form.citizenId || parseInt(getCitizenId()) || 0,
-    };
     if (isEditing && tarjeta) {
-      await updateTarjeta({ id: tarjeta.id, payload });
+      await updateTarjeta({ id: tarjeta.id, payload: form });
     } else {
-      await createTarjeta(payload);
+      await createTarjeta(form);
     }
     onClose();
   };
