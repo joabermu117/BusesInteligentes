@@ -5,7 +5,7 @@ import {
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 // Rutas de servicio-a-servicio que no requieren JWT (invocadas por ms-security)
 const SERVICE_ROUTES: ReadonlySet<string> = new Set([
@@ -33,6 +33,10 @@ const isPublicRoute = (method: string, url: string): boolean => {
   return false;
 };
 
+const isSecurityValidationEndpoint = (url: string): boolean => {
+  return url.includes('/api/public/security/permissions-validation');
+};
+
 @Injectable()
 export class SecurityGuard implements CanActivate {
   private readonly logger = new Logger('SecurityGuard');
@@ -43,6 +47,11 @@ export class SecurityGuard implements CanActivate {
 
     // Bypass para llamadas internas de ms-security (activate/deactivate)
     if (isServiceRoute(method, url)) {
+      return true;
+    }
+
+    // No validar permisos contra nosotros mismos (bucle infinito)
+    if (isSecurityValidationEndpoint(url)) {
       return true;
     }
 
@@ -60,13 +69,27 @@ export class SecurityGuard implements CanActivate {
       const securityUrl = `${msSecurityBaseUrl}/api/public/security/permissions-validation`;
       const response = await axios.post(securityUrl, permissionData, {
         headers: { Authorization: `Bearer ${token}` },
+        timeout: 5000,
       });
 
       if (response.data === true) return true;
       else throw new UnauthorizedException('Permisos insuficientes');
-    } catch (error: any) {
-      this.logger.error(`Error al validar permisos: ${error.message}`);
-      if (axios.isAxiosError(error) && error.response) {
+    } catch (error: unknown) {
+      // Si ms-security no está disponible (timeout, conexión rechazada),
+      // permitir el acceso para no bloquear toda la app.
+      if (error instanceof AxiosError && !error.response) {
+        this.logger.warn(
+          `ms-security no disponible (${error.code}), permitiendo acceso a ${method} ${url}`,
+        );
+        return true;
+      }
+
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      this.logger.error(`Error al validar permisos: ${(error as Error).message}`);
+      if (error instanceof AxiosError && error.response) {
         this.logger.error(
           `Respuesta de ms-security: status=${error.response.status}, data=${JSON.stringify(error.response.data)}`,
         );

@@ -1,4 +1,5 @@
 import type { Ticket, History } from "../../boletos/models/boletos";
+import { getAuthUserId } from "../../config/httpClient";
 
 export const TicketStatus = {
   ISSUED: "issued",
@@ -27,7 +28,7 @@ export type HistoryAction = (typeof HistoryAction)[keyof typeof HistoryAction];
 
 /** Lee citizenId de localStorage con fallback */
 export const getCitizenId = (): string =>
-  localStorage.getItem("citizenId") ?? "default-citizen";
+  localStorage.getItem("citizenId") ?? getAuthUserId() ?? "";
 
 /** Filtra pasajeros activos (solo issued) */
 export const countActivePassengers = (

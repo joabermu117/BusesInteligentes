@@ -43,6 +43,8 @@ import RutaDetalle from "./viajes/pages/RutaDetalle";
 import RutasList from "./viajes/pages/RutasList";
 import StopsList from "./viajes/pages/StopsList";
 
+import TurnosList from "./turnos/pages/TurnosList";
+
 const RequireAuth = () => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 
@@ -101,6 +103,7 @@ function App() {
               <Route path="/paraderos/admin" element={<StopsList />} />
               <Route path="/rutas/admin" element={<AdminRoutesList />} />
               <Route path="/programaciones" element={<SchedulesList />} />
+              <Route path="/turnos/admin" element={<TurnosList />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </Route>

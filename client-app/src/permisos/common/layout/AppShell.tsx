@@ -162,6 +162,12 @@ const adminItems: NavigationItem[] = [
     icon: <ScheduleRounded />,
   },
   {
+    path: "/turnos/admin",
+    label: "Turnos",
+    description: "Asignar turnos a conductores.",
+    icon: <WorkHistoryRounded />,
+  },
+  {
     path: "/incidentes",
     label: "Incidentes",
     description: "Registro de incidentes y novedades.",

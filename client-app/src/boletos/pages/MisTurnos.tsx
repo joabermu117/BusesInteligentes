@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import CalendarMonthRounded from "@mui/icons-material/CalendarMonthRounded";
 import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
+import { getAuthUserId } from "../../config/httpClient";
 import PageHeader from "../../permisos/common/components/PageHeader";
 import { useShiftsByDriver } from "../stores/useShiftStore";
 
@@ -42,13 +43,20 @@ const formatDate = (dateStr?: string) => {
 
 const MisTurnos = () => {
   const navigate = useNavigate();
-  const driverUserId = localStorage.getItem("driverUserId") ?? "";
+  const storedDriverUserId = localStorage.getItem("driverUserId");
+  const jwtUserId = getAuthUserId();
+  const driverUserId = storedDriverUserId ?? jwtUserId ?? "";
 
   useEffect(() => {
-    if (!localStorage.getItem("driverUserId")) {
+    if (!driverUserId) {
       navigate("/login", { replace: true });
+      return;
     }
-  }, [navigate]);
+
+    if (!storedDriverUserId && jwtUserId) {
+      localStorage.setItem("driverUserId", jwtUserId);
+    }
+  }, [driverUserId, jwtUserId, navigate, storedDriverUserId]);
 
   const { data: shifts, isLoading } = useShiftsByDriver(driverUserId);
 

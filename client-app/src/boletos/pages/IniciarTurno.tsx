@@ -21,6 +21,7 @@ import {
 import DirectionsBusRounded from "@mui/icons-material/DirectionsBusRounded";
 import GpsFixedRounded from "@mui/icons-material/GpsFixedRounded";
 import CheckCircleRounded from "@mui/icons-material/CheckCircleRounded";
+import { getAuthUserId } from "../../config/httpClient";
 import PageHeader from "../../permisos/common/components/PageHeader";
 import { useShiftsByDriver, useStartShift } from "../stores/useShiftStore";
 
@@ -29,7 +30,9 @@ const IniciarTurno = () => {
   const navigate = useNavigate();
   const shiftId = Number(id);
 
-  const driverUserId = localStorage.getItem("driverUserId") ?? "";
+  const storedDriverUserId = localStorage.getItem("driverUserId");
+  const jwtUserId = getAuthUserId();
+  const driverUserId = storedDriverUserId ?? jwtUserId ?? "";
   const { data: shifts, isLoading: loadingShifts } =
     useShiftsByDriver(driverUserId);
   const startShiftMutation = useStartShift();
@@ -40,10 +43,15 @@ const IniciarTurno = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!localStorage.getItem("driverUserId")) {
+    if (!driverUserId) {
       navigate("/login", { replace: true });
+      return;
     }
-  }, [navigate]);
+
+    if (!storedDriverUserId && jwtUserId) {
+      localStorage.setItem("driverUserId", jwtUserId);
+    }
+  }, [driverUserId, jwtUserId, navigate, storedDriverUserId]);
 
   const shift = shifts?.find((s) => s.id === shiftId);
 
