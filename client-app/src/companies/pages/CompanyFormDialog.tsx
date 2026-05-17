@@ -1,6 +1,8 @@
 import { Stack, TextField } from "@mui/material";
+import { useSnackbar } from "notistack";
 import { useEffect, useState } from "react";
 import FormDialog from "../../permisos/common/components/forms/FormDialog";
+import { extractErrorMessage } from "../../shared/utils/errorHandler";
 import type { Company, CreateCompanyPayload } from "../models/company";
 import {
   useCreateCompany,
@@ -9,7 +11,7 @@ import {
 
 type Props = { open: boolean; company: Company | null; onClose: () => void };
 const empty: CreateCompanyPayload = {
-  name: "",
+  nombre: "",
   nit: "",
   direccion: "",
   telefono: "",
@@ -18,6 +20,7 @@ const empty: CreateCompanyPayload = {
 };
 
 const CompanyFormDialog = ({ open, company, onClose }: Props) => {
+  const { enqueueSnackbar } = useSnackbar();
   const edit = !!company;
   const { mutateAsync: create, isPending: c1 } = useCreateCompany();
   const { mutateAsync: update, isPending: c2 } = useUpdateCompany();
@@ -26,7 +29,7 @@ const CompanyFormDialog = ({ open, company, onClose }: Props) => {
   useEffect(() => {
     if (company)
       setForm({
-        name: company.name,
+        nombre: company.nombre,
         nit: company.nit,
         direccion: company.direccion ?? "",
         telefono: company.telefono ?? "",
@@ -40,9 +43,16 @@ const CompanyFormDialog = ({ open, company, onClose }: Props) => {
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((p) => ({ ...p, [field]: e.target.value }));
   const submit = async () => {
-    if (edit && company) await update({ id: company.id, p: form });
-    else await create(form);
-    onClose();
+    try {
+      if (edit && company) await update({ id: company.id, p: form });
+      else await create(form);
+      onClose();
+    } catch (e: unknown) {
+      enqueueSnackbar(extractErrorMessage(e, "Error al guardar empresa"), {
+        variant: "error",
+        style: { whiteSpace: "pre-line" },
+      });
+    }
   };
   return (
     <FormDialog
@@ -52,7 +62,7 @@ const CompanyFormDialog = ({ open, company, onClose }: Props) => {
       onSubmit={submit}
       submitLabel={edit ? "Guardar" : "Agregar"}
       submitting={loading}
-      canSubmit={!!form.name.trim() && !!form.nit.trim() && !loading}
+      canSubmit={!!form.nombre.trim() && !!form.nit.trim() && !loading}
       maxWidth="sm"
     >
       <Stack spacing={2.5}>
@@ -66,8 +76,8 @@ const CompanyFormDialog = ({ open, company, onClose }: Props) => {
         />
         <TextField
           label="Nombre"
-          value={form.name}
-          onChange={h("name")}
+          value={form.nombre}
+          onChange={h("nombre")}
           required
           fullWidth
           placeholder="Razón social"

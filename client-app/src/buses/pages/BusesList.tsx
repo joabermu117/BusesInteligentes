@@ -6,11 +6,13 @@ import {
   Button,
   Chip,
   IconButton,
+  Link,
   TableCell,
   TableRow,
   Tooltip,
 } from "@mui/material";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import ConfirmActionDialog from "../../permisos/common/components/ConfirmActionDialog";
 import DataTable from "../../permisos/common/components/DataTable";
 import PageHeader from "../../permisos/common/components/PageHeader";
@@ -26,6 +28,7 @@ const BUS_STATUS_COLORS: Record<string, "success" | "warning" | "error"> = {
 };
 
 const BusesList = () => {
+  const navigate = useNavigate();
   const { data: buses, isLoading } = useBuses();
   const { mutateAsync: deleteBus, isPending: isDeleting } = useDeleteBus();
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -100,7 +103,18 @@ const BusesList = () => {
       >
         {buses?.map((bus) => (
           <TableRow key={bus.id} hover>
-            <TableCell sx={{ fontWeight: 700 }}>{bus.plate}</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>
+              <Link
+                component="button"
+                variant="body2"
+                fontWeight={700}
+                onClick={() => navigate(`/buses/${bus.id}`)}
+                underline="hover"
+                sx={{ cursor: "pointer" }}
+              >
+                {bus.plate}
+              </Link>
+            </TableCell>
             <TableCell>{bus.model}</TableCell>
             <TableCell>{bus.year}</TableCell>
             <TableCell>{bus.totalCapacity}</TableCell>
@@ -113,7 +127,11 @@ const BusesList = () => {
                 size="small"
               />
             </TableCell>
-            <TableCell>{bus.company?.name ?? "—"}</TableCell>
+            <TableCell>
+              {bus.company?.nombre
+                ? `${bus.company.nombre} (${bus.company.nit ?? ""})`
+                : "—"}
+            </TableCell>
             <TableCell>
               <Box display="flex" gap={0.5}>
                 <Tooltip title="Editar">

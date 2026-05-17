@@ -1,6 +1,6 @@
 export interface Company {
   id: number;
-  name: string;
+  nombre: string;
   nit: string;
   direccion?: string;
   telefono?: string;
@@ -9,7 +9,7 @@ export interface Company {
 }
 
 export interface CreateCompanyPayload {
-  name: string;
+  nombre: string;
   nit: string;
   direccion?: string;
   telefono?: string;
@@ -18,7 +18,7 @@ export interface CreateCompanyPayload {
 }
 
 export interface UpdateCompanyPayload {
-  name?: string;
+  nombre?: string;
   nit?: string;
   direccion?: string;
   telefono?: string;

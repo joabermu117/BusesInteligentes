@@ -19,13 +19,25 @@ export class BusesService {
     private readonly companyRepository: Repository<Company>,
   ) {}
 
+  private validateCapacity(dto: CreateBusDto | UpdateBusDto): void {
+    const seated = dto.seatedCapacity ?? 0;
+    const standing = dto.standingCapacity ?? 0;
+    const total = seated + standing;
+    if (dto.totalCapacity !== undefined && total > dto.totalCapacity) {
+      throw new BadRequestException(
+        `La suma de personas sentadas (${seated}) y paradas (${standing}) es ${total}, pero la capacidad máxima es ${dto.totalCapacity}. ` +
+          `Reduce los valores para que no excedan la capacidad total.`,
+      );
+    }
+  }
+
   async create(createBusDto: CreateBusDto): Promise<Bus> {
     const existing = await this.busRepository.findOne({
       where: { plate: createBusDto.plate },
     });
     if (existing) {
       throw new BadRequestException(
-        `Bus with plate ${createBusDto.plate} already exists`,
+        `Ya existe un bus con la placa ${createBusDto.plate}`,
       );
     }
 
@@ -34,19 +46,23 @@ export class BusesService {
     });
     if (!company) {
       throw new NotFoundException(
-        `Company #${createBusDto.companyId} not found`,
+        `Empresa #${createBusDto.companyId} no encontrada`,
       );
     }
 
-    // Generar QR único: URL a la vista del bus en el frontend
-    // Se genera con el ID temporario que retorna save, por eso se guarda en dos pasos
+    this.validateCapacity(createBusDto);
+
+    // Compatibilidad: si envían photoUrl lo mapeamos a photo
+    if (createBusDto.photoUrl && !createBusDto.photo) {
+      (createBusDto as Record<string, unknown>).photo = createBusDto.photoUrl;
+    }
+
     const bus = this.busRepository.create({
       ...createBusDto,
       company,
     });
     const saved = await this.busRepository.save(bus);
 
-    // QR apunta a la vista del bus en el frontend
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     saved.qrCode = `${frontendUrl}/buses/${saved.id}`;
     return await this.busRepository.save(saved);
@@ -63,7 +79,7 @@ export class BusesService {
       where: { id },
       relations: ['company', 'gps', 'shifts', 'incidentBuses', 'schedules'],
     });
-    if (!bus) throw new NotFoundException(`Bus #${id} not found`);
+    if (!bus) throw new NotFoundException(`Bus #${id} no encontrado`);
     return bus;
   }
 
@@ -76,6 +92,22 @@ export class BusesService {
 
   async update(id: number, updateBusDto: UpdateBusDto): Promise<Bus> {
     const bus = await this.findOne(id);
+    this.validateCapacity(updateBusDto);
+    // Verificar placa única si se está cambiando
+    if (updateBusDto.plate && updateBusDto.plate !== bus.plate) {
+      const existing = await this.busRepository.findOne({
+        where: { plate: updateBusDto.plate },
+      });
+      if (existing) {
+        throw new BadRequestException(
+          `Ya existe un bus con la placa ${updateBusDto.plate}`,
+        );
+      }
+    }
+    // Compatibilidad: si envían photoUrl lo mapeamos a photo
+    if (updateBusDto.photoUrl && !updateBusDto.photo) {
+      (updateBusDto as Record<string, unknown>).photo = updateBusDto.photoUrl;
+    }
     const updated = Object.assign(bus, updateBusDto);
     return await this.busRepository.save(updated);
   }
@@ -84,10 +116,10 @@ export class BusesService {
     const bus = await this.findOne(id);
     if (bus.shifts && bus.shifts.length > 0) {
       throw new BadRequestException(
-        'Cannot delete bus because it has associated shifts',
+        'No se puede eliminar el bus porque tiene turnos asociados',
       );
     }
     await this.busRepository.remove(bus);
-    return { message: `Bus #${id} deleted successfully` };
+    return { message: `Bus #${id} eliminado correctamente` };
   }
 }

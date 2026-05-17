@@ -30,7 +30,7 @@ const CompaniesList = () => {
       <ConfirmActionDialog
         open={!!deleteTarget}
         title="Eliminar empresa"
-        description={`¿Eliminar "${deleteTarget?.name}"?`}
+        description={`¿Eliminar "${deleteTarget?.nombre}"?`}
         confirmLabel="Eliminar"
         confirmDisabled={isDeleting}
         onCancel={() => setDeleteTarget(null)}
@@ -80,7 +80,7 @@ const CompaniesList = () => {
         {companies?.map((c: Company) => (
           <TableRow key={c.id} hover>
             <TableCell sx={{ fontWeight: 700 }}>{c.nit}</TableCell>
-            <TableCell>{c.name}</TableCell>
+            <TableCell>{c.nombre}</TableCell>
             <TableCell>{c.direccion ?? "—"}</TableCell>
             <TableCell>{c.telefono ?? "—"}</TableCell>
             <TableCell>

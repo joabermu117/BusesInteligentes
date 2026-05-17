@@ -1,4 +1,14 @@
-import { IsEnum, IsInt, IsNumber, IsOptional, IsString, Max, MaxLength, Min, MinLength } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class CreateBusDto {
   @IsString()
@@ -30,6 +40,10 @@ export class CreateBusDto {
   @IsInt()
   @Min(0)
   standingCapacity?: number;
+
+  @IsOptional()
+  @IsString()
+  photo?: string;
 
   @IsOptional()
   @IsString()
