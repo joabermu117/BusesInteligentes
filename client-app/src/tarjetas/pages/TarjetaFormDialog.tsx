@@ -1,7 +1,7 @@
 import { MenuItem, Stack, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import { usePaymentMethods } from "../../payment-methods/stores/usePaymentMethodsStore";
-import FormDialog from "../../permisos/common/components/FormDialog";
+import FormDialog from "../../permisos/common/components/forms/FormDialog";
 import { getCitizenId } from "../../shared/utils/boarding";
 import type { CreateTarjetaPayload, Tarjeta } from "../models/tarjeta";
 import { useCreateTarjeta, useUpdateTarjeta } from "../stores/useTarjetasStore";
