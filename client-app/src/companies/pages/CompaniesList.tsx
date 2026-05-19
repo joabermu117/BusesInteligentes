@@ -68,6 +68,7 @@ const CompaniesList = () => {
           "Nombre",
           "Dirección",
           "Teléfono",
+          "Email Supervisor",
           "Estado",
           "Acciones",
         ]}
@@ -75,7 +76,7 @@ const CompaniesList = () => {
         emptyMessage={
           isLoading ? "Cargando..." : "No hay empresas registradas."
         }
-        colSpan={6}
+        colSpan={7}
       >
         {companies?.map((c: Company) => (
           <TableRow key={c.id} hover>
@@ -83,6 +84,7 @@ const CompaniesList = () => {
             <TableCell>{c.nombre}</TableCell>
             <TableCell>{c.direccion ?? "—"}</TableCell>
             <TableCell>{c.telefono ?? "—"}</TableCell>
+            <TableCell>{c.email ?? "—"}</TableCell>
             <TableCell>
               <Chip
                 label={c.activa !== false ? "Activa" : "Inactiva"}

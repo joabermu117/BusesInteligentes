@@ -95,11 +95,12 @@ const CompanyFormDialog = ({ open, company, onClose }: Props) => {
           fullWidth
         />
         <TextField
-          label="Email"
+          label="Email Supervisor"
           value={form.email}
           onChange={h("email")}
           fullWidth
           type="email"
+          placeholder="supervisor@example.com"
         />
       </Stack>
     </FormDialog>
