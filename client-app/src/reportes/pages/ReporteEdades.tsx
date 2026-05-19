@@ -128,7 +128,8 @@ const ReporteEdades = () => {
       );
     }
     const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
+    // BOM (U+FEFF) para que Excel interprete correctamente UTF-8 con tildes
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;

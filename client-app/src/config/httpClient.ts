@@ -25,23 +25,31 @@ const isPublicSecurityEndpoint = (url?: string): boolean => {
 
 const httpClient = axios.create();
 
-// Lightweight JWT payload decode used only for exp validation.
-const getTokenPayload = (token: string): { exp?: number } | null => {
-  try {
-    const tokenParts = token.split(".");
-    if (tokenParts.length < 2) {
-      return null;
-    }
+// Decodifica base64 a UTF-8 (atob es Latin-1, rompe acentos y ñ)
+const base64ToUtf8 = (b64: string): string => {
+  const binaryStr = atob(b64);
+  const bytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    bytes[i] = binaryStr.charCodeAt(i);
+  }
+  return new TextDecoder("utf-8").decode(bytes);
+};
 
-    const payloadBase64 = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const paddedPayload = payloadBase64.padEnd(
-      payloadBase64.length + ((4 - (payloadBase64.length % 4)) % 4),
-      "=",
-    );
-    return JSON.parse(atob(paddedPayload));
+const decodeJwtPayload = (token: string): Record<string, unknown> | null => {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64.padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "=");
+    return JSON.parse(base64ToUtf8(padded));
   } catch {
     return null;
   }
+};
+
+// Lightweight JWT payload decode used only for exp validation.
+const getTokenPayload = (token: string): { exp?: number } | null => {
+  return decodeJwtPayload(token) as { exp?: number } | null;
 };
 
 export const isAuthTokenExpired = (token: string): boolean => {
@@ -88,9 +96,7 @@ const isRealAuthFailure = (error: unknown): boolean => {
 
   const message =
     error.response.data?.message ??
-    (typeof error.response.data === "string"
-      ? error.response.data
-      : "");
+    (typeof error.response.data === "string" ? error.response.data : "");
 
   // SecurityGuard (NestJS) throws UnauthorizedException("Permisos insuficientes")
   // or UnauthorizedException("Error al validar permisos") — these mean the token
@@ -176,10 +182,7 @@ export const getUserEmailFromToken = (): string | null => {
   try {
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
     if (!token) return null;
-    const payload = JSON.parse(
-      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
-    );
-    return payload?.email ?? null;
+    return (decodeJwtPayload(token)?.email as string) ?? null;
   } catch {
     return null;
   }
@@ -195,10 +198,7 @@ export const getUserNameFromToken = (): string | null => {
   try {
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
     if (!token) return null;
-    const payload = JSON.parse(
-      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
-    );
-    return payload?.name ?? null;
+    return (decodeJwtPayload(token)?.name as string) ?? null;
   } catch {
     return null;
   }
@@ -209,10 +209,8 @@ export const getAuthUserId = (): string | null => {
   try {
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
     if (!token) return null;
-    const payload = JSON.parse(
-      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
-    );
-    return payload?.id ?? payload?.userId ?? null;
+    const payload = decodeJwtPayload(token);
+    return (payload?.id ?? payload?.userId ?? null) as string | null;
   } catch {
     return null;
   }
