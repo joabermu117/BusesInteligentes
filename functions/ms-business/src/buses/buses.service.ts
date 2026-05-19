@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Company } from '../companies/entities/company.entity';
+import { Gps } from '../gps/entities/gps.entity';
 import { CreateBusDto } from './dto/create-bus.dto';
 import { UpdateBusDto } from './dto/update-bus.dto';
 import { Bus } from './entities/bus.entity';
@@ -57,9 +58,17 @@ export class BusesService {
       (createBusDto as Record<string, unknown>).photo = createBusDto.photoUrl;
     }
 
+    // Crear GPS con ubicacion por defecto en Manizales
+    const gps = new Gps();
+    gps.latitude = 5.031077;
+    gps.longitude = -75.452459;
+    gps.active = true;
+    gps.lastUpdate = new Date();
+
     const bus = this.busRepository.create({
       ...createBusDto,
       company,
+      gps,
     });
     const saved = await this.busRepository.save(bus);
 

@@ -83,16 +83,16 @@ const RecargaEpayco = () => {
   const [successRef, setSuccessRef] = useState<string | null>(null);
 
   const selectedTarjeta = tarjetasActivas.find((t) => t.id === selectedCardId);
-  const saldoActual = selectedTarjeta?.id
-    ? (tarjetas?.find((t) => t.id === selectedTarjeta.id)?.balance ?? 0)
-    : 0;
+  // balance puede venir como string desde MySQL (DECIMAL), convertir siempre a numero
+  const saldoActual = Number(
+    tarjetas?.find((t) => t.id === selectedCardId)?.balance ??
+      selectedTarjeta?.balance ??
+      0,
+  );
 
+  const parsedCustom = customAmount ? parseInt(customAmount, 10) : 0;
   const amount =
-    presetAmount !== null
-      ? presetAmount
-      : customAmount
-        ? parseInt(customAmount)
-        : 0;
+    presetAmount !== null ? presetAmount : parsedCustom > 0 ? parsedCustom : 0;
 
   const commission = Math.round(amount * COMMISSION_RATE);
   const total = amount + commission;
@@ -337,7 +337,7 @@ const RecargaEpayco = () => {
                         fontWeight={700}
                         color="success.main"
                       >
-                        {formatCurrency(saldoActual + amount)}
+                        {formatCurrency(Number(saldoActual) + Number(amount))}
                       </Typography>
                     </Box>
                     <Box display="flex" justifyContent="space-between">
