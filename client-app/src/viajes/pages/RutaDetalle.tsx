@@ -1,5 +1,5 @@
-import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import AccessTimeRounded from "@mui/icons-material/AccessTimeRounded";
+import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import AttachMoneyRounded from "@mui/icons-material/AttachMoneyRounded";
 import RouteRounded from "@mui/icons-material/RouteRounded";
 import StraightenRounded from "@mui/icons-material/StraightenRounded";
@@ -17,11 +17,11 @@ import {
 import { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import PageHeader from "../../permisos/common/components/PageHeader";
-import { useRouteRoadGeometry } from "../hooks/useRouteRoadGeometry";
+import { formatCurrency, formatDuration } from "../../shared/utils/format";
 import type { SelectedStopData } from "../components/MapaSeleccionRuta";
 import MapaSeleccionRuta from "../components/MapaSeleccionRuta";
+import { useRouteRoadGeometry } from "../hooks/useRouteRoadGeometry";
 import { useParaderosByRuta, useRuta } from "../stores/useRutasStore";
-import { formatCurrency, formatDuration } from "../../shared/utils/format";
 
 const RutaDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -31,10 +31,13 @@ const RutaDetalle = () => {
   const { data: paraderos, isLoading: isLoadingParaderos } =
     useParaderosByRuta(routeId);
 
-  const { geometry, isLoading: geomLoading, fetchRoute } =
-    useRouteRoadGeometry();
+  const {
+    geometry,
+    isLoading: geomLoading,
+    failed: geomFailed,
+    fetchRoute,
+  } = useRouteRoadGeometry();
 
-  // Convertir paraderos al formato que espera MapaSeleccionRuta
   const selectedStops = useMemo((): SelectedStopData[] => {
     if (!paraderos) return [];
     return [...paraderos]
@@ -48,7 +51,6 @@ const RutaDetalle = () => {
       }));
   }, [paraderos]);
 
-  // Calcular geometría OSRM cuando cargan los paraderos
   useEffect(() => {
     if (selectedStops.length >= 2) {
       fetchRoute(
@@ -56,6 +58,20 @@ const RutaDetalle = () => {
       );
     }
   }, [selectedStops, fetchRoute]);
+
+  // Fallback con línea recta cuando OSRM falla
+  const fallbackGeometry = useMemo(() => {
+    if (!geomFailed || selectedStops.length < 2) return null;
+    return {
+      coordinates: selectedStops.map(
+        (s) => [s.latitude, s.longitude] as [number, number],
+      ),
+      distanceKm: ruta?.distance ?? 0,
+      durationMin: ruta?.estimated_duration ?? 0,
+    };
+  }, [geomFailed, selectedStops, ruta]);
+
+  const activeGeometry = geometry ?? fallbackGeometry;
 
   if (isLoadingRuta) {
     return (
@@ -91,7 +107,6 @@ const RutaDetalle = () => {
       />
 
       <Grid container spacing={3}>
-        {/* Panel izquierdo — info de la ruta */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 3 }}>
             <Stack gap={2.5}>
@@ -168,29 +183,54 @@ const RutaDetalle = () => {
                 </Box>
               </Stack>
 
-              {/* Geometría OSRM calculada en tiempo real */}
-              {geometry && (
+              {/* Geometría OSRM o fallback */}
+              {activeGeometry && (
                 <>
                   <Divider />
                   <Stack direction="row" alignItems="center" gap={1}>
                     <RouteRounded color="action" />
-                    <Box>
+                    <Box sx={{ flex: 1 }}>
                       <Typography variant="overline" color="text.secondary">
-                        Ruta real por calles
+                        {geomFailed
+                          ? "Ruta estimada (línea recta)"
+                          : "Ruta real por calles"}
                       </Typography>
-                      <Stack direction="row" spacing={1} mt={0.5}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        mt={0.5}
+                        flexWrap="wrap"
+                        useFlexGap
+                      >
                         <Chip
-                          label={`${geometry.distanceKm} km`}
+                          label={`${activeGeometry.distanceKm} km`}
                           size="small"
                           color="primary"
                           variant="outlined"
                         />
                         <Chip
-                          label={`~${geometry.durationMin} min`}
+                          label={`~${activeGeometry.durationMin} min`}
                           size="small"
                           color="primary"
                           variant="outlined"
                         />
+                        {geomFailed && (
+                          <Chip
+                            label="Reintentar"
+                            size="small"
+                            color="warning"
+                            variant="outlined"
+                            onClick={() =>
+                              fetchRoute(
+                                selectedStops.map((s) => ({
+                                  lat: s.latitude,
+                                  lng: s.longitude,
+                                })),
+                              )
+                            }
+                            sx={{ cursor: "pointer" }}
+                          />
+                        )}
                       </Stack>
                     </Box>
                   </Stack>
@@ -247,9 +287,11 @@ const RutaDetalle = () => {
           </Paper>
         </Grid>
 
-        {/* Panel derecho — mapa con geometría OSRM */}
+        {/* Panel derecho — mapa */}
         <Grid size={{ xs: 12, md: 8 }}>
-          <Paper sx={{ p: 0, overflow: "hidden", height: "100%", minHeight: 500 }}>
+          <Paper
+            sx={{ p: 0, overflow: "hidden", height: "100%", minHeight: 500 }}
+          >
             {isLoadingParaderos ? (
               <Box sx={{ display: "grid", placeItems: "center", height: 500 }}>
                 <CircularProgress />
@@ -258,7 +300,7 @@ const RutaDetalle = () => {
               <MapaSeleccionRuta
                 allStops={[]}
                 selectedStops={selectedStops}
-                geometry={geometry}
+                geometry={activeGeometry}
                 isGeometryLoading={geomLoading}
                 onToggleStop={() => {}}
               />
