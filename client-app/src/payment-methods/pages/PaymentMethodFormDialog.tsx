@@ -1,4 +1,4 @@
-import { Stack, TextField } from "@mui/material";
+import { FormControlLabel, Stack, Switch, TextField } from "@mui/material";
 import { useEffect, useState } from "react";
 import FormDialog from "../../permisos/common/components/forms/FormDialog";
 import type {
@@ -20,6 +20,7 @@ const emptyForm: CreatePaymentMethodPayload = {
   name: "",
   description: "",
   isActive: true,
+  isPrepaid: false,
 };
 
 const PaymentMethodFormDialog = ({ open, method, onClose }: Props) => {
@@ -38,6 +39,7 @@ const PaymentMethodFormDialog = ({ open, method, onClose }: Props) => {
         name: method.name,
         description: method.description ?? "",
         isActive: method.isActive ?? true,
+        isPrepaid: method.isPrepaid ?? false,
       });
     } else {
       setForm(emptyForm);
@@ -92,6 +94,17 @@ const PaymentMethodFormDialog = ({ open, method, onClose }: Props) => {
           multiline
           rows={2}
           placeholder="Descripción del método de pago"
+        />
+        <FormControlLabel
+          control={
+            <Switch
+              checked={form.isPrepaid ?? false}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, isPrepaid: e.target.checked }))
+              }
+            />
+          }
+          label="Método prepago (descuenta saldo de la tarjeta)"
         />
       </Stack>
     </FormDialog>

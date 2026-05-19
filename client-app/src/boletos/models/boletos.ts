@@ -39,6 +39,7 @@ export interface Ticket {
 
 export interface DriverInfo {
   person_id: string;
+  name?: string;
   licenseNumber?: string;
   driverUserId?: string;
 }

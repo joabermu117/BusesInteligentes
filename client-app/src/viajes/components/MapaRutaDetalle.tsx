@@ -37,21 +37,26 @@ const MapaRutaDetalle = ({ paraderos, boardedNodeId, validatedNodeId }: MapaRuta
     [paraderos]
   );
 
-  const center = useMemo((): [number, number] => {
-    if (sorted.length === 0) return [-12.0464, -77.0428];
-    const lat = sorted.reduce((s, p) => s + p.stop.latitude, 0) / sorted.length;
-    const lng = sorted.reduce((s, p) => s + p.stop.longitude, 0) / sorted.length;
-    return [lat, lng];
-  }, [sorted]);
-
-  const polyline: [number, number][] = sorted.map(
-    (p) => [p.stop.latitude, p.stop.longitude] as [number, number]
+  const validParaderos = useMemo(
+    () => sorted.filter((p) => p.stop.latitude != null && p.stop.longitude != null && !isNaN(p.stop.latitude) && !isNaN(p.stop.longitude)),
+    [sorted]
   );
 
-  if (sorted.length === 0) {
+  const center = useMemo((): [number, number] => {
+    if (validParaderos.length === 0) return [-12.0464, -77.0428];
+    const lat = validParaderos.reduce((s, p) => s + Number(p.stop.latitude), 0) / validParaderos.length;
+    const lng = validParaderos.reduce((s, p) => s + Number(p.stop.longitude), 0) / validParaderos.length;
+    return [lat, lng];
+  }, [validParaderos]);
+
+  const polyline: [number, number][] = validParaderos.map(
+    (p) => [Number(p.stop.latitude), Number(p.stop.longitude)] as [number, number]
+  );
+
+  if (validParaderos.length === 0) {
     return (
       <div style={{ height: 400, display: "grid", placeItems: "center", color: "#888" }}>
-        No hay paraderos registrados para esta ruta.
+        No hay paraderos con coordenadas válidas para mostrar en el mapa.
       </div>
     );
   }
@@ -63,12 +68,12 @@ const MapaRutaDetalle = ({ paraderos, boardedNodeId, validatedNodeId }: MapaRuta
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <Polyline positions={polyline} color="#cf3b23" weight={3} opacity={0.8} />
-      {sorted.map((p) => {
+      {validParaderos.map((p) => {
         const isBoarding = p.stop_id === boardedNodeId;
         const isAlighting = p.stop_id === validatedNodeId;
         const icon = isAlighting ? ALIGHTING_ICON : isBoarding ? BOARDING_ICON : STOP_ICON;
         return (
-          <Marker key={`${p.stop_id}-${p.order_index}`} position={[p.stop.latitude, p.stop.longitude]} icon={icon}>
+          <Marker key={`${p.stop_id}-${p.order_index}`} position={[Number(p.stop.latitude), Number(p.stop.longitude)]} icon={icon}>
             <Popup>
               <strong>{p.stop.name}</strong>
               <br />

@@ -12,4 +12,8 @@ export class CreatePaymentMethodDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isPrepaid?: boolean;
 }

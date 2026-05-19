@@ -15,6 +15,9 @@ export class PaymentMethod {
   @Column({ default: true })
   isActive?: boolean;
 
+  @Column({ default: false })
+  isPrepaid?: boolean;
+
   /**
    * Bidirectional 1:N relationship with CitizenPaymentMethod
    * A payment method can be used by many citizens

@@ -53,6 +53,8 @@ export const useBoardBus = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tickets"] });
       queryClient.invalidateQueries({ queryKey: ["schedules", "active"] });
+      queryClient.invalidateQueries({ queryKey: ["payment-methods"] });
+      queryClient.invalidateQueries({ queryKey: ["tarjetas"] });
     },
   });
 };

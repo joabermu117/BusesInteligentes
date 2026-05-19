@@ -17,8 +17,6 @@ import {
   TicketStatus,
   ScheduleStatus,
 } from '../common/boarding-rules';
-import { SIMULATED_PREPAID_BALANCE } from '../common/enums';
-
 @Injectable()
 export class BoardingService {
   constructor(
@@ -85,16 +83,21 @@ export class BoardingService {
     const price = route?.tarifa ?? 0;
 
     const methodName = paymentMethod.paymentMethod?.name;
-    const isPrepaid = isPrepaidMethod(methodName);
+    const isPrepaid =
+      (paymentMethod.paymentMethod?.isPrepaid ?? false) ||
+      isPrepaidMethod(methodName);
     let remainingBalance = 0;
 
     if (isPrepaid) {
-      remainingBalance = SIMULATED_PREPAID_BALANCE - price;
+      const currentBalance = Number(paymentMethod.balance ?? 0);
+      remainingBalance = currentBalance - price;
       if (remainingBalance < 0) {
         throw new BadRequestException(
-          `Saldo insuficiente. Disponible: S/ ${SIMULATED_PREPAID_BALANCE.toFixed(2)}, Tarifa: S/ ${price.toFixed(2)}`,
+          `Saldo insuficiente. Disponible: S/ ${currentBalance.toFixed(2)}, Tarifa: S/ ${price.toFixed(2)}`,
         );
       }
+      paymentMethod.balance = remainingBalance;
+      await this.citizenPaymentMethodRepository.save(paymentMethod);
     }
 
     const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
@@ -150,7 +153,7 @@ export class BoardingService {
       );
     }
 
-    if (ticket.schedule?.status !== ScheduleStatus.IN_PROGRESS) {
+    if (!canBoardSchedule(ticket.schedule?.status!)) {
       throw new BadRequestException(
         'El viaje asociado a este boleto ya no está activo',
       );
@@ -188,9 +191,11 @@ export class BoardingService {
 
     return {
       valid: true,
-      balance: isPrepaidMethod(paymentMethod.paymentMethod?.name)
-        ? SIMULATED_PREPAID_BALANCE
-        : 0,
+      balance:
+        ((paymentMethod.paymentMethod?.isPrepaid ?? false) ||
+          isPrepaidMethod(paymentMethod.paymentMethod?.name))
+          ? Number(paymentMethod.balance ?? 0)
+          : 0,
     };
   }
 }

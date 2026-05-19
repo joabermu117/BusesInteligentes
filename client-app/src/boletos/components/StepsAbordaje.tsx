@@ -36,7 +36,7 @@ export const StepPayment = ({
       </Typography>
 
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Tarifa: <strong>S/ {tariff.toFixed(2)}</strong>
+        Tarifa: <strong>$ {tariff.toLocaleString("es-CO")}</strong>
       </Typography>
 
       {paraderoName && (

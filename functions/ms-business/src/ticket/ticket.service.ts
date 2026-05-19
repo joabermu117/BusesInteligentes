@@ -135,6 +135,7 @@ export class TicketService {
     // Buscar turno activo del bus para obtener información del conductor
     const driverInfo: {
       person_id: string;
+      name?: string;
       licenseNumber?: string;
       driverUserId?: string;
     } | null = ticket.schedule?.bus?.id
@@ -146,13 +147,13 @@ export class TicketService {
             },
             relations: ['driver'],
           });
-          return activeShift?.driver
-            ? {
-                person_id: activeShift.driver.person_id,
-                licenseNumber: activeShift.driver.licenseNumber,
-                driverUserId: activeShift.driverUserId,
-              }
-            : null;
+          if (!activeShift) return null;
+          return {
+            person_id: activeShift.driver?.person_id ?? activeShift.driverUserId ?? '',
+            name: activeShift.driver?.name,
+            licenseNumber: activeShift.driver?.licenseNumber,
+            driverUserId: activeShift.driverUserId,
+          };
         })()
       : null;
 
