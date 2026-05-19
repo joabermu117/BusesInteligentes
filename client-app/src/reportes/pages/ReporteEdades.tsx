@@ -185,7 +185,7 @@ const ReporteEdades = () => {
                         width: 220,
                         height: 220,
                         borderRadius: "50%",
-                        background: segmentos
+                        background: `conic-gradient(${segmentos
                           .map((s: any, i: number) => {
                             const pct = (s.pasajerosUnicos / totalTorta) * 100;
                             const prevPct = segmentos
@@ -198,7 +198,7 @@ const ReporteEdades = () => {
                               );
                             return `${COLORS[i % COLORS.length]} ${prevPct}% ${prevPct + pct}%`;
                           })
-                          .join(", "),
+                          .join(", ")})`,
                         flexShrink: 0,
                       }}
                     >

@@ -1,4 +1,5 @@
 import {
+  Autocomplete,
   Box,
   Card,
   CardContent,
@@ -9,6 +10,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -29,11 +31,23 @@ const COLORS = ["#d32f2f", "#f57c00", "#1976d2", "#388e3c"];
 
 const ReporteIncidentes = () => {
   const [period, setPeriod] = useState(12);
-  const { data, isLoading } = useQuery({
-    queryKey: ["incident-trends", period],
+  const [companyId, setCompanyId] = useState<number | undefined>(undefined);
+
+  const { data: companies } = useQuery({
+    queryKey: ["companies"],
     queryFn: async () => {
+      const { data } = await httpClient.get(`${API_URL}/api/companies`);
+      return data;
+    },
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["incident-trends", period, companyId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ months: String(period) });
+      if (companyId) params.append("companyId", String(companyId));
       const { data } = await httpClient.get(
-        `${API_URL}/api/reports/incident-trends?months=${period}`,
+        `${API_URL}/api/reports/incident-trends?${params}`,
       );
       return data;
     },
@@ -54,18 +68,35 @@ const ReporteIncidentes = () => {
       />
 
       <Stack spacing={3}>
-        <ToggleButtonGroup
-          value={period}
-          exclusive
-          onChange={(_, v) => v !== null && setPeriod(v)}
-          size="small"
-        >
-          {MONTH_OPTIONS.map((o) => (
-            <ToggleButton key={o.value} value={o.value}>
-              {o.label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
+          <ToggleButtonGroup
+            value={period}
+            exclusive
+            onChange={(_, v) => v !== null && setPeriod(v)}
+            size="small"
+          >
+            {MONTH_OPTIONS.map((o) => (
+              <ToggleButton key={o.value} value={o.value}>
+                {o.label}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+
+          <Autocomplete
+            size="small"
+            sx={{ minWidth: 220 }}
+            options={companies ?? []}
+            getOptionLabel={(opt: any) =>
+              opt.nombre || opt.name || "Sin nombre"
+            }
+            value={companies?.find((c: any) => c.id === companyId) ?? null}
+            onChange={(_, v) => setCompanyId(v?.id ?? undefined)}
+            isOptionEqualToValue={(opt, val) => opt.id === val.id}
+            renderInput={(params) => (
+              <TextField {...params} label="Filtrar por empresa" />
+            )}
+          />
+        </Stack>
 
         {isLoading && (
           <Typography color="text.secondary">Cargando...</Typography>

@@ -82,28 +82,17 @@ export class ReportService {
   }
 
   async getPassengerAgeDistribution(routeId?: number, months?: number) {
-    const since = months
-      ? new Date(new Date().setMonth(new Date().getMonth() - months))
-      : new Date(0);
-
-    const query = this.ticketRepository
-      .createQueryBuilder('ticket')
-      .leftJoinAndSelect('ticket.citizen', 'citizen')
-      .leftJoinAndSelect('ticket.schedule', 'schedule')
-      .where('ticket.issuedDate >= :since', { since })
-      .andWhere('citizen.birthDate IS NOT NULL');
-
+    // Si se filtra por ruta, consultamos a través de tiquetes (ruta específica)
     if (routeId) {
-      query.andWhere('schedule.routeId = :routeId', { routeId });
+      return this.getPassengerAgeDistributionByRoute(routeId, months);
     }
 
-    const tickets = await query.getMany();
+    // Consultar ciudadanos directamente desde la tabla citizens
+    const citizens = await this.citizenRepository
+      .createQueryBuilder('citizen')
+      .where('citizen.birthDate IS NOT NULL')
+      .getMany();
 
-    // Contar pasajeros únicos por edad
-    const ageCount = new Map<
-      string,
-      { count: number; passengers: Set<string> }
-    >();
     const ageRanges = [
       { label: 'Menores (0-17)', min: 0, max: 17 },
       { label: 'Jóvenes (18-25)', min: 18, max: 25 },
@@ -112,8 +101,124 @@ export class ReportService {
       { label: 'Adultos mayores (60+)', min: 61, max: 200 },
     ];
 
+    const ageCount = new Map<string, Set<string>>();
     for (const range of ageRanges) {
-      ageCount.set(range.label, { count: 0, passengers: new Set() });
+      ageCount.set(range.label, new Set());
+    }
+    let sinInfo = 0;
+    const now = new Date();
+
+    for (const citizen of citizens) {
+      if (!citizen.birthDate) {
+        sinInfo++;
+        continue;
+      }
+      const age = Math.floor(
+        (now.getTime() - new Date(citizen.birthDate).getTime()) /
+          (365.25 * 24 * 60 * 60 * 1000),
+      );
+      const range = ageRanges.find((r) => age >= r.min && age <= r.max);
+      if (range) {
+        ageCount.get(range.label)!.add(citizen.person_id);
+      }
+    }
+
+    const totalUnique = citizens.length;
+
+    const segments = ageRanges.map((range) => {
+      const passengers = ageCount.get(range.label)!;
+      return {
+        rango: range.label,
+        pasajeros: passengers.size,
+        pasajerosUnicos: passengers.size,
+        porcentaje:
+          totalUnique > 0
+            ? parseFloat(((passengers.size / totalUnique) * 100).toFixed(1))
+            : 0,
+      };
+    });
+
+    // Calcular variación vs mes anterior comparando con ciudadanos que tenían
+    // la edad en el mes anterior (envejeciendo un mes a cada ciudadano)
+    const segmentsConVariacion = segments.map((s) => ({
+      ...s,
+      variacion: 0,
+    }));
+
+    // Calcular variación real si hay datos
+    if (totalUnique > 0 && months && months > 0) {
+      const prevDate = new Date(
+        now.getFullYear(),
+        now.getMonth() - 1,
+        now.getDate(),
+      );
+      const prevCounts = new Map<string, number>();
+      for (const range of ageRanges) {
+        prevCounts.set(range.label, 0);
+      }
+      for (const citizen of citizens) {
+        if (!citizen.birthDate) continue;
+        const age = Math.floor(
+          (prevDate.getTime() - new Date(citizen.birthDate).getTime()) /
+            (365.25 * 24 * 60 * 60 * 1000),
+        );
+        const range = ageRanges.find((r) => age >= r.min && age <= r.max);
+        if (range) {
+          prevCounts.set(range.label, prevCounts.get(range.label)! + 1);
+        }
+      }
+      for (let i = 0; i < segmentsConVariacion.length; i++) {
+        const prev = prevCounts.get(ageRanges[i].label) ?? 0;
+        const curr = segmentsConVariacion[i].pasajerosUnicos;
+        if (prev > 0) {
+          segmentsConVariacion[i].variacion = parseFloat(
+            (((curr - prev) / prev) * 100).toFixed(1),
+          );
+        }
+      }
+    }
+
+    return {
+      totalPasajeros: totalUnique,
+      sinInformacion: sinInfo,
+      segmentos: segmentsConVariacion,
+      segmentoPredominante:
+        segmentsConVariacion.length > 0
+          ? segmentsConVariacion.reduce((a, b) =>
+              a.pasajerosUnicos > b.pasajerosUnicos ? a : b,
+            ).rango
+          : null,
+    };
+  }
+
+  private async getPassengerAgeDistributionByRoute(
+    routeId: number,
+    months?: number,
+  ) {
+    const since = months
+      ? new Date(new Date().setMonth(new Date().getMonth() - months))
+      : new Date(0);
+
+    const tickets = await this.ticketRepository
+      .createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.citizen', 'citizen')
+      .leftJoinAndSelect('ticket.schedule', 'schedule')
+      .where('ticket.issuedDate >= :since', { since })
+      .andWhere('citizen.birthDate IS NOT NULL')
+      .andWhere('schedule.routeId = :routeId', { routeId })
+      .getMany();
+
+    const ageRanges = [
+      { label: 'Menores (0-17)', min: 0, max: 17 },
+      { label: 'Jóvenes (18-25)', min: 18, max: 25 },
+      { label: 'Adultos jóvenes (26-40)', min: 26, max: 40 },
+      { label: 'Adultos (41-60)', min: 41, max: 60 },
+      { label: 'Adultos mayores (60+)', min: 61, max: 200 },
+    ];
+
+    const ageCount = new Map<string, Set<string>>();
+    for (const range of ageRanges) {
+      ageCount.set(range.label, new Set());
     }
     let sinInfo = 0;
     const now = new Date();
@@ -129,9 +234,7 @@ export class ReportService {
       );
       const range = ageRanges.find((r) => age >= r.min && age <= r.max);
       if (range && ticket.citizen.person_id) {
-        const entry = ageCount.get(range.label)!;
-        entry.count++;
-        entry.passengers.add(ticket.citizen.person_id);
+        ageCount.get(range.label)!.add(ticket.citizen.person_id);
       }
     }
 
@@ -142,24 +245,21 @@ export class ReportService {
     ).size;
 
     const segments = ageRanges.map((range) => {
-      const entry = ageCount.get(range.label)!;
+      const passengers = ageCount.get(range.label)!;
       return {
         rango: range.label,
-        pasajeros: entry.count,
-        pasajerosUnicos: entry.passengers.size,
+        pasajeros: passengers.size,
+        pasajerosUnicos: passengers.size,
         porcentaje:
           totalUnique > 0
-            ? parseFloat(
-                ((entry.passengers.size / totalUnique) * 100).toFixed(1),
-              )
+            ? parseFloat(((passengers.size / totalUnique) * 100).toFixed(1))
             : 0,
       };
     });
 
-    // Calcular variación vs mes anterior (simplificado: usamos datos actuales)
     const segmentsConVariacion = segments.map((s) => ({
       ...s,
-      variacion: 0, // Placeholder: se podría calcular con período anterior
+      variacion: 0,
     }));
 
     return {
