@@ -1,14 +1,20 @@
-import { MenuItem, Stack, TextField } from "@mui/material";
+import { Alert, MenuItem, Stack, TextField, Typography } from "@mui/material";
+import { useSnackbar } from "notistack";
 import { useEffect, useState } from "react";
+import { useActiveShiftByBus } from "../../boletos/stores/useShiftStore";
 import { useBuses } from "../../buses/stores/useBusesStore";
 import FormDialog from "../../permisos/common/components/forms/FormDialog";
+import { extractErrorMessage } from "../../shared/utils/errorHandler";
 import { useAdminRoutes } from "../../viajes/stores/useAdminRoutesStore";
 import type { CreateSchedulePayload, Schedule } from "../models/schedule";
 import {
   SCHEDULE_RECURRENCE_OPTIONS,
   SCHEDULE_STATUS_OPTIONS,
 } from "../models/schedule";
-import { useCreateSchedule, useUpdateSchedule } from "../stores/useSchedulesStore";
+import {
+  useCreateSchedule,
+  useUpdateSchedule,
+} from "../stores/useSchedulesStore";
 
 type ScheduleFormDialogProps = {
   open: boolean;
@@ -31,6 +37,7 @@ const ScheduleFormDialog = ({
   schedule,
   onClose,
 }: ScheduleFormDialogProps) => {
+  const { enqueueSnackbar } = useSnackbar();
   const isEditing = !!schedule;
   const { mutateAsync: createSchedule, isPending: isCreating } =
     useCreateSchedule();
@@ -41,6 +48,14 @@ const ScheduleFormDialog = ({
   const isSubmitting = isCreating || isUpdating;
 
   const [form, setForm] = useState<CreateSchedulePayload>(emptyForm);
+
+  // Validar turno activo del bus seleccionado
+  const { data: activeShift } = useActiveShiftByBus(
+    form.busId > 0 ? form.busId : 0,
+  );
+
+  // Empresa del bus seleccionado
+  const selectedBus = buses?.find((b) => b.id === form.busId);
 
   useEffect(() => {
     if (schedule) {
@@ -73,17 +88,39 @@ const ScheduleFormDialog = ({
     };
 
   const handleSubmit = async () => {
-    const payload: CreateSchedulePayload = {
-      ...form,
-      date: form.date || undefined,
-    };
-
-    if (isEditing && schedule) {
-      await updateSchedule({ id: schedule.id, payload });
-    } else {
-      await createSchedule(payload);
+    // Validar que el bus tenga conductor asignado (turno activo)
+    if (form.busId > 0 && !activeShift) {
+      enqueueSnackbar(
+        "El bus seleccionado no tiene un conductor asignado (turno activo). Asigna un turno antes de crear la programación.",
+        { variant: "warning" },
+      );
+      return;
     }
-    onClose();
+
+    try {
+      const payload: CreateSchedulePayload = {
+        ...form,
+        date: form.date || undefined,
+      };
+
+      if (isEditing && schedule) {
+        await updateSchedule({ id: schedule.id, payload });
+        enqueueSnackbar("Programación actualizada correctamente.", {
+          variant: "success",
+        });
+      } else {
+        await createSchedule(payload);
+        enqueueSnackbar("Programación creada correctamente.", {
+          variant: "success",
+        });
+      }
+      onClose();
+    } catch (e: unknown) {
+      enqueueSnackbar(
+        extractErrorMessage(e, "Error al guardar la programación"),
+        { variant: "error", style: { whiteSpace: "pre-line" } },
+      );
+    }
   };
 
   const isFormValid =
@@ -112,10 +149,30 @@ const ScheduleFormDialog = ({
           {buses?.map((b) => (
             <MenuItem key={b.id} value={b.id}>
               {b.plate} — {b.model}{" "}
-              {b.company ? `(${b.company.name})` : ""}
+              {b.company ? `(${b.company.nombre})` : ""}
             </MenuItem>
           ))}
         </TextField>
+
+        {/* Mostrar empresa y validación de turno automáticamente */}
+        {form.busId > 0 && (
+          <Stack spacing={0.5}>
+            {selectedBus?.company && (
+              <Typography variant="caption" color="text.secondary">
+                Empresa: <strong>{selectedBus.company.nombre}</strong>
+              </Typography>
+            )}
+            {activeShift ? (
+              <Alert severity="success" sx={{ py: 0.5 }}>
+                Conductor asignado — Turno #{activeShift.id} activo
+              </Alert>
+            ) : (
+              <Alert severity="warning" sx={{ py: 0.5 }}>
+                Este bus no tiene un conductor asignado (turno activo).
+              </Alert>
+            )}
+          </Stack>
+        )}
 
         <TextField
           label="Ruta"

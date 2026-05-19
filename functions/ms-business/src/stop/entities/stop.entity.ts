@@ -1,5 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { RouteStop } from '../../route/entities/route-stop.entity';
+import { RouteStop } from '../../routes-stops/entities/route-stop.entity';
 
 @Entity('stops')
 export class Stop {

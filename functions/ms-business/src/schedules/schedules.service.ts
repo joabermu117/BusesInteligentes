@@ -50,14 +50,14 @@ export class SchedulesService {
 
   async findAll(): Promise<Schedule[]> {
     return await this.scheduleRepository.find({
-      relations: ['bus', 'bus.company', 'tickets'],
+      relations: ['bus', 'bus.company', 'route'],
     });
   }
 
   async findOne(id: number): Promise<Schedule> {
     const schedule = await this.scheduleRepository.findOne({
       where: { id },
-      relations: ['bus', 'bus.company'],
+      relations: ['bus', 'bus.company', 'route'],
     });
     if (!schedule) throw new NotFoundException(`Schedule #${id} not found`);
     return schedule;
@@ -74,7 +74,7 @@ export class SchedulesService {
   async findByRoute(routeId: number): Promise<Schedule[]> {
     return await this.scheduleRepository.find({
       where: { routeId },
-      relations: ['bus', 'bus.company'],
+      relations: ['bus', 'bus.company', 'route'],
       order: { departureTime: 'ASC' },
     });
   }

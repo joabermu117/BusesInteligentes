@@ -4,7 +4,7 @@ export class CreateRouteDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
-  name: string;
+  name?: string;
 
   @IsString()
   @MaxLength(500)
@@ -13,25 +13,25 @@ export class CreateRouteDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
-  origin: string;
+  origin?: string;
 
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
-  destination: string;
+  destination?: string;
 
   @IsNumber()
   @Min(0)
-  distance: number;
+  distance?: number;
 
   @IsNumber()
   @Min(1)
-  estimated_duration: number;
+  estimated_duration?: number;
 
   @IsNumber()
   @Min(0)
-  tarifa: number;
+  tarifa?: number;
 
   @IsBoolean()
-  is_active: boolean;
+  is_active?: boolean;
 }

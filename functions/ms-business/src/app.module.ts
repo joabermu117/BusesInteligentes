@@ -29,6 +29,7 @@ import { SchedulesModule } from './schedules/schedules.module';
 import { ShiftsModule } from './shifts/shifts.module';
 import { StopModule } from './stop/stop.module';
 import { TicketModule } from './ticket/ticket.module';
+import { RouteStopsModule } from './routes-stops/route-stops.module';
 
 @Module({
   providers: [{ provide: APP_GUARD, useClass: SecurityGuard }],
@@ -75,6 +76,7 @@ import { TicketModule } from './ticket/ticket.module';
     RecipientGroupModule,
     GroupModule,
     BoardingModule,
+    RouteStopsModule,
   ],
 })
 export class AppModule {}

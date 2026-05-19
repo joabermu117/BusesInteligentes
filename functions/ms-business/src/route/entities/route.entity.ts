@@ -1,6 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Node } from '../../node/entities/node.entity';
-import { RouteStop } from './route-stop.entity';
+import { RouteStop } from '../../routes-stops/entities/route-stop.entity';
 
 @Entity('routes')
 export class Route {

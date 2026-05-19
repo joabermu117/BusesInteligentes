@@ -42,6 +42,7 @@ import ParaderosCercanos from "./viajes/pages/ParaderosCercanos";
 import RutaDetalle from "./viajes/pages/RutaDetalle";
 import RutasList from "./viajes/pages/RutasList";
 import StopsList from "./viajes/pages/StopsList";
+import HorariosPage from "./schedules/pages/HorariosPage";
 
 import TurnosList from "./turnos/pages/TurnosList";
 
@@ -103,6 +104,7 @@ function App() {
               <Route path="/paraderos/admin" element={<StopsList />} />
               <Route path="/rutas/admin" element={<AdminRoutesList />} />
               <Route path="/programaciones" element={<SchedulesList />} />
+              <Route path="/horarios" element={<HorariosPage />} />
               <Route path="/turnos/admin" element={<TurnosList />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>

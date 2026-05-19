@@ -24,6 +24,23 @@ export interface Paradero {
   };
 }
 
+export interface RouteStop {
+  route_id: number;
+  stop_id: number;
+  order_index: number;
+  stop?: {
+    id: number;
+    name: string;
+    latitude: number;
+    longitude: number;
+    address: string;
+  };
+  route?: {
+    id: number;
+    name: string;
+  };
+}
+
 export interface CreateRoutePayload {
   name: string;
   description?: string;
