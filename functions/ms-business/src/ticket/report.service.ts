@@ -81,17 +81,68 @@ export class ReportService {
     };
   }
 
-  async getPassengerAgeDistribution(routeId?: number, months?: number) {
-    // Si se filtra por ruta, consultamos a través de tiquetes (ruta específica)
+  async getPassengerAgeDistribution(
+    routeId?: number,
+    months?: number,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    // Si se filtra por ruta, consultamos a través de tiquetes
     if (routeId) {
-      return this.getPassengerAgeDistributionByRoute(routeId, months);
+      return this.getPassengerAgeDistributionByRoute(
+        routeId,
+        months,
+        startDate,
+        endDate,
+      );
     }
 
-    // Consultar ciudadanos directamente desde la tabla citizens
-    const citizens = await this.citizenRepository
+    // Obtener todos los ciudadanos
+    const allCitizens = await this.citizenRepository
       .createQueryBuilder('citizen')
-      .where('citizen.birthDate IS NOT NULL')
       .getMany();
+
+    let activePersonIds: Set<string> | null = null;
+
+    // Si hay filtro temporal, obtener ciudadanos que viajaron en ese período
+    if (months || startDate || endDate) {
+      const ticketQuery = this.ticketRepository
+        .createQueryBuilder('ticket')
+        .leftJoin('ticket.citizen', 'citizen')
+        .where('ticket.status IN (:...statuses)', {
+          statuses: ['issued', 'used'],
+        });
+
+      if (months) {
+        const since = new Date();
+        since.setMonth(since.getMonth() - months);
+        ticketQuery.andWhere('ticket.issuedDate >= :since', { since });
+      }
+      if (startDate) {
+        ticketQuery.andWhere('ticket.issuedDate >= :startDate', {
+          startDate: new Date(startDate),
+        });
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        ticketQuery.andWhere('ticket.issuedDate <= :endDate', {
+          endDate: end,
+        });
+      }
+
+      const tickets = await ticketQuery.getMany();
+      activePersonIds = new Set(
+        tickets
+          .filter((t) => t.citizen?.person_id)
+          .map((t) => t.citizen!.person_id),
+      );
+    }
+
+    // Si hay filtro temporal, filtrar ciudadanos que viajaron
+    const citizens = activePersonIds
+      ? allCitizens.filter((c) => activePersonIds!.has(c.person_id))
+      : allCitizens;
 
     const ageRanges = [
       { label: 'Menores (0-17)', min: 0, max: 17 },
@@ -123,7 +174,7 @@ export class ReportService {
       }
     }
 
-    const totalUnique = citizens.length;
+    const totalConFecha = citizens.length - sinInfo;
 
     const segments = ageRanges.map((range) => {
       const passengers = ageCount.get(range.label)!;
@@ -132,21 +183,19 @@ export class ReportService {
         pasajeros: passengers.size,
         pasajerosUnicos: passengers.size,
         porcentaje:
-          totalUnique > 0
-            ? parseFloat(((passengers.size / totalUnique) * 100).toFixed(1))
+          totalConFecha > 0
+            ? parseFloat(((passengers.size / totalConFecha) * 100).toFixed(1))
             : 0,
       };
     });
 
-    // Calcular variación vs mes anterior comparando con ciudadanos que tenían
-    // la edad en el mes anterior (envejeciendo un mes a cada ciudadano)
     const segmentsConVariacion = segments.map((s) => ({
       ...s,
       variacion: 0,
     }));
 
-    // Calcular variación real si hay datos
-    if (totalUnique > 0 && months && months > 0) {
+    // Calcular variación vs mes anterior
+    if (totalConFecha > 0 && months && months > 0) {
       const prevDate = new Date(
         now.getFullYear(),
         now.getMonth() - 1,
@@ -179,7 +228,7 @@ export class ReportService {
     }
 
     return {
-      totalPasajeros: totalUnique,
+      totalPasajeros: totalConFecha,
       sinInformacion: sinInfo,
       segmentos: segmentsConVariacion,
       segmentoPredominante:
@@ -194,19 +243,35 @@ export class ReportService {
   private async getPassengerAgeDistributionByRoute(
     routeId: number,
     months?: number,
+    startDate?: string,
+    endDate?: string,
   ) {
-    const since = months
-      ? new Date(new Date().setMonth(new Date().getMonth() - months))
-      : new Date(0);
-
-    const tickets = await this.ticketRepository
+    const query = this.ticketRepository
       .createQueryBuilder('ticket')
       .leftJoinAndSelect('ticket.citizen', 'citizen')
       .leftJoinAndSelect('ticket.schedule', 'schedule')
-      .where('ticket.issuedDate >= :since', { since })
-      .andWhere('citizen.birthDate IS NOT NULL')
-      .andWhere('schedule.routeId = :routeId', { routeId })
-      .getMany();
+      .where('schedule.routeId = :routeId', { routeId })
+      .andWhere('ticket.status IN (:...statuses)', {
+        statuses: ['issued', 'used'],
+      });
+
+    if (months) {
+      const since = new Date();
+      since.setMonth(since.getMonth() - months);
+      query.andWhere('ticket.issuedDate >= :since', { since });
+    }
+    if (startDate) {
+      query.andWhere('ticket.issuedDate >= :startDate', {
+        startDate: new Date(startDate),
+      });
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      query.andWhere('ticket.issuedDate <= :endDate', { endDate: end });
+    }
+
+    const tickets = await query.getMany();
 
     const ageRanges = [
       { label: 'Menores (0-17)', min: 0, max: 17 },

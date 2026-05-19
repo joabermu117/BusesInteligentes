@@ -15,10 +15,14 @@ export class ReportController {
   getAgeDistribution(
     @Query('routeId') routeId?: string,
     @Query('months') months?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
   ) {
     return this.reportService.getPassengerAgeDistribution(
       routeId ? +routeId : undefined,
       months ? +months : undefined,
+      startDate,
+      endDate,
     );
   }
 

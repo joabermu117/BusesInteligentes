@@ -4,6 +4,10 @@ import {
   Card,
   CardContent,
   Chip,
+  Dialog,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Stack,
   Table,
   TableBody,
@@ -11,9 +15,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip,
   Typography,
 } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
@@ -37,13 +41,47 @@ const COLORS = [
   "#9e9e9e",
 ];
 
+// Convierte grados a radianes
+const toRad = (deg: number) => (deg * Math.PI) / 180;
+
+// Genera el path SVG para un sector de torta
+function sectorPath(
+  cx: number,
+  cy: number,
+  r: number,
+  startAngle: number,
+  endAngle: number,
+) {
+  const x1 = cx + r * Math.cos(toRad(startAngle - 90));
+  const y1 = cy + r * Math.sin(toRad(startAngle - 90));
+  const x2 = cx + r * Math.cos(toRad(endAngle - 90));
+  const y2 = cy + r * Math.sin(toRad(endAngle - 90));
+  const large = endAngle - startAngle > 180 ? 1 : 0;
+  return `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+}
+
+interface Segmento {
+  rango: string;
+  pasajeros: number;
+  pasajerosUnicos: number;
+  porcentaje: number;
+  variacion: number;
+}
+
 const ReporteEdades = () => {
   const [period, setPeriod] = useState<number>(-1);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [selectedSegment, setSelectedSegment] = useState<Segmento | null>(null);
+
+  const queryKey = ["age-distribution", period, startDate, endDate];
   const { data, isLoading } = useQuery({
-    queryKey: ["age-distribution", period],
+    queryKey,
     queryFn: async () => {
       const params = new URLSearchParams();
       if (period > 0) params.set("months", period.toString());
+      if (startDate) params.set("startDate", startDate);
+      if (endDate) params.set("endDate", endDate);
       const res = await httpClient.get(
         `${API_URL}/api/reports/passenger-age-distribution?${params}`,
       );
@@ -54,14 +92,15 @@ const ReporteEdades = () => {
   const chartRef = useRef<HTMLDivElement>(null);
 
   const total = data?.totalPasajeros ?? 0;
-  const segmentos = data?.segmentos ?? [];
-  const predominante = data?.segmentoPredominante;
+  const sinInformacion = data?.sinInformacion ?? 0;
+  const segmentos: Segmento[] = data?.segmentos ?? [];
+  const predominante = data?.segmentoPredominante as string | null;
+  const totalConSinInfo = total + sinInformacion;
 
   const exportPNG = useCallback(async () => {
     if (!chartRef.current) return;
-    const canvas = await import("html-to-image").then((m) =>
-      m.toPng(chartRef.current!),
-    );
+    const { toPng } = await import("html-to-image");
+    const canvas = await toPng(chartRef.current);
     const a = document.createElement("a");
     a.href = canvas;
     a.download = "distribucion-etaria.png";
@@ -70,7 +109,7 @@ const ReporteEdades = () => {
 
   const exportCSV = useCallback(() => {
     const headers = ["Rango etario", "Pasajeros", "Porcentaje", "Variación"];
-    const rows = segmentos.map((s: any) =>
+    const rows = segmentos.map((s) =>
       [
         s.rango,
         s.pasajerosUnicos,
@@ -78,6 +117,16 @@ const ReporteEdades = () => {
         `${s.variacion >= 0 ? "+" : ""}${s.variacion}%`,
       ].join(","),
     );
+    if (sinInformacion > 0) {
+      rows.push(
+        [
+          "Sin información",
+          sinInformacion,
+          `${((sinInformacion / totalConSinInfo) * 100).toFixed(1)}%`,
+          "—",
+        ].join(","),
+      );
+    }
     const csv = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -86,12 +135,31 @@ const ReporteEdades = () => {
     a.download = "distribucion-etaria.csv";
     a.click();
     URL.revokeObjectURL(url);
-  }, [segmentos]);
+  }, [segmentos, sinInformacion, totalConSinInfo]);
 
-  const totalTorta = segmentos.reduce(
-    (sum: number, s: any) => sum + s.pasajerosUnicos,
-    0,
-  );
+  const totalTorta = segmentos.reduce((sum, s) => sum + s.pasajerosUnicos, 0);
+
+  // Calcular ángulos para SVG
+  const segmentAngles = (() => {
+    let currentAngle = 0;
+    return segmentos.map((s) => {
+      const pct = totalTorta > 0 ? s.pasajerosUnicos / totalTorta : 0;
+      const angle = pct * 360;
+      const start = currentAngle;
+      currentAngle += angle;
+      return { start, end: currentAngle };
+    });
+  })();
+
+  // Calcular etiquetas para segmentos muy pequeños
+  const labelSegments = segmentos.map((s, i) => {
+    const angle = totalTorta > 0 ? (s.pasajerosUnicos / totalTorta) * 360 : 0;
+    const midAngle = segmentAngles[i].start + angle / 2;
+    const labelR = 75;
+    const lx = 110 + labelR * Math.cos(toRad(midAngle - 90));
+    const ly = 110 + labelR * Math.sin(toRad(midAngle - 90));
+    return { angle, midAngle, lx, ly };
+  });
 
   return (
     <Box className="page-enter">
@@ -121,18 +189,43 @@ const ReporteEdades = () => {
       />
 
       <Stack spacing={3}>
-        <ToggleButtonGroup
-          value={period}
-          exclusive
-          onChange={(_, v) => v !== null && setPeriod(v)}
-          size="small"
+        {/* Filtros */}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={2}
+          alignItems="center"
         >
-          {MONTH_OPTIONS.map((o) => (
-            <ToggleButton key={o.value} value={o.value}>
-              {o.label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
+          <ToggleButtonGroup
+            value={period}
+            exclusive
+            onChange={(_, v) => v !== null && setPeriod(v)}
+            size="small"
+          >
+            {MONTH_OPTIONS.map((o) => (
+              <ToggleButton key={o.value} value={o.value}>
+                {o.label}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+          <TextField
+            label="Desde"
+            type="date"
+            size="small"
+            slotProps={{ inputLabel: { shrink: true } }}
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            sx={{ maxWidth: 180 }}
+          />
+          <TextField
+            label="Hasta"
+            type="date"
+            size="small"
+            slotProps={{ inputLabel: { shrink: true } }}
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            sx={{ maxWidth: 180 }}
+          />
+        </Stack>
 
         {isLoading && (
           <Typography color="text.secondary">Cargando...</Typography>
@@ -140,9 +233,9 @@ const ReporteEdades = () => {
 
         {data && (
           <>
-            {data.sinInformacion > 0 && (
+            {sinInformacion > 0 && (
               <Chip
-                label={`${data.sinInformacion} pasajeros sin fecha de nacimiento`}
+                label={`${sinInformacion} pasajeros sin fecha de nacimiento`}
                 color="default"
                 variant="outlined"
                 sx={{ alignSelf: "flex-start" }}
@@ -164,7 +257,7 @@ const ReporteEdades = () => {
               />
             )}
 
-            {/* Gráfico de torta (CSS puro) */}
+            {/* Gráfico de torta SVG */}
             <Card variant="outlined" ref={chartRef}>
               <CardContent>
                 <Typography variant="subtitle1" fontWeight={700} gutterBottom>
@@ -179,84 +272,76 @@ const ReporteEdades = () => {
                       flexWrap: "wrap",
                     }}
                   >
-                    <Box
-                      sx={{
-                        position: "relative",
-                        width: 220,
-                        height: 220,
-                        borderRadius: "50%",
-                        background: `conic-gradient(${segmentos
-                          .map((s: any, i: number) => {
-                            const pct = (s.pasajerosUnicos / totalTorta) * 100;
-                            const prevPct = segmentos
-                              .slice(0, i)
-                              .reduce(
-                                (sum: number, seg: any) =>
-                                  sum +
-                                  (seg.pasajerosUnicos / totalTorta) * 100,
-                                0,
-                              );
-                            return `${COLORS[i % COLORS.length]} ${prevPct}% ${prevPct + pct}%`;
-                          })
-                          .join(", ")})`,
-                        flexShrink: 0,
-                      }}
+                    <svg
+                      width={220}
+                      height={220}
+                      viewBox="0 0 220 220"
+                      style={{ flexShrink: 0 }}
                     >
-                      {segmentos.map((s: any) => {
-                        const pct = (s.pasajerosUnicos / totalTorta) * 100;
-                        return pct > 0 ? (
-                          <Tooltip
-                            key={s.rango}
-                            title={`${s.rango}: ${s.pasajerosUnicos} pasajeros (${pct.toFixed(1)}%)`}
-                          >
-                            <Box
-                              sx={{
-                                position: "absolute",
-                                inset: 0,
-                                cursor: "pointer",
-                                "&:hover": { opacity: 0.8 },
-                              }}
-                              onClick={() =>
-                                alert(
-                                  `${s.rango}: ${s.pasajerosUnicos} pasajeros`,
-                                )
-                              }
-                            />
-                          </Tooltip>
-                        ) : null;
-                      })}
-                    </Box>
-                    <Stack spacing={1}>
-                      {segmentos.map((s: any, i: number) => {
-                        const pct =
-                          totalTorta > 0
-                            ? ((s.pasajerosUnicos / totalTorta) * 100).toFixed(
-                                1,
-                              )
-                            : 0;
+                      {segmentos.map((s, i) => {
+                        const { start, end } = segmentAngles[i];
+                        const d = sectorPath(110, 110, 100, start, end);
                         return (
-                          <Stack
-                            key={s.rango}
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                          >
-                            <Box
-                              sx={{
-                                width: 14,
-                                height: 14,
-                                borderRadius: "3px",
-                                backgroundColor: COLORS[i % COLORS.length],
+                          <g key={s.rango}>
+                            <path
+                              d={d}
+                              fill={COLORS[i % COLORS.length]}
+                              stroke="#fff"
+                              strokeWidth={2}
+                              style={{ cursor: "pointer" }}
+                              onClick={() => setSelectedSegment(s)}
+                              onMouseEnter={(e) => {
+                                (
+                                  e.currentTarget as SVGPathElement
+                                ).style.opacity = "0.8";
+                              }}
+                              onMouseLeave={(e) => {
+                                (
+                                  e.currentTarget as SVGPathElement
+                                ).style.opacity = "1";
                               }}
                             />
-                            <Typography variant="body2">{s.rango}</Typography>
-                            <Typography variant="body2" fontWeight={700}>
-                              {pct}%
-                            </Typography>
-                          </Stack>
+                            {labelSegments[i].angle > 15 && (
+                              <text
+                                x={labelSegments[i].lx}
+                                y={labelSegments[i].ly}
+                                fill="#fff"
+                                fontSize={12}
+                                fontWeight={700}
+                                textAnchor="middle"
+                                dominantBaseline="central"
+                                style={{ pointerEvents: "none" }}
+                              >
+                                {s.porcentaje}%
+                              </text>
+                            )}
+                          </g>
                         );
                       })}
-                      {data.sinInformacion > 0 && (
+                    </svg>
+                    <Stack spacing={1}>
+                      {segmentos.map((s, i) => (
+                        <Stack
+                          key={s.rango}
+                          direction="row"
+                          spacing={1}
+                          alignItems="center"
+                        >
+                          <Box
+                            sx={{
+                              width: 14,
+                              height: 14,
+                              borderRadius: "3px",
+                              backgroundColor: COLORS[i % COLORS.length],
+                            }}
+                          />
+                          <Typography variant="body2">{s.rango}</Typography>
+                          <Typography variant="body2" fontWeight={700}>
+                            {s.porcentaje}%
+                          </Typography>
+                        </Stack>
+                      ))}
+                      {sinInformacion > 0 && (
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Box
                             sx={{
@@ -270,11 +355,9 @@ const ReporteEdades = () => {
                             Sin información
                           </Typography>
                           <Typography variant="body2" fontWeight={700}>
-                            {(
-                              (data.sinInformacion /
-                                (total + data.sinInformacion)) *
-                              100
-                            ).toFixed(1)}
+                            {((sinInformacion / totalConSinInfo) * 100).toFixed(
+                              1,
+                            )}
                             %
                           </Typography>
                         </Stack>
@@ -314,7 +397,7 @@ const ReporteEdades = () => {
                       </TableRow>
                     </TableHead>
                     <TableBody>
-                      {segmentos.map((s: any) => {
+                      {segmentos.map((s) => {
                         const pct =
                           totalTorta > 0
                             ? ((s.pasajerosUnicos / totalTorta) * 100).toFixed(
@@ -356,7 +439,7 @@ const ReporteEdades = () => {
                           </TableRow>
                         );
                       })}
-                      {data.sinInformacion > 0 && (
+                      {sinInformacion > 0 && (
                         <TableRow>
                           <TableCell
                             sx={{
@@ -366,15 +449,11 @@ const ReporteEdades = () => {
                           >
                             Sin información
                           </TableCell>
+                          <TableCell align="right">{sinInformacion}</TableCell>
                           <TableCell align="right">
-                            {data.sinInformacion}
-                          </TableCell>
-                          <TableCell align="right">
-                            {(
-                              (data.sinInformacion /
-                                (total + data.sinInformacion)) *
-                              100
-                            ).toFixed(1)}
+                            {((sinInformacion / totalConSinInfo) * 100).toFixed(
+                              1,
+                            )}
                             %
                           </TableCell>
                           <TableCell align="right">—</TableCell>
@@ -387,6 +466,32 @@ const ReporteEdades = () => {
             </Card>
           </>
         )}
+
+        {/* Modal con detalle del segmento */}
+        <Dialog
+          open={!!selectedSegment}
+          onClose={() => setSelectedSegment(null)}
+        >
+          <DialogTitle>{selectedSegment?.rango}</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              <strong>Pasajeros únicos:</strong>{" "}
+              {selectedSegment?.pasajerosUnicos}
+              <br />
+              <strong>Porcentaje:</strong> {selectedSegment?.porcentaje}%
+              <br />
+              <strong>Variación vs mes anterior:</strong>{" "}
+              {selectedSegment && (
+                <Chip
+                  label={`${selectedSegment.variacion >= 0 ? "+" : ""}${selectedSegment.variacion}%`}
+                  color={selectedSegment.variacion >= 0 ? "success" : "error"}
+                  size="small"
+                  variant="outlined"
+                />
+              )}
+            </DialogContentText>
+          </DialogContent>
+        </Dialog>
       </Stack>
     </Box>
   );
