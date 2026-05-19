@@ -190,6 +190,20 @@ export const useUserEmail = (): string | null => {
   return getUserEmailFromToken();
 };
 
+/** Lee el nombre del usuario desde el JWT almacenado */
+export const getUserNameFromToken = (): string | null => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    if (!token) return null;
+    const payload = JSON.parse(
+      atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return payload?.name ?? null;
+  } catch {
+    return null;
+  }
+};
+
 /** Lee el userId del usuario desde el JWT almacenado */
 export const getAuthUserId = (): string | null => {
   try {
