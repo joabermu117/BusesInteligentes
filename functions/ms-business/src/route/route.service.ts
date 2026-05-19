@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Like, Repository } from 'typeorm';
+import { RouteStopsService } from '../routes-stops/route-stops.service';
 import { CreateRouteDto } from './dto/create-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
 import { Route } from './entities/route.entity';
-import { RouteStopsService } from '../routes-stops/route-stops.service';
 
 @Injectable()
 export class RouteService {
@@ -20,9 +20,17 @@ export class RouteService {
   }
 
   async findAll(name?: string): Promise<Route[]> {
-    const where = name ? { name: Like(`%${name}%`) } : {};
+    const where: any = { is_active: true };
+    if (name) where.name = Like(`%${name}%`);
     return await this.routeRepository.find({
       where,
+      relations: ['routeStops', 'routeStops.stop'],
+    });
+  }
+
+  async findInactive(): Promise<Route[]> {
+    return await this.routeRepository.find({
+      where: { is_active: false },
       relations: ['routeStops', 'routeStops.stop'],
     });
   }
@@ -44,10 +52,11 @@ export class RouteService {
 
   async remove(id: number): Promise<{ message: string }> {
     const route = await this.findOne(id);
-    // Eliminar route-stops primero
-    await this.routeStopsService.removeAllByRoute(id);
-    await this.routeRepository.remove(route);
-    return { message: `Route #${id} deleted successfully` };
+    // Soft-delete: marcar como inactiva en lugar de eliminar físicamente
+    // Esto evita errores de FK con schedules, nodes y route_stop
+    route.is_active = false;
+    await this.routeRepository.save(route);
+    return { message: `Route #${id} deactivated successfully` };
   }
 
   async findStopsByRoute(routeId: number) {
