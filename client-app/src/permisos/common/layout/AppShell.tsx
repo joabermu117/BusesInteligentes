@@ -86,6 +86,12 @@ const citizenItems: NavigationItem[] = [
     icon: <NearMeRounded />,
   },
   {
+    path: "/horarios",
+    label: "Horarios",
+    description: "Consulta de programaciones y horarios de buses.",
+    icon: <ScheduleRounded />,
+  },
+  {
     path: "/abordar",
     label: "Abordar",
     description: "Abordaje y generación de boleto.",

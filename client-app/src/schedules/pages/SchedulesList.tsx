@@ -10,10 +10,12 @@ import {
   TableRow,
   Tooltip,
 } from "@mui/material";
+import { useSnackbar } from "notistack";
 import { useState } from "react";
 import ConfirmActionDialog from "../../permisos/common/components/ConfirmActionDialog";
 import DataTable from "../../permisos/common/components/DataTable";
 import PageHeader from "../../permisos/common/components/PageHeader";
+import { extractErrorMessage } from "../../shared/utils/errorHandler";
 import type { Schedule } from "../models/schedule";
 import {
   SCHEDULE_RECURRENCE_LABELS,
@@ -27,6 +29,7 @@ import {
 import ScheduleFormDialog from "./ScheduleFormDialog";
 
 const SchedulesList = () => {
+  const { enqueueSnackbar } = useSnackbar();
   const { data: schedules, isLoading } = useSchedules();
   const { mutateAsync: deleteSchedule, isPending: isDeleting } =
     useDeleteSchedule();
@@ -42,8 +45,19 @@ const SchedulesList = () => {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    await deleteSchedule(deleteTarget.id);
-    setDeleteTarget(null);
+    try {
+      await deleteSchedule(deleteTarget.id);
+      enqueueSnackbar("Programación eliminada correctamente.", {
+        variant: "success",
+      });
+    } catch (e: unknown) {
+      enqueueSnackbar(
+        extractErrorMessage(e, "Error al eliminar la programación"),
+        { variant: "error" },
+      );
+    } finally {
+      setDeleteTarget(null);
+    }
   };
 
   const handleFormClose = () => {
@@ -56,7 +70,7 @@ const SchedulesList = () => {
       <ConfirmActionDialog
         open={!!deleteTarget}
         title="Eliminar programación"
-        description={`¿Estás seguro de eliminar esta programación? Esta acción no se puede deshacer.`}
+        description="¿Estás seguro de eliminar esta programación? Esta acción no se puede deshacer."
         confirmLabel="Eliminar"
         confirmDisabled={isDeleting}
         onCancel={() => setDeleteTarget(null)}
@@ -108,9 +122,13 @@ const SchedulesList = () => {
               {schedule.bus?.plate ?? "—"}
             </TableCell>
             <TableCell>
-              {schedule.bus?.company?.name ?? "—"}
+              {schedule.bus?.company?.nombre ?? "—"}
             </TableCell>
-            <TableCell>{schedule.routeId}</TableCell>
+            <TableCell>
+              {schedule.route
+                ? `${schedule.route.name} (${schedule.route.origin} → ${schedule.route.destination})`
+                : `#${schedule.routeId}`}
+            </TableCell>
             <TableCell>
               {new Date(schedule.departureTime).toLocaleString("es-CO")}
             </TableCell>
@@ -132,10 +150,7 @@ const SchedulesList = () => {
             <TableCell>
               <Box display="flex" gap={0.5}>
                 <Tooltip title="Editar">
-                  <IconButton
-                    size="small"
-                    onClick={() => handleEdit(schedule)}
-                  >
+                  <IconButton size="small" onClick={() => handleEdit(schedule)}>
                     <EditRounded fontSize="small" />
                   </IconButton>
                 </Tooltip>

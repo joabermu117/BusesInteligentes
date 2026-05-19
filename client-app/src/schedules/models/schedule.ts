@@ -22,7 +22,17 @@ export interface Schedule {
     id: number;
     plate: string;
     model: string;
-    company?: { id: number; name: string };
+    company?: {
+      id: number;
+      nombre: string;
+      email?: string;
+    };
+  };
+  route?: {
+    id: number;
+    name: string;
+    origin: string;
+    destination: string;
   };
 }
 
