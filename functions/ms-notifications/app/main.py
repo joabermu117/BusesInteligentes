@@ -7,6 +7,7 @@ Unico endpoint publico para enviar correos con plantilla generica.
 import logging
 
 from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 from app.config import settings
 from app.email_service import EmailService
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 # App
 # ------------------------------------------------------------------
 app = Flask(__name__)
+CORS(app)
 
 email_service = EmailService()
 

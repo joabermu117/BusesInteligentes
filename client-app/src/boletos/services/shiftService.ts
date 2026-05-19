@@ -21,6 +21,11 @@ export const fetchActiveShiftByDriver = async (
   return data;
 };
 
+export const fetchActiveShiftByBus = async (busId: number): Promise<Shift | null> => {
+  const { data } = await httpClient.get(`${API_URL}/api/shifts/bus/${busId}/active`);
+  return data;
+};
+
 export const startShift = async (
   shiftId: number,
   dto: { busCondition?: string; observations?: string }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchShiftsByDriver,
   fetchActiveShiftByDriver,
+  fetchActiveShiftByBus,
   startShift,
 } from "../services/shiftService";
 import type { Shift } from "../models/boletos";
@@ -18,6 +19,13 @@ export const useActiveShiftByDriver = (driverUserId: string) =>
     queryKey: ["shifts", "active", driverUserId],
     queryFn: () => fetchActiveShiftByDriver(driverUserId),
     enabled: !!driverUserId,
+  });
+
+export const useActiveShiftByBus = (busId: number) =>
+  useQuery<Shift | null>({
+    queryKey: ["shifts", "active", "bus", busId],
+    queryFn: () => fetchActiveShiftByBus(busId),
+    enabled: !!busId,
   });
 
 export const useStartShift = () => {

@@ -62,6 +62,17 @@ export class ShiftsService {
     return shift;
   }
 
+  async findActiveByBus(busId: number): Promise<Shift | null> {
+    const shift = await this.shiftRepository.findOne({
+      where: {
+        bus: { id: busId },
+        status: 'in_progress',
+      },
+      relations: ['bus', 'bus.gps', 'driver'],
+    });
+    return shift ?? null;
+  }
+
   async findByBus(busId: number): Promise<Shift[]> {
     return await this.shiftRepository.find({
       where: { bus: { id: busId } },

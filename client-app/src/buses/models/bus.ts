@@ -15,6 +15,7 @@ export interface Bus {
     id: number;
     nombre: string;
     nit: string;
+    email?: string;
   };
   gps?: {
     id: number;

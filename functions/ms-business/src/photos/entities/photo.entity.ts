@@ -6,7 +6,7 @@ export class Photo {
   @PrimaryGeneratedColumn()
   id?: number;
 
-  @Column()
+  @Column({ type: 'longtext' })
   url?: string;
 
   @Column({ nullable: true })

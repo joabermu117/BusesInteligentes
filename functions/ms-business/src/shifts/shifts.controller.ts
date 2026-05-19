@@ -17,7 +17,12 @@ export class ShiftsController {
   findAll() {
     return this.shiftsService.findAll();
   }
-
+  
+  @Get('bus/:busId/active')
+  findActiveByBus(@Param('busId') busId: string) {
+    return this.shiftsService.findActiveByBus(+busId);
+  }
+  
   @Get('bus/:busId')
   findByBus(@Param('busId') busId: string) {
     return this.shiftsService.findByBus(+busId);

@@ -1,7 +1,7 @@
 import { IsNumber, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class CreatePhotoDto {
-  @IsUrl()
+  @IsString()
   url?: string;
 
   @IsOptional()
