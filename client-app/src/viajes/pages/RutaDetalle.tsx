@@ -1,6 +1,7 @@
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import AccessTimeRounded from "@mui/icons-material/AccessTimeRounded";
 import AttachMoneyRounded from "@mui/icons-material/AttachMoneyRounded";
+import RouteRounded from "@mui/icons-material/RouteRounded";
 import StraightenRounded from "@mui/icons-material/StraightenRounded";
 import {
   Box,
@@ -13,10 +14,14 @@ import {
   Stack,
   Typography,
 } from "@mui/material";
+import { useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import PageHeader from "../../permisos/common/components/PageHeader";
-import MapaRuta from "../components/MapaRuta";
+import { useRouteRoadGeometry } from "../hooks/useRouteRoadGeometry";
+import type { SelectedStopData } from "../components/MapaSeleccionRuta";
+import MapaSeleccionRuta from "../components/MapaSeleccionRuta";
 import { useParaderosByRuta, useRuta } from "../stores/useRutasStore";
+import { formatCurrency, formatDuration } from "../../shared/utils/format";
 
 const RutaDetalle = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +30,32 @@ const RutaDetalle = () => {
   const { data: ruta, isLoading: isLoadingRuta } = useRuta(routeId);
   const { data: paraderos, isLoading: isLoadingParaderos } =
     useParaderosByRuta(routeId);
+
+  const { geometry, isLoading: geomLoading, fetchRoute } =
+    useRouteRoadGeometry();
+
+  // Convertir paraderos al formato que espera MapaSeleccionRuta
+  const selectedStops = useMemo((): SelectedStopData[] => {
+    if (!paraderos) return [];
+    return [...paraderos]
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((p) => ({
+        stop_id: p.stop_id,
+        name: p.stop.name,
+        address: p.stop.address,
+        latitude: p.stop.latitude,
+        longitude: p.stop.longitude,
+      }));
+  }, [paraderos]);
+
+  // Calcular geometría OSRM cuando cargan los paraderos
+  useEffect(() => {
+    if (selectedStops.length >= 2) {
+      fetchRoute(
+        selectedStops.map((s) => ({ lat: s.latitude, lng: s.longitude })),
+      );
+    }
+  }, [selectedStops, fetchRoute]);
 
   if (isLoadingRuta) {
     return (
@@ -44,18 +75,6 @@ const RutaDetalle = () => {
     );
   }
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("es-PE", {
-      style: "currency",
-      currency: "PEN",
-    }).format(value);
-
-  const formatDuration = (minutes: number) => {
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m} min`;
-  };
-
   return (
     <Box className="page-enter">
       <Button
@@ -72,6 +91,7 @@ const RutaDetalle = () => {
       />
 
       <Grid container spacing={3}>
+        {/* Panel izquierdo — info de la ruta */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Paper sx={{ p: 3 }}>
             <Stack gap={2.5}>
@@ -139,11 +159,83 @@ const RutaDetalle = () => {
                   <Typography variant="overline" color="text.secondary">
                     Tarifa
                   </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 800, color: "primary.main" }}>
+                  <Typography
+                    variant="h5"
+                    sx={{ fontWeight: 800, color: "primary.main" }}
+                  >
                     {formatCurrency(ruta.tarifa)}
                   </Typography>
                 </Box>
               </Stack>
+
+              {/* Geometría OSRM calculada en tiempo real */}
+              {geometry && (
+                <>
+                  <Divider />
+                  <Stack direction="row" alignItems="center" gap={1}>
+                    <RouteRounded color="action" />
+                    <Box>
+                      <Typography variant="overline" color="text.secondary">
+                        Ruta real por calles
+                      </Typography>
+                      <Stack direction="row" spacing={1} mt={0.5}>
+                        <Chip
+                          label={`${geometry.distanceKm} km`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`~${geometry.durationMin} min`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                      </Stack>
+                    </Box>
+                  </Stack>
+                </>
+              )}
+
+              <Divider />
+
+              {/* Lista de paraderos en orden */}
+              <Box>
+                <Typography variant="overline" color="text.secondary">
+                  Paraderos ({selectedStops.length})
+                </Typography>
+                <Stack spacing={0.75} mt={1}>
+                  {selectedStops.map((stop, index) => (
+                    <Stack
+                      key={stop.stop_id}
+                      direction="row"
+                      spacing={1}
+                      alignItems="center"
+                    >
+                      <Chip
+                        label={index + 1}
+                        size="small"
+                        color={
+                          index === 0
+                            ? "success"
+                            : index === selectedStops.length - 1
+                              ? "error"
+                              : "default"
+                        }
+                        sx={{ minWidth: 32 }}
+                      />
+                      <Box>
+                        <Typography variant="body2" fontWeight={600}>
+                          {stop.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {stop.address}
+                        </Typography>
+                      </Box>
+                    </Stack>
+                  ))}
+                </Stack>
+              </Box>
 
               <Box>
                 <Chip
@@ -155,14 +247,21 @@ const RutaDetalle = () => {
           </Paper>
         </Grid>
 
+        {/* Panel derecho — mapa con geometría OSRM */}
         <Grid size={{ xs: 12, md: 8 }}>
-          <Paper sx={{ p: 0, overflow: "hidden" }}>
+          <Paper sx={{ p: 0, overflow: "hidden", height: "100%", minHeight: 500 }}>
             {isLoadingParaderos ? (
-              <Box sx={{ display: "grid", placeItems: "center", height: 400 }}>
+              <Box sx={{ display: "grid", placeItems: "center", height: 500 }}>
                 <CircularProgress />
               </Box>
             ) : (
-              <MapaRuta paraderos={paraderos ?? []} />
+              <MapaSeleccionRuta
+                allStops={[]}
+                selectedStops={selectedStops}
+                geometry={geometry}
+                isGeometryLoading={geomLoading}
+                onToggleStop={() => {}}
+              />
             )}
           </Paper>
         </Grid>

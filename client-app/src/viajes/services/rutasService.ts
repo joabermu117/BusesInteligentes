@@ -18,7 +18,7 @@ export const fetchParaderosByRuta = async (
   routeId: number
 ): Promise<Paradero[]> => {
   const { data } = await httpClient.get(
-    `${API_URL}/api/routes/${routeId}/stops`
+    `${API_URL}/api/route-stops/route/${routeId}`,
   );
   return data;
 };

@@ -1,6 +1,10 @@
 import { IsInt, IsNotEmpty, Min } from 'class-validator';
 
-export class AddRouteStopDto {
+export class CreateRouteStopDto {
+  @IsInt()
+  @IsNotEmpty()
+  route_id?: number;
+
   @IsInt()
   @IsNotEmpty()
   stop_id?: number;

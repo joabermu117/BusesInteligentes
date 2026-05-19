@@ -112,7 +112,7 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
 
   // ── Consultar OSRM cuando cambien los stops seleccionados ──────
   useEffect(() => {
-    if (selectedStops.length >= 2) {
+    if (selectedStops.length >= 3) {
       fetchRoute(
         selectedStops.map((s) => ({ lat: s.latitude, lng: s.longitude })),
       );
@@ -187,8 +187,8 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
   };
 
   const handleSubmit = async () => {
-    if (selectedStops.length < 2) {
-      setStopError("La ruta debe tener al menos 2 paraderos.");
+    if (selectedStops.length < 3) {
+      setStopError("La ruta debe tener al menos 3 paraderos.");
       return;
     }
 
@@ -337,12 +337,12 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
                 label={`${selectedStops.length} seleccionados`}
                 size="small"
                 sx={{ ml: 1 }}
-                color={selectedStops.length >= 2 ? "success" : "warning"}
+                color={selectedStops.length >= 3 ? "success" : "warning"}
               />
             </Typography>
 
             {/* Info de ruta calculada */}
-            {selectedStops.length >= 2 && (
+            {selectedStops.length >= 3 && (
               <Stack direction="row" spacing={1} alignItems="center">
                 {geomLoading ? (
                   <CircularProgress size={16} />
@@ -411,7 +411,7 @@ const RouteFormDialog = ({ open, route, onClose }: RouteFormDialogProps) => {
           </Stack>
 
           {/* Indicador de ruta real contra línea recta */}
-          {geometry && selectedStops.length >= 2 && (
+          {geometry && selectedStops.length >= 3 && (
             <Box sx={{ mt: 1.5 }}>
               <Stack direction="row" spacing={3} flexWrap="wrap" useFlexGap>
                 <StopInfoRow

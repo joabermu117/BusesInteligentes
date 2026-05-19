@@ -1,14 +1,14 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
 import { Stop } from '../../stop/entities/stop.entity';
-import { Route } from './route.entity';
+import { Route } from '../../route/entities/route.entity';
 
 @Entity('route_stop')
 export class RouteStop {
   @PrimaryColumn({ type: 'int' })
-  route_id: number;
+  route_id?: number;
 
   @PrimaryColumn({ type: 'int' })
-  stop_id: number;
+  stop_id?: number;
 
   @Column({ type: 'int' })
   order_index?: number;

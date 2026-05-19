@@ -3,6 +3,7 @@ import type {
   AddRouteStopPayload,
   CreateRoutePayload,
   Ruta,
+  RouteStop,
   Paradero,
   UpdateRoutePayload,
 } from "../models/ruta";
@@ -47,11 +48,12 @@ export const deleteRoute = async (
 export const addStopToRoute = async (
   routeId: number,
   payload: AddRouteStopPayload,
-): Promise<Paradero> => {
-  const { data } = await httpClient.post(
-    `${API_URL}/api/routes/${routeId}/stops`,
-    payload,
-  );
+): Promise<RouteStop> => {
+  const { data } = await httpClient.post(`${API_URL}/api/route-stops`, {
+    route_id: routeId,
+    stop_id: payload.stop_id,
+    order_index: payload.order_index,
+  });
   return data;
 };
 
@@ -60,7 +62,16 @@ export const removeStopFromRoute = async (
   stopId: number,
 ): Promise<{ message: string }> => {
   const { data } = await httpClient.delete(
-    `${API_URL}/api/routes/${routeId}/stops/${stopId}`,
+    `${API_URL}/api/route-stops/route/${routeId}/stop/${stopId}`,
+  );
+  return data;
+};
+
+export const fetchRouteStopsByRoute = async (
+  routeId: number,
+): Promise<RouteStop[]> => {
+  const { data } = await httpClient.get(
+    `${API_URL}/api/route-stops/route/${routeId}`,
   );
   return data;
 };

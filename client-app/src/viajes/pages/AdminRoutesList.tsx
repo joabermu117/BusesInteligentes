@@ -79,6 +79,7 @@ const AdminRoutesList = () => {
 
       <DataTable
         columns={[
+          "ID",
           "Nombre",
           "Origen",
           "Destino",
@@ -93,10 +94,11 @@ const AdminRoutesList = () => {
         emptyMessage={
           isLoading ? "Cargando rutas..." : "No hay rutas registradas."
         }
-        colSpan={9}
+        colSpan={10}
       >
         {routes?.map((route) => (
           <TableRow key={route.id} hover>
+            <TableCell sx={{ color: "text.secondary", fontSize: "0.8rem" }}>#{route.id}</TableCell>
             <TableCell sx={{ fontWeight: 700 }}>{route.name}</TableCell>
             <TableCell>{route.origin}</TableCell>
             <TableCell>{route.destination}</TableCell>
