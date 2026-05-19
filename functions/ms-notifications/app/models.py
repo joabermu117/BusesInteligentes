@@ -1,21 +1,9 @@
-from pydantic import BaseModel, EmailStr
+import re
 
 
-class SendEmailRequest(BaseModel):
-    """Peticion generica para enviar un correo con la plantilla."""
-    to: EmailStr
-    subject: str
-    title: str = "Notificacion"
-    user_name: str = "Usuario"
-    message: str
-    footer: str = ""
-
-
-class HealthResponse(BaseModel):
-    status: str = "ok"
-    service: str = "ms-notifications"
-
-
-class EmailResponse(BaseModel):
-    success: bool
-    message: str
+def validate_email(email: str) -> str | None:
+    """Valida formato basico de email, retorna error o None."""
+    pattern = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+    if not re.match(pattern, email):
+        return "Formato de email invalido"
+    return None
