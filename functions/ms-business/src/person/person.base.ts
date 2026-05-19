@@ -13,6 +13,12 @@ export abstract class Person {
   person_id: string;
 
   /**
+   * Person's full name, synced from ms-security User.name
+   */
+  @Column({ nullable: true })
+  name?: string;
+
+  /**
    * Shared attributes between Citizen and Driver
    * Additional attributes are stored in MongoDB
    */

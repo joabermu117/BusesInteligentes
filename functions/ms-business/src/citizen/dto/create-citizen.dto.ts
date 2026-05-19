@@ -13,6 +13,11 @@ export class CreateCitizenDto {
   person_id: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name?: string;
+
+  @IsOptional()
   @IsDateString()
   birthDate?: string;
 

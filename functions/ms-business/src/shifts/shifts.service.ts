@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Equal, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Bus } from '../buses/entities/bus.entity';
 import { Driver } from '../driver/entities/driver.entity';
 import { CreateShiftDto } from './dto/create-shift.dto';
@@ -39,10 +39,18 @@ export class ShiftsService {
       );
     }
 
+    let driver: Driver | null = null;
+    if (createShiftDto.driverUserId) {
+      driver = await this.driverRepository.findOne({
+        where: { person_id: createShiftDto.driverUserId },
+      });
+    }
+
     const shift = this.shiftRepository.create({
       ...createShiftDto,
       startTime: new Date(createShiftDto.startTime!),
       bus,
+      driver: driver ?? undefined,
     });
     return await this.shiftRepository.save(shift);
   }
@@ -80,11 +88,11 @@ export class ShiftsService {
     });
   }
 
-  // Buscar turno activo por driverId
-  async findActiveByDriver(driverId: number): Promise<Shift | null> {
+  // Buscar turno activo por driverUserId
+  async findActiveByDriver(driverUserId: string): Promise<Shift | null> {
     return await this.shiftRepository.findOne({
       where: {
-        driver: Equal(driverId),
+        driverUserId,
         status: 'in_progress',
       },
       relations: ['bus', 'driver'],
@@ -139,6 +147,16 @@ export class ShiftsService {
   async update(id: number, updateShiftDto: UpdateShiftDto): Promise<Shift> {
     const shift = await this.findOne(id);
     const updated = Object.assign(shift, updateShiftDto);
+
+    if (updateShiftDto.driverUserId !== undefined) {
+      const driver = updateShiftDto.driverUserId
+        ? await this.driverRepository.findOne({
+            where: { person_id: updateShiftDto.driverUserId },
+          })
+        : null;
+      updated.driver = driver ?? undefined;
+    }
+
     return await this.shiftRepository.save(updated);
   }
 

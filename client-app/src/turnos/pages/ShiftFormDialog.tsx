@@ -126,7 +126,7 @@ const ShiftFormDialog = ({ open, shift, onClose }: ShiftFormDialogProps) => {
                       <PersonRounded sx={{ fontSize: 18, color: "text.secondary" }} />
                       <Box>
                         <Typography variant="body2" fontWeight={600}>
-                          {d.person_id.slice(0, 8)}...
+                          {d.name || `${d.person_id.slice(0, 8)}...`}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {d.licenseNumber ? `Lic. ${d.licenseNumber}` : "Sin licencia"}

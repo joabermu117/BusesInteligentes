@@ -2,8 +2,8 @@ import { IsDateString, IsEnum, IsInt, IsNumber, IsOptional, IsString } from 'cla
 
 export class CreateShiftDto {
   @IsOptional()
-  @IsInt()
-  driverId?: number;
+  @IsString()
+  driverUserId?: string;
 
   @IsDateString()
   startTime?: string;

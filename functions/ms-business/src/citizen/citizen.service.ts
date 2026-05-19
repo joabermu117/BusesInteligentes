@@ -33,19 +33,23 @@ export class CitizenService {
     return await this.citizenRepository.save(citizen);
   }
 
-  async activate(person_id: string, birthDate?: string): Promise<Citizen> {
+  async activate(person_id: string, name?: string, birthDate?: string): Promise<Citizen> {
     let citizen = await this.citizenRepository.findOne({
       where: { person_id },
     });
     if (!citizen) {
       citizen = this.citizenRepository.create({
         person_id,
+        name,
         isActive: true,
         birthDate: birthDate ? new Date(birthDate) : undefined,
       });
       return await this.citizenRepository.save(citizen);
     }
     citizen.isActive = true;
+    if (name) {
+      citizen.name = name;
+    }
     if (birthDate) {
       citizen.birthDate = new Date(birthDate);
     }

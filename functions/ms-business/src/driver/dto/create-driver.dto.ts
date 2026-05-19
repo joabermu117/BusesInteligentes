@@ -8,6 +8,11 @@ export class CreateDriverDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(50)
   licenseNumber?: string;
 

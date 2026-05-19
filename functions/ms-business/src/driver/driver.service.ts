@@ -33,15 +33,18 @@ export class DriverService {
     return await this.driverRepository.save(driver);
   }
 
-  async activate(person_id: string): Promise<Driver> {
+  async activate(person_id: string, name?: string): Promise<Driver> {
     let driver = await this.driverRepository.findOne({
       where: { person_id },
     });
     if (!driver) {
-      driver = this.driverRepository.create({ person_id, isActive: true });
+      driver = this.driverRepository.create({ person_id, name, isActive: true });
       return await this.driverRepository.save(driver);
     }
     driver.isActive = true;
+    if (name) {
+      driver.name = name;
+    }
     return await this.driverRepository.save(driver);
   }
 

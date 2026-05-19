@@ -112,9 +112,9 @@ const TurnosList = () => {
                   <PersonRounded sx={{ fontSize: 18, color: "text.secondary" }} />
                   <Box>
                     <Typography variant="body2" fontWeight={600}>
-                      {shift.driverUserId
+                      {shift.driver?.name || (shift.driverUserId
                         ? `${shift.driverUserId.slice(0, 12)}...`
-                        : "—"}
+                        : "—")}
                     </Typography>
                     {shift.driver?.licenseNumber && (
                       <Typography variant="caption" color="text.secondary">

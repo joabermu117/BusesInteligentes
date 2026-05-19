@@ -75,11 +75,11 @@ export class SecurityGuard implements CanActivate {
       if (response.data === true) return true;
       else throw new UnauthorizedException('Permisos insuficientes');
     } catch (error: unknown) {
-      // Si ms-security no está disponible (timeout, conexión rechazada),
+      // Si ms-security no está disponible o devuelve error interno,
       // permitir el acceso para no bloquear toda la app.
-      if (error instanceof AxiosError && !error.response) {
+      if (error instanceof AxiosError && (!error.response || error.response.status >= 500)) {
         this.logger.warn(
-          `ms-security no disponible (${error.code}), permitiendo acceso a ${method} ${url}`,
+          `ms-security no disponible o error interno (${error.code} ${error.response?.status}), permitiendo acceso a ${method} ${url}`,
         );
         return true;
       }

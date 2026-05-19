@@ -30,9 +30,7 @@ const IniciarTurno = () => {
   const navigate = useNavigate();
   const shiftId = Number(id);
 
-  const storedDriverUserId = localStorage.getItem("driverUserId");
-  const jwtUserId = getAuthUserId();
-  const driverUserId = storedDriverUserId ?? jwtUserId ?? "";
+  const driverUserId = getAuthUserId() ?? "";
   const { data: shifts, isLoading: loadingShifts } =
     useShiftsByDriver(driverUserId);
   const startShiftMutation = useStartShift();
@@ -45,13 +43,8 @@ const IniciarTurno = () => {
   useEffect(() => {
     if (!driverUserId) {
       navigate("/login", { replace: true });
-      return;
     }
-
-    if (!storedDriverUserId && jwtUserId) {
-      localStorage.setItem("driverUserId", jwtUserId);
-    }
-  }, [driverUserId, jwtUserId, navigate, storedDriverUserId]);
+  }, [driverUserId, navigate]);
 
   const shift = shifts?.find((s) => s.id === shiftId);
 

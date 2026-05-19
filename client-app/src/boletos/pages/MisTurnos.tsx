@@ -43,20 +43,13 @@ const formatDate = (dateStr?: string) => {
 
 const MisTurnos = () => {
   const navigate = useNavigate();
-  const storedDriverUserId = localStorage.getItem("driverUserId");
-  const jwtUserId = getAuthUserId();
-  const driverUserId = storedDriverUserId ?? jwtUserId ?? "";
+  const driverUserId = getAuthUserId() ?? "";
 
   useEffect(() => {
     if (!driverUserId) {
       navigate("/login", { replace: true });
-      return;
     }
-
-    if (!storedDriverUserId && jwtUserId) {
-      localStorage.setItem("driverUserId", jwtUserId);
-    }
-  }, [driverUserId, jwtUserId, navigate, storedDriverUserId]);
+  }, [driverUserId, navigate]);
 
   const { data: shifts, isLoading } = useShiftsByDriver(driverUserId);
 

@@ -21,8 +21,8 @@ export class DriverController {
   }
 
   @Post('activate')
-  activate(@Body() body: { person_id: string }) {
-    return this.driverService.activate(body.person_id);
+  activate(@Body() body: { person_id: string; name?: string }) {
+    return this.driverService.activate(body.person_id, body.name);
   }
 
   @Patch(':person_id/deactivate')

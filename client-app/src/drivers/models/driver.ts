@@ -1,5 +1,6 @@
 export interface Driver {
   person_id: string;
+  name?: string;
   licenseNumber?: string;
   licenseExpiration?: string;
   status?: string;

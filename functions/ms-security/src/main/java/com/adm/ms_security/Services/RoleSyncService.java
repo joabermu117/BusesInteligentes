@@ -68,11 +68,12 @@ public class RoleSyncService {
 
         String roleName = role.getName().trim();
         String personId = user.getId();
+        String userName = user.getName();
 
         if (isCitizenRole(roleName)) {
-            notifyBusiness(personId, "/api/citizens/activate", "role-assigned", roleName);
+            notifyBusinessWithName(personId, userName, "/api/citizens/activate", "role-assigned", roleName);
         } else if (isDriverRole(roleName)) {
-            notifyBusiness(personId, "/api/drivers/activate", "role-assigned", roleName);
+            notifyBusinessWithName(personId, userName, "/api/drivers/activate", "role-assigned", roleName);
         }
     }
 
@@ -105,6 +106,36 @@ public class RoleSyncService {
     private boolean isDriverRole(String roleName) {
         return ROLE_DRIVER.equalsIgnoreCase(roleName)
                 || ROLE_DRIVER_LEGACY.equalsIgnoreCase(roleName);
+    }
+
+    /**
+     * Sends a POST request to the business microservice to activate a profile,
+     * including the user's name so it can be stored in MySQL.
+     */
+    private void notifyBusinessWithName(String personId, String userName, String endpoint, String action, String roleName) {
+        String url = businessBaseUrl + endpoint;
+        HttpHeaders headers = buildHeaders();
+        Map<String, String> body = new java.util.HashMap<>();
+        body.put("person_id", personId);
+        if (userName != null && !userName.isEmpty()) {
+            body.put("name", userName);
+        }
+
+        try {
+            HttpEntity<Map<String, String>> request = new HttpEntity<>(body, headers);
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.POST, request, String.class);
+
+            if (response.getStatusCode().is2xxSuccessful()) {
+                LOGGER.info("RoleSync: {} '{}' activated for personId={} -> {} {}",
+                        roleName, action, personId, response.getStatusCode(), endpoint);
+            } else {
+                LOGGER.warn("RoleSync: {} '{}' returned non-2xx for personId={}: {}",
+                        roleName, action, personId, response.getStatusCode());
+            }
+        } catch (RestClientException e) {
+            LOGGER.error("RoleSync: Failed to notify business for {} '{}' personId={}: {}",
+                    roleName, action, personId, e.getMessage());
+        }
     }
 
     /**

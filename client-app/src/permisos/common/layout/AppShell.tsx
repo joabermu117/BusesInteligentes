@@ -385,6 +385,8 @@ const AppShell = () => {
 
   const handleLogout = () => {
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+    localStorage.removeItem("driverUserId");
+    localStorage.removeItem("citizenId");
     navigate("/login", { replace: true });
   };
 
