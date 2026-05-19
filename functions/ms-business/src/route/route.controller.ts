@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { CreateRouteDto } from './dto/create-route.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
 import { AddRouteStopDto } from './dto/add-route-stop.dto';
@@ -14,7 +14,7 @@ export class RouteController {
   }
 
   @Get()
-  findAll(@Param('name') name?: string) {
+  findAll(@Query('name') name?: string) {
     return this.routeService.findAll(name);
   }
 

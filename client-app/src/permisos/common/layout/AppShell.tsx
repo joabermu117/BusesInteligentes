@@ -22,8 +22,10 @@ import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import WorkHistoryRounded from "@mui/icons-material/WorkHistoryRounded";
 import {
   AppBar,
+  Avatar,
   Box,
   Button,
+  Chip,
   Collapse,
   Container,
   Divider,
@@ -39,7 +41,14 @@ import {
 } from "@mui/material";
 import { useMemo, useState, type ReactNode } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AUTH_TOKEN_STORAGE_KEY } from "../../../config/httpClient";
+import {
+  AUTH_TOKEN_STORAGE_KEY,
+  getAuthRoles,
+  getAuthUserId,
+  getUserEmailFromToken,
+  getUserNameFromToken,
+} from "../../../config/httpClient";
+import { useRoleStore } from "../../stores/useRoleStore";
 
 type NavigationItem = {
   path: string;
@@ -343,6 +352,24 @@ const AppShell = () => {
     Administración: true,
   });
 
+  const { roles } = useRoleStore();
+
+  const userName = getUserNameFromToken();
+  const userEmail = getUserEmailFromToken();
+  const userRoleIds = getAuthRoles();
+  const userId = getAuthUserId();
+
+  const firstRoleName = useMemo(() => {
+    if (userRoleIds.length === 0) return null;
+    const roleId = userRoleIds[0];
+    const role = roles.find((r) => r.id === roleId);
+    return role?.name ?? roleId;
+  }, [roles, userRoleIds]);
+
+  const moreRolesCount = useMemo(() => {
+    return Math.max(0, userRoleIds.length - 1);
+  }, [userRoleIds]);
+
   const activeItem = useMemo(() => {
     const allItems = navigationGroups.flatMap((g) => g.items);
     return (
@@ -427,14 +454,76 @@ const AppShell = () => {
             </Typography>
           </Box>
 
-          <Button
-            color="inherit"
-            variant="outlined"
-            startIcon={<LogoutRounded />}
-            onClick={handleLogout}
-          >
-            Cerrar sesión
-          </Button>
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            {/* User info: avatar, name, email */}
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              sx={{ display: { xs: "none", sm: "flex" } }}
+            >
+              <Avatar
+                sx={{
+                  width: 36,
+                  height: 36,
+                  bgcolor: "primary.main",
+                  fontSize: 15,
+                  fontWeight: 700,
+                }}
+              >
+                {userName?.charAt(0)?.toUpperCase() ?? "U"}
+              </Avatar>
+              <Box sx={{ lineHeight: 1.2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                  {userName ?? userEmail ?? "Usuario"}
+                </Typography>
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  {firstRoleName && (
+                    <Chip
+                      label={firstRoleName}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                      sx={{ height: 20, fontSize: 11 }}
+                    />
+                  )}
+                  {moreRolesCount > 0 && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ fontWeight: 600 }}
+                    >
+                      +{moreRolesCount} más
+                    </Typography>
+                  )}
+                </Stack>
+              </Box>
+            </Stack>
+
+            {/* Profile button */}
+            <Button
+              color="inherit"
+              variant="outlined"
+              size="small"
+              startIcon={<PersonRounded />}
+              onClick={() => {
+                if (userId) navigate(`/users/profile/${userId}`);
+              }}
+            >
+              Ver perfil
+            </Button>
+
+            <Divider orientation="vertical" flexItem />
+
+            <Button
+              color="inherit"
+              variant="outlined"
+              startIcon={<LogoutRounded />}
+              onClick={handleLogout}
+            >
+              Cerrar sesión
+            </Button>
+          </Stack>
         </Toolbar>
       </AppBar>
 
