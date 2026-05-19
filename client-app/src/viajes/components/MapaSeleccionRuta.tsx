@@ -92,14 +92,19 @@ const MapaSeleccionRuta = memo(
       [selectedStops],
     );
 
-    const allPoints = useMemo(
-      () =>
-        allStops.map((s) => ({
+    const allPoints = useMemo(() => {
+      if (allStops.length > 0) {
+        return allStops.map((s) => ({
           lat: s.latitude,
           lng: s.longitude,
-        })),
-      [allStops],
-    );
+        }));
+      }
+      // Si no hay allStops (vista ciudadano), usar los selectedStops
+      return selectedStops.map((s) => ({
+        lat: s.latitude,
+        lng: s.longitude,
+      }));
+    }, [allStops, selectedStops]);
 
     return (
       <Box
@@ -156,7 +161,34 @@ const MapaSeleccionRuta = memo(
             </div>
           )}
 
-          {/* Marcadores de todos los stops */}
+          {/* Marcadores de stops seleccionados (vista ciudadano: cuando allStops está vacío) */}
+          {allStops.length === 0 &&
+            selectedStops.map((stop, idx) => {
+              let icon = ICON_SELECTED(idx + 1);
+              if (idx === 0) icon = ICON_ORIGIN;
+              else if (idx === selectedStops.length - 1) icon = ICON_DESTINATION;
+
+              return (
+                <Marker
+                  key={stop.stop_id}
+                  position={[stop.latitude, stop.longitude]}
+                  icon={icon}
+                >
+                  <Popup>
+                    <Box sx={{ minWidth: 180 }}>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {stop.name}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {stop.address}
+                      </Typography>
+                    </Box>
+                  </Popup>
+                </Marker>
+              );
+            })}
+
+          {/* Marcadores de todos los stops disponibles (vista admin) */}
           {allStops.map((stop) => {
             const selIdx = selectedStops.findIndex(
               (s) => s.stop_id === stop.id,

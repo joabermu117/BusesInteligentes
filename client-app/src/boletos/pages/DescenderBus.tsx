@@ -106,7 +106,7 @@ const DescenderBus = () => {
               <Row label="Número de boleto" value={<Chip label={activeTicket.ticketNumber} color="primary" variant="outlined" size="small" />} />
               <Row label="Estado" value={<Chip label="Emitido" color="success" size="small" />} />
               {activeTicket.price && (
-                <Row label="Tarifa" value={`S/ ${Number(activeTicket.price).toFixed(2)}`} />
+                <Row label="Tarifa" value={`$ ${Number(activeTicket.price).toLocaleString("es-CO")}`} />
               )}
             </Box>
             <Divider sx={{ my: 2 }} />

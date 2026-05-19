@@ -92,10 +92,10 @@ const DetalleViaje = () => {
 
               <InfoRow icon={<PersonRounded color="action" />} label="Conductor">
                 <Typography variant="body1" fontWeight={600}>
-                  {ticket.driver?.driverUserId
-                    ? `Conductor #${ticket.driver.driverUserId}`
-                    : ticket.schedule?.bus?.plate
-                      ? "Asignado"
+                  {ticket.driver?.name
+                    ? ticket.driver.name
+                    : ticket.driver?.driverUserId
+                      ? `ID: ${ticket.driver.driverUserId.slice(0, 8)}...`
                       : "—"}
                 </Typography>
                 {ticket.driver?.licenseNumber && (

@@ -1,8 +1,8 @@
-/** Formatea moneda en soles */
+/** Formatea moneda en pesos colombianos */
 export const formatCurrency = (value: number): string =>
-  new Intl.NumberFormat("es-PE", {
+  new Intl.NumberFormat("es-CO", {
     style: "currency",
-    currency: "PEN",
+    currency: "COP",
   }).format(value);
 
 /** Formatea duración en minutos a "Xh Ym" */
@@ -12,10 +12,10 @@ export const formatDuration = (minutes: number): string => {
   return h > 0 ? `${h}h ${m}m` : `${m} min`;
 };
 
-/** Formatea fecha ISO a locale es-PE */
+/** Formatea fecha ISO a locale es-CO */
 export const formatDate = (dateStr?: string): string => {
   if (!dateStr) return "—";
-  return new Date(dateStr).toLocaleDateString("es-PE", {
+  return new Date(dateStr).toLocaleDateString("es-CO", {
     year: "numeric",
     month: "short",
     day: "numeric",

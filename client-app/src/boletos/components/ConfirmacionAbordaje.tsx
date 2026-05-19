@@ -73,7 +73,7 @@ const ConfirmacionAbordaje = ({
                 Tarifa
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                S/ {Number(ticket.price).toFixed(2)}
+                $ {Number(ticket.price).toLocaleString("es-CO")}
               </Typography>
             </Box>
             <Box
@@ -83,7 +83,7 @@ const ConfirmacionAbordaje = ({
                 Saldo restante
               </Typography>
               <Typography variant="body2" fontWeight={600}>
-                S/ {Number(remainingBalance).toFixed(2)}
+                $ {Number(remainingBalance).toLocaleString("es-CO")}
               </Typography>
             </Box>
             <Box
