@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Citizen } from '../citizen/entities/citizen.entity';
 import { Group } from '../group/entities/group.entity';
 import { CreateGroupPersonDto } from './dto/create-group-person.dto';
 import { UpdateGroupPersonDto } from './dto/update-group-person.dto';
+import { GroupMembershipLog } from './entities/group-membership-log.entity';
 import { GroupPerson } from './entities/group-person.entity';
 
 @Injectable()
@@ -16,98 +21,100 @@ export class GroupPersonService {
     private readonly groupRepository: Repository<Group>,
     @InjectRepository(Citizen)
     private readonly citizenRepository: Repository<Citizen>,
+    @InjectRepository(GroupMembershipLog)
+    private readonly logRepository: Repository<GroupMembershipLog>,
   ) {}
 
-  async create(createGroupPersonDto: CreateGroupPersonDto): Promise<GroupPerson> {
-    const group = await this.groupRepository.findOne({
-      where: { id: createGroupPersonDto.group_id },
+  private async log(
+    group_id: number,
+    person_id: string,
+    action: string,
+    action_by?: string,
+  ) {
+    await this.logRepository.save(
+      this.logRepository.create({ group_id, person_id, action, action_by_person_id: action_by }),
+    );
+  }
+
+  async create(dto: CreateGroupPersonDto): Promise<GroupPerson> {
+    const group = await this.groupRepository.findOne({ where: { id: dto.group_id } });
+    if (!group) throw new NotFoundException(`Group #${dto.group_id} not found`);
+
+    const person = await this.citizenRepository.findOne({ where: { person_id: dto.person_id } });
+    if (!person) throw new NotFoundException(`Citizen #${dto.person_id} not found`);
+
+    // Verificar si está bloqueado
+    const existing = await this.groupPersonRepository.findOne({
+      where: { group_id: dto.group_id, person_id: dto.person_id },
     });
-    if (!group) {
-      throw new NotFoundException(`Group #${createGroupPersonDto.group_id} not found`);
+    if (existing?.is_blocked) {
+      throw new BadRequestException('Este usuario está bloqueado y no puede unirse al grupo');
+    }
+    if (existing) {
+      throw new BadRequestException('El usuario ya es miembro del grupo');
     }
 
-    const person = await this.citizenRepository.findOne({
-      where: { person_id: createGroupPersonDto.person_id },
-    });
-    if (!person) {
-      throw new NotFoundException(`Citizen #${createGroupPersonDto.person_id} not found`);
-    }
-
-    const groupPerson = this.groupPersonRepository.create({
-      ...createGroupPersonDto,
-      group,
-      person,
-    });
-
-    return await this.groupPersonRepository.save(groupPerson);
+    const groupPerson = this.groupPersonRepository.create({ ...dto, group, person });
+    const saved = await this.groupPersonRepository.save(groupPerson);
+    await this.log(dto.group_id!, dto.person_id!, 'joined', dto.person_id!);
+    return saved;
   }
 
   async findAll(): Promise<GroupPerson[]> {
-    return await this.groupPersonRepository.find({
-      relations: ['group', 'person'],
-    });
+    return await this.groupPersonRepository.find({ relations: ['group', 'person'] });
   }
 
   async findByGroup(group_id: number): Promise<GroupPerson[]> {
     return await this.groupPersonRepository.find({
       where: { group_id },
       relations: ['person'],
+      order: { joined_at: 'ASC' },
     });
   }
 
   async findOne(group_id: number, person_id: string): Promise<GroupPerson> {
-    const groupPerson = await this.groupPersonRepository.findOne({
+    const gp = await this.groupPersonRepository.findOne({
       where: { group_id, person_id },
       relations: ['group', 'person'],
     });
-
-    if (!groupPerson) {
-      throw new NotFoundException(
-        `GroupPerson group_id=${group_id}, person_id=${person_id} not found`,
-      );
-    }
-
-    return groupPerson;
+    if (!gp) throw new NotFoundException(`Member not found`);
+    return gp;
   }
 
-  async update(
-    group_id: number,
-    person_id: string,
-    updateGroupPersonDto: UpdateGroupPersonDto,
-  ): Promise<GroupPerson> {
-    const groupPerson = await this.findOne(group_id, person_id);
-
-    if (updateGroupPersonDto.group_id !== undefined) {
-      const group = await this.groupRepository.findOne({
-        where: { id: updateGroupPersonDto.group_id },
-      });
-      if (!group) {
-        throw new NotFoundException(`Group #${updateGroupPersonDto.group_id} not found`);
-      }
-      groupPerson.group = group;
-      groupPerson.group_id = group.id!;
-    }
-
-    if (updateGroupPersonDto.person_id !== undefined) {
-      const person = await this.citizenRepository.findOne({
-        where: { person_id: updateGroupPersonDto.person_id },
-      });
-      if (!person) {
-        throw new NotFoundException(`Citizen #${updateGroupPersonDto.person_id} not found`);
-      }
-      groupPerson.person = person;
-      groupPerson.person_id = person.person_id;
-    }
-
-    Object.assign(groupPerson, updateGroupPersonDto);
-    return await this.groupPersonRepository.save(groupPerson);
+  async update(group_id: number, person_id: string, dto: UpdateGroupPersonDto): Promise<GroupPerson> {
+    const gp = await this.findOne(group_id, person_id);
+    Object.assign(gp, dto);
+    return await this.groupPersonRepository.save(gp);
   }
 
-  async remove(group_id: number, person_id: string): Promise<{ message: string }> {
-    const groupPerson = await this.findOne(group_id, person_id);
-    await this.groupPersonRepository.remove(groupPerson);
-    return {
-      message: `GroupPerson group_id=${group_id}, person_id=${person_id} deleted successfully`,
-    };
+  async promote(group_id: number, person_id: string, action_by: string): Promise<GroupPerson> {
+    const gp = await this.findOne(group_id, person_id);
+    gp.role = 'admin';
+    const saved = await this.groupPersonRepository.save(gp);
+    await this.log(group_id, person_id, 'promoted', action_by);
+    return saved;
+  }
+
+  async block(group_id: number, person_id: string, action_by: string): Promise<{ message: string }> {
+    const gp = await this.findOne(group_id, person_id);
+    gp.is_blocked = true;
+    await this.groupPersonRepository.save(gp);
+    await this.log(group_id, person_id, 'blocked', action_by);
+    return { message: `User ${person_id} blocked from group ${group_id}` };
+  }
+
+  async remove(group_id: number, person_id: string, action_by?: string): Promise<{ message: string }> {
+    const gp = await this.findOne(group_id, person_id);
+    const action = action_by === person_id ? 'left' : 'removed';
+    await this.groupPersonRepository.remove(gp);
+    await this.log(group_id, person_id, action, action_by ?? person_id);
+    return { message: `Member removed from group` };
+  }
+
+  async getMembershipLog(group_id: number): Promise<GroupMembershipLog[]> {
+    return await this.logRepository.find({
+      where: { group_id },
+      order: { action_at: 'DESC' },
+    });
   }
 }

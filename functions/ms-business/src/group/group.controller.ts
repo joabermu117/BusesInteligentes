@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { CreateGroupPersonDto } from '../group-person/dto/create-group-person.dto';
+import { GroupPersonService } from '../group-person/group-person.service';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { GroupService } from './group.service';
-import { GroupPersonService } from '../group-person/group-person.service';
-import { CreateGroupPersonDto } from '../group-person/dto/create-group-person.dto';
 
 @Controller('api/groups')
 export class GroupController {
@@ -13,13 +13,18 @@ export class GroupController {
   ) {}
 
   @Post()
-  create(@Body() createGroupDto: CreateGroupDto) {
-    return this.groupService.create(createGroupDto);
+  create(@Body() dto: CreateGroupDto) {
+    return this.groupService.create(dto);
   }
 
   @Get()
   findAll() {
     return this.groupService.findAll();
+  }
+
+  @Get('public')
+  findPublic(@Query('search') search?: string) {
+    return this.groupService.findPublic(search);
   }
 
   @Get(':id')
@@ -28,8 +33,8 @@ export class GroupController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateGroupDto: UpdateGroupDto) {
-    return this.groupService.update(+id, updateGroupDto);
+  update(@Param('id') id: string, @Body() dto: UpdateGroupDto) {
+    return this.groupService.update(+id, dto);
   }
 
   @Delete(':id')
@@ -37,17 +42,9 @@ export class GroupController {
     return this.groupService.remove(+id);
   }
 
-  // ─── Endpoints anidados: personas del grupo ───
-
   @Post(':id/persons')
-  addPerson(
-    @Param('id') id: string,
-    @Body() createGroupPersonDto: CreateGroupPersonDto,
-  ) {
-    return this.groupPersonService.create({
-      ...createGroupPersonDto,
-      group_id: +id,
-    });
+  addPerson(@Param('id') id: string, @Body() dto: CreateGroupPersonDto) {
+    return this.groupPersonService.create({ ...dto, group_id: +id });
   }
 
   @Get(':id/persons')
@@ -55,11 +52,35 @@ export class GroupController {
     return this.groupPersonService.findByGroup(+id);
   }
 
+  @Get(':id/log')
+  getMembershipLog(@Param('id') id: string) {
+    return this.groupPersonService.getMembershipLog(+id);
+  }
+
+  @Patch(':id/persons/:pid/promote')
+  promote(
+    @Param('id') id: string,
+    @Param('pid') pid: string,
+    @Body('action_by') actionBy: string,
+  ) {
+    return this.groupPersonService.promote(+id, pid, actionBy);
+  }
+
+  @Patch(':id/persons/:pid/block')
+  block(
+    @Param('id') id: string,
+    @Param('pid') pid: string,
+    @Body('action_by') actionBy: string,
+  ) {
+    return this.groupPersonService.block(+id, pid, actionBy);
+  }
+
   @Delete(':id/persons/:pid')
   removePerson(
     @Param('id') id: string,
     @Param('pid') pid: string,
+    @Body('action_by') actionBy: string,
   ) {
-    return this.groupPersonService.remove(+id, pid);
+    return this.groupPersonService.remove(+id, pid, actionBy);
   }
 }

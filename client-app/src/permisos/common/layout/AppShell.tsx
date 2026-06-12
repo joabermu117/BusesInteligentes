@@ -49,6 +49,7 @@ import {
   getUserNameFromToken,
 } from "../../../config/httpClient";
 import { useRoleStore } from "../../stores/useRoleStore";
+import GroupsRounded from "@mui/icons-material/GroupsRounded";
 
 type NavigationItem = {
   path: string;
@@ -121,6 +122,12 @@ const citizenItems: NavigationItem[] = [
     label: "Recargar tarjeta",
     description: "Recarga tu tarjeta con ePayco.",
     icon: <ConfirmationNumberRounded />,
+  },
+  {
+    path: "/grupos",
+    label: "Grupos",
+    description: "Únete a grupos públicos de la comunidad.",
+    icon: <GroupsRounded />,
   },
 ];
 
@@ -217,6 +224,12 @@ const adminItems: NavigationItem[] = [
     label: "Reporte incidentes",
     description: "Tendencia de incidentes por tipo.",
     icon: <BarChartRounded />,
+  },
+  {
+    path: "/grupos/admin",
+    label: "Grupos",
+    description: "Crea y administra grupos del sistema.",
+    icon: <GroupsRounded />,
   },
 ];
 

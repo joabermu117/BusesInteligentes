@@ -1,9 +1,9 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class CreateGroupDto {
   @IsString()
   @IsNotEmpty()
-  name: string;
+  name?: string;
 
   @IsOptional()
   @IsString()
@@ -11,5 +11,9 @@ export class CreateGroupDto {
 
   @IsString()
   @IsNotEmpty()
-  created_by_person_id: string;
+  created_by_person_id?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_public?: boolean;
 }

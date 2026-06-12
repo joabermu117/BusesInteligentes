@@ -5,10 +5,10 @@ import { Group } from '../../group/entities/group.entity';
 @Entity('group_persons')
 export class GroupPerson {
   @PrimaryColumn({ type: 'int' })
-  group_id: number;
+  group_id?: number;
 
   @PrimaryColumn({ type: 'varchar', length: 255 })
-  person_id: string;
+  person_id?: string;
 
   @ManyToOne(() => Group, (group) => group.groupPersons, {
     onDelete: 'CASCADE',
@@ -25,4 +25,7 @@ export class GroupPerson {
 
   @Column({ type: 'enum', enum: ['admin', 'member'], default: 'member' })
   role?: string;
+
+  @Column({ type: 'boolean', default: false })
+  is_blocked?: boolean;
 }

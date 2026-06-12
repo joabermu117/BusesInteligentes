@@ -1,17 +1,17 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class CreateGroupPersonDto {
+  @IsOptional()
   @IsNumber()
-  @IsNotEmpty()
-  group_id: number;
+  group_id?: number;
 
   @IsString()
-  @IsNotEmpty()
-  person_id: string;
+  person_id?: string;
 
   @IsOptional()
   joined_at?: Date;
 
+  @IsOptional()
   @IsEnum(['admin', 'member'])
-  role: string;
+  role?: string;
 }

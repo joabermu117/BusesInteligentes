@@ -43,8 +43,12 @@ import RutaDetalle from "./viajes/pages/RutaDetalle";
 import RutasList from "./viajes/pages/RutasList";
 import StopsList from "./viajes/pages/StopsList";
 import HorariosPage from "./schedules/pages/HorariosPage";
+import GruposPublicos from "./grupos/pages/GruposPublicos";
+import GrupoDetalle from "./grupos/pages/GrupoDetalle";
+import AdminGruposList from "./grupos/pages/AdminGruposList";
 
 import TurnosList from "./turnos/pages/TurnosList";
+import MisGrupos from "./grupos/pages/MisGrupos";
 
 const RequireAuth = () => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -106,6 +110,11 @@ function App() {
               <Route path="/programaciones" element={<SchedulesList />} />
               <Route path="/horarios" element={<HorariosPage />} />
               <Route path="/turnos/admin" element={<TurnosList />} />
+              <Route path="/grupos/mis-grupos" element={<MisGrupos />} />
+              <Route path="/grupos/admin" element={<AdminGruposList />} />
+              <Route path="/grupos/admin/:id" element={<GrupoDetalle />} />
+              <Route path="/grupos/:id" element={<GrupoDetalle />} />
+              <Route path="/grupos" element={<GruposPublicos />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </Route>
