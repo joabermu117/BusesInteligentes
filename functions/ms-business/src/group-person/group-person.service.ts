@@ -97,8 +97,20 @@ export class GroupPersonService {
 
   async block(group_id: number, person_id: string, action_by: string): Promise<{ message: string }> {
     const gp = await this.findOne(group_id, person_id);
+
     gp.is_blocked = true;
     await this.groupPersonRepository.save(gp);
+
+    await this.groupPersonRepository.remove(gp);
+
+    const blocked = this.groupPersonRepository.create({
+      group_id,
+      person_id,
+      is_blocked: true,
+      role: 'member',
+    });
+    await this.groupPersonRepository.save(blocked);
+
     await this.log(group_id, person_id, 'blocked', action_by);
     return { message: `User ${person_id} blocked from group ${group_id}` };
   }

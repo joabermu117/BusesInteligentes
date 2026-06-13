@@ -5,6 +5,7 @@ import { Citizen } from '../citizen/entities/citizen.entity';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { Group } from './entities/group.entity';
+import { GroupPerson } from '../group-person/entities/group-person.entity';
 
 @Injectable()
 export class GroupService {
@@ -13,6 +14,8 @@ export class GroupService {
     private readonly groupRepository: Repository<Group>,
     @InjectRepository(Citizen)
     private readonly citizenRepository: Repository<Citizen>,
+    @InjectRepository(GroupPerson)
+    private readonly groupPersonRepository: Repository<GroupPerson>,
   ) {}
 
   async create(createGroupDto: CreateGroupDto): Promise<Group> {
@@ -26,7 +29,17 @@ export class GroupService {
       is_public: createGroupDto.is_public ?? true,
       created_by: createdBy,
     });
-    return await this.groupRepository.save(group);
+    const savedGroup = await this.groupRepository.save(group);
+
+    await this.groupPersonRepository.save(
+      this.groupPersonRepository.create({
+        group_id: savedGroup.id!,
+        person_id: createGroupDto.created_by_person_id,
+        role: 'admin',
+      }),
+    );
+
+    return savedGroup;
   }
 
   async findAll(): Promise<Group[]> {
@@ -36,14 +49,21 @@ export class GroupService {
   }
 
   async findPublic(search?: string): Promise<Group[]> {
-    const where: any = { is_public: true };
-    if (search) where.name = Like(`%${search}%`);
-    const groups = await this.groupRepository.find({
-      where,
+    if (search) {
+      return await this.groupRepository.find({
+        where: [
+          { is_public: true, name: Like(`%${search}%`) },
+          { is_public: true, description: Like(`%${search}%`) },
+        ],
+        relations: ['groupPersons'],
+        order: { created_at: 'DESC' },
+      });
+    }
+    return await this.groupRepository.find({
+      where: { is_public: true },
       relations: ['groupPersons'],
       order: { created_at: 'DESC' },
     });
-    return groups;
   }
 
   async findOne(id: number): Promise<Group> {
