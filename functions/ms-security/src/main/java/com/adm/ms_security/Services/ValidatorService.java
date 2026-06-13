@@ -204,7 +204,15 @@ public class ValidatorService {
             normalizedUrl = normalizedUrl.substring(0, queryStartIndex);
         }
 
+        // Replace numeric IDs and MongoDB ObjectIds with "?"
         normalizedUrl = normalizedUrl.replaceAll("[0-9a-fA-F]{24}|\\d+", "?");
+
+        // Replace any text segment after known parameter patterns with "?"
+        // This handles cases like /forecast/Manizales, /preferences/user123, /check/user123
+        normalizedUrl = normalizedUrl.replaceAll(
+            "/(forecast|preferences|check|subscriptions|unsubscribe|eta|gps-update|active-buses|start|stop|status)/([^?/]+)",
+            "/$1/?"
+        );
 
         if (normalizedUrl.length() > 1 && normalizedUrl.endsWith("/")) {
             normalizedUrl = normalizedUrl.substring(0, normalizedUrl.length() - 1);
