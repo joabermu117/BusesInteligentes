@@ -8,7 +8,10 @@ import ExitToAppRounded from "@mui/icons-material/ExitToAppRounded";
 import ExpandLessRounded from "@mui/icons-material/ExpandLessRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import GppGoodRounded from "@mui/icons-material/GppGoodRounded";
+import GpsFixedRounded from "@mui/icons-material/GpsFixedRounded";
 import GroupRounded from "@mui/icons-material/GroupRounded";
+import NotificationsActiveRounded from "@mui/icons-material/NotificationsActiveRounded";
+import UmbrellaRounded from "@mui/icons-material/UmbrellaRounded";
 import HistoryRounded from "@mui/icons-material/HistoryRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
@@ -73,6 +76,24 @@ const citizenItems: NavigationItem[] = [
     label: "Dashboard",
     description: "Estado general de rutas, flota y seguridad.",
     icon: <DashboardRounded />,
+  },
+  {
+    path: "/buses/tracking",
+    label: "Seguimiento",
+    description: "Ubicación de buses en tiempo real.",
+    icon: <GpsFixedRounded />,
+  },
+  {
+    path: "/buses/proximity",
+    label: "Bus próximo",
+    description: "Notificaciones cuando tu bus se acerque.",
+    icon: <NotificationsActiveRounded />,
+  },
+  {
+    path: "/buses/weather",
+    label: "Clima",
+    description: "Alertas meteorológicas para tus viajes.",
+    icon: <UmbrellaRounded />,
   },
   {
     path: "/rutas",

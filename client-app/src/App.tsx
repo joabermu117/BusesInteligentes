@@ -18,6 +18,9 @@ import IniciarTurno from "./boletos/pages/IniciarTurno";
 import MisTurnos from "./boletos/pages/MisTurnos";
 import BusDetail from "./buses/pages/BusDetail";
 import BusesList from "./buses/pages/BusesList";
+import BusTrackingPage from "./buses/pages/BusTrackingPage";
+import ProximityNotificationPage from "./buses/pages/ProximityNotificationPage";
+import WeatherAlertPage from "./buses/pages/WeatherAlertPage";
 import CompaniesList from "./companies/pages/CompaniesList";
 import ErrorBoundary from "./components/ErrorBoundary";
 import {
@@ -91,6 +94,9 @@ function App() {
               <Route path="/turnos" element={<MisTurnos />} />
               <Route path="/turnos/:id/iniciar" element={<IniciarTurno />} />
               <Route path="/buses" element={<BusesList />} />
+              <Route path="/buses/tracking" element={<BusTrackingPage />} />
+              <Route path="/buses/proximity" element={<ProximityNotificationPage />} />
+              <Route path="/buses/weather" element={<WeatherAlertPage />} />
               <Route path="/buses/:id" element={<BusDetail />} />
               <Route path="/empresas" element={<CompaniesList />} />
               <Route path="/payment-methods" element={<PaymentMethodsList />} />

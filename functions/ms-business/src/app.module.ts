@@ -30,10 +30,14 @@ import { ShiftsModule } from './shifts/shifts.module';
 import { StopModule } from './stop/stop.module';
 import { TicketModule } from './ticket/ticket.module';
 import { RouteStopsModule } from './routes-stops/route-stops.module';
+import { TrackingModule } from './gateways/tracking/tracking.module';
+import { WeatherModule } from './weather/weather.module';
 
 @Module({
   providers: [{ provide: APP_GUARD, useClass: SecurityGuard }],
   imports: [
+    WeatherModule,
+    TrackingModule,
     NotificationsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({

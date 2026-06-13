@@ -1,320 +1,105 @@
 [
-  { "url": "/api/addresses", "method": "GET", "model": "direcciones" },
-  { "url": "/api/addresses/?", "method": "GET", "model": "direcciones" },
+  { "url": "/api/route-stops", "method": "GET", "model": "rutas" },
+  { "url": "/api/route-stops/route/?", "method": "GET", "model": "rutas" },
+  { "url": "/api/route-stops/stop/?", "method": "GET", "model": "rutas" },
+  { "url": "/api/route-stops", "method": "POST", "model": "rutas" },
   {
-    "url": "/api/addresses/citizen/?",
-    "method": "GET",
-    "model": "direcciones"
-  },
-  { "url": "/api/addresses", "method": "POST", "model": "direcciones" },
-  { "url": "/api/addresses/?", "method": "PATCH", "model": "direcciones" },
-  { "url": "/api/addresses/?", "method": "DELETE", "model": "direcciones" },
-
-  { "url": "/api/boarding/board", "method": "POST", "model": "abordaje" },
-  { "url": "/api/boarding/alight", "method": "POST", "model": "abordaje" },
-  {
-    "url": "/api/boarding/validate-payment",
-    "method": "POST",
-    "model": "abordaje"
-  },
-
-  { "url": "/api/buses", "method": "GET", "model": "buses" },
-  { "url": "/api/buses/?", "method": "GET", "model": "buses" },
-  { "url": "/api/buses/company/?", "method": "GET", "model": "buses" },
-  { "url": "/api/buses", "method": "POST", "model": "buses" },
-  { "url": "/api/buses/?", "method": "PATCH", "model": "buses" },
-  { "url": "/api/buses/?", "method": "DELETE", "model": "buses" },
-
-  { "url": "/api/citizens", "method": "GET", "model": "ciudadanos" },
-  { "url": "/api/citizens/?", "method": "GET", "model": "ciudadanos" },
-  { "url": "/api/citizens", "method": "POST", "model": "ciudadanos" },
-  { "url": "/api/citizens/activate", "method": "POST", "model": "ciudadanos" },
-  {
-    "url": "/api/citizens/?/deactivate",
+    "url": "/api/route-stops/?/?",
     "method": "PATCH",
-    "model": "ciudadanos"
-  },
-  { "url": "/api/citizens/?", "method": "PATCH", "model": "ciudadanos" },
-  { "url": "/api/citizens/?", "method": "DELETE", "model": "ciudadanos" },
-
-  {
-    "url": "/api/citizen-payment-methods",
-    "method": "GET",
-    "model": "métodos pago ciudadano"
+    "model": "rutas"
   },
   {
-    "url": "/api/citizen-payment-methods/?",
-    "method": "GET",
-    "model": "métodos pago ciudadano"
-  },
-  {
-    "url": "/api/citizen-payment-methods/citizen/?",
-    "method": "GET",
-    "model": "métodos pago ciudadano"
-  },
-  {
-    "url": "/api/citizen-payment-methods",
-    "method": "POST",
-    "model": "métodos pago ciudadano"
-  },
-  {
-    "url": "/api/citizen-payment-methods/?",
-    "method": "PATCH",
-    "model": "métodos pago ciudadano"
-  },
-  {
-    "url": "/api/citizen-payment-methods/?",
+    "url": "/api/route-stops/?/?",
     "method": "DELETE",
-    "model": "métodos pago ciudadano"
+    "model": "rutas"
   },
 
-  { "url": "/api/companies", "method": "GET", "model": "empresas" },
-  { "url": "/api/companies/?", "method": "GET", "model": "empresas" },
-  { "url": "/api/companies", "method": "POST", "model": "empresas" },
-  { "url": "/api/companies/?", "method": "PATCH", "model": "empresas" },
-  { "url": "/api/companies/?", "method": "DELETE", "model": "empresas" },
-
-  { "url": "/api/contracts", "method": "GET", "model": "contratos" },
-  { "url": "/api/contracts/?", "method": "GET", "model": "contratos" },
-  { "url": "/api/contracts/driver/?", "method": "GET", "model": "contratos" },
-  { "url": "/api/contracts/company/?", "method": "GET", "model": "contratos" },
-  { "url": "/api/contracts", "method": "POST", "model": "contratos" },
-  { "url": "/api/contracts/?", "method": "PATCH", "model": "contratos" },
-  { "url": "/api/contracts/?", "method": "DELETE", "model": "contratos" },
-
-  { "url": "/api/drivers", "method": "GET", "model": "conductores" },
-  { "url": "/api/drivers/?", "method": "GET", "model": "conductores" },
-  { "url": "/api/drivers", "method": "POST", "model": "conductores" },
-  { "url": "/api/drivers/activate", "method": "POST", "model": "conductores" },
   {
-    "url": "/api/drivers/?/deactivate",
-    "method": "PATCH",
-    "model": "conductores"
-  },
-  { "url": "/api/drivers/?", "method": "PATCH", "model": "conductores" },
-  { "url": "/api/drivers/?", "method": "DELETE", "model": "conductores" },
-
-  { "url": "/api/gps", "method": "GET", "model": "gps" },
-  { "url": "/api/gps/?", "method": "GET", "model": "gps" },
-  { "url": "/api/gps/bus/?", "method": "GET", "model": "gps" },
-  { "url": "/api/gps", "method": "POST", "model": "gps" },
-  { "url": "/api/gps/?", "method": "PATCH", "model": "gps" },
-  { "url": "/api/gps/?", "method": "DELETE", "model": "gps" },
-
-  { "url": "/api/groups", "method": "GET", "model": "grupos" },
-  { "url": "/api/groups/?", "method": "GET", "model": "grupos" },
-  { "url": "/api/groups/?/persons", "method": "GET", "model": "grupos" },
-  { "url": "/api/groups", "method": "POST", "model": "grupos" },
-  { "url": "/api/groups/?", "method": "PUT", "model": "grupos" },
-  { "url": "/api/groups/?/persons", "method": "POST", "model": "grupos" },
-  { "url": "/api/groups/?", "method": "DELETE", "model": "grupos" },
-  { "url": "/api/groups/?/persons/?", "method": "DELETE", "model": "grupos" },
-
-  { "url": "/api/histories", "method": "GET", "model": "historial viajes" },
-  { "url": "/api/histories/?", "method": "GET", "model": "historial viajes" },
-  {
-    "url": "/api/histories/ticket/?",
-    "method": "GET",
-    "model": "historial viajes"
-  },
-  {
-    "url": "/api/histories/person/?",
-    "method": "GET",
-    "model": "historial viajes"
-  },
-  { "url": "/api/histories", "method": "POST", "model": "historial viajes" },
-  { "url": "/api/histories/?", "method": "PATCH", "model": "historial viajes" },
-  {
-    "url": "/api/histories/?",
-    "method": "DELETE",
-    "model": "historial viajes"
-  },
-
-  { "url": "/api/incidents", "method": "GET", "model": "incidentes" },
-  { "url": "/api/incidents/?", "method": "GET", "model": "incidentes" },
-  { "url": "/api/incidents", "method": "POST", "model": "incidentes" },
-  { "url": "/api/incidents/?", "method": "PATCH", "model": "incidentes" },
-  { "url": "/api/incidents/?", "method": "DELETE", "model": "incidentes" },
-
-  {
-    "url": "/api/incidents-buses",
-    "method": "GET",
-    "model": "incidentes buses"
-  },
-  {
-    "url": "/api/incidents-buses/?",
-    "method": "GET",
-    "model": "incidentes buses"
-  },
-  {
-    "url": "/api/incidents-buses/bus/?",
-    "method": "GET",
-    "model": "incidentes buses"
-  },
-  {
-    "url": "/api/incidents-buses",
+    "url": "/api/tracking/gps-update",
     "method": "POST",
-    "model": "incidentes buses"
+    "model": "seguimiento buses"
   },
   {
-    "url": "/api/incidents-buses/?",
-    "method": "PATCH",
-    "model": "incidentes buses"
-  },
-  {
-    "url": "/api/incidents-buses/?",
-    "method": "DELETE",
-    "model": "incidentes buses"
-  },
-
-  { "url": "/api/messages", "method": "GET", "model": "mensajes" },
-  { "url": "/api/messages/?", "method": "GET", "model": "mensajes" },
-  { "url": "/api/messages", "method": "POST", "model": "mensajes" },
-  { "url": "/api/messages/?", "method": "PUT", "model": "mensajes" },
-  { "url": "/api/messages/?", "method": "DELETE", "model": "mensajes" },
-
-  { "url": "/api/nodes", "method": "GET", "model": "nodos" },
-  { "url": "/api/nodes/?", "method": "GET", "model": "nodos" },
-  { "url": "/api/nodes", "method": "POST", "model": "nodos" },
-  { "url": "/api/nodes/?", "method": "PUT", "model": "nodos" },
-  { "url": "/api/nodes/?", "method": "DELETE", "model": "nodos" },
-
-  { "url": "/api/payment-methods", "method": "GET", "model": "métodos pago" },
-  { "url": "/api/payment-methods/?", "method": "GET", "model": "métodos pago" },
-  { "url": "/api/payment-methods", "method": "POST", "model": "métodos pago" },
-  {
-    "url": "/api/payment-methods/?",
-    "method": "PATCH",
-    "model": "métodos pago"
-  },
-  {
-    "url": "/api/payment-methods/?",
-    "method": "DELETE",
-    "model": "métodos pago"
-  },
-
-  { "url": "/person", "method": "GET", "model": "personas" },
-  { "url": "/person/?", "method": "GET", "model": "personas" },
-  { "url": "/person", "method": "POST", "model": "personas" },
-  { "url": "/person/?", "method": "PATCH", "model": "personas" },
-  { "url": "/person/?", "method": "DELETE", "model": "personas" },
-
-  { "url": "/api/photos", "method": "GET", "model": "fotos" },
-  { "url": "/api/photos/?", "method": "GET", "model": "fotos" },
-  { "url": "/api/photos/incident-bus/?", "method": "GET", "model": "fotos" },
-  { "url": "/api/photos", "method": "POST", "model": "fotos" },
-  { "url": "/api/photos/?", "method": "PATCH", "model": "fotos" },
-  { "url": "/api/photos/?", "method": "DELETE", "model": "fotos" },
-
-  {
-    "url": "/api/recipient-groups",
+    "url": "/api/tracking/active-buses",
     "method": "GET",
-    "model": "grupos destinatarios"
+    "model": "seguimiento buses"
   },
   {
-    "url": "/api/recipient-groups/?",
+    "url": "/api/tracking/eta/?/stop/?",
     "method": "GET",
-    "model": "grupos destinatarios"
+    "model": "seguimiento buses"
   },
   {
-    "url": "/api/recipient-groups",
+    "url": "/api/tracking/eta/?/route/?",
+    "method": "GET",
+    "model": "seguimiento buses"
+  },
+
+  {
+    "url": "/api/proximity/subscribe",
     "method": "POST",
-    "model": "grupos destinatarios"
+    "model": "notificaciones proximidad"
   },
   {
-    "url": "/api/recipient-groups/?",
+    "url": "/api/proximity/unsubscribe/?",
+    "method": "DELETE",
+    "model": "notificaciones proximidad"
+  },
+  {
+    "url": "/api/proximity/subscriptions/?",
+    "method": "GET",
+    "model": "notificaciones proximidad"
+  },
+
+  {
+    "url": "/api/simulator/start",
+    "method": "POST",
+    "model": "simulador buses"
+  },
+  {
+    "url": "/api/simulator/stop",
+    "method": "POST",
+    "model": "simulador buses"
+  },
+  {
+    "url": "/api/simulator/status",
+    "method": "GET",
+    "model": "simulador buses"
+  },
+
+  {
+    "url": "/api/weather/forecast",
+    "method": "GET",
+    "model": "clima"
+  },
+  {
+    "url": "/api/weather/forecast/?",
+    "method": "GET",
+    "model": "clima"
+  },
+  {
+    "url": "/api/weather/preferences/?",
+    "method": "GET",
+    "model": "clima"
+  },
+  {
+    "url": "/api/weather/preferences/?",
+    "method": "POST",
+    "model": "clima"
+  },
+  {
+    "url": "/api/weather/preferences/?",
     "method": "PUT",
-    "model": "grupos destinatarios"
+    "model": "clima"
   },
   {
-    "url": "/api/recipient-groups/?",
+    "url": "/api/weather/preferences/?",
     "method": "DELETE",
-    "model": "grupos destinatarios"
-  },
-
-  {
-    "url": "/api/recipient-persons",
-    "method": "GET",
-    "model": "personas destinatarias"
+    "model": "clima"
   },
   {
-    "url": "/api/recipient-persons/?",
-    "method": "GET",
-    "model": "personas destinatarias"
-  },
-  {
-    "url": "/api/recipient-persons",
+    "url": "/api/weather/check/?",
     "method": "POST",
-    "model": "personas destinatarias"
-  },
-  {
-    "url": "/api/recipient-persons/?",
-    "method": "PUT",
-    "model": "personas destinatarias"
-  },
-  {
-    "url": "/api/recipient-persons/?",
-    "method": "DELETE",
-    "model": "personas destinatarias"
-  },
-
-  { "url": "/api/routes", "method": "GET", "model": "rutas" },
-  { "url": "/api/routes/?", "method": "GET", "model": "rutas" },
-  { "url": "/api/routes/?/stops", "method": "GET", "model": "rutas" },
-  { "url": "/api/routes", "method": "POST", "model": "rutas" },
-  { "url": "/api/routes/?", "method": "PUT", "model": "rutas" },
-  { "url": "/api/routes/?", "method": "DELETE", "model": "rutas" },
-
-  { "url": "/api/schedules", "method": "GET", "model": "programaciones" },
-  { "url": "/api/schedules/?", "method": "GET", "model": "programaciones" },
-  { "url": "/api/schedules/bus/?", "method": "GET", "model": "programaciones" },
-  {
-    "url": "/api/schedules/route/?",
-    "method": "GET",
-    "model": "programaciones"
-  },
-  { "url": "/api/schedules", "method": "POST", "model": "programaciones" },
-  { "url": "/api/schedules/?", "method": "PATCH", "model": "programaciones" },
-  { "url": "/api/schedules/?", "method": "DELETE", "model": "programaciones" },
-
-  { "url": "/api/shifts", "method": "GET", "model": "turnos" },
-  { "url": "/api/shifts/?", "method": "GET", "model": "turnos" },
-  { "url": "/api/shifts/bus/?", "method": "GET", "model": "turnos" },
-  { "url": "/api/shifts/driver/?/active", "method": "GET", "model": "turnos" },
-  { "url": "/api/shifts/driver/?", "method": "GET", "model": "turnos" },
-  { "url": "/api/shifts", "method": "POST", "model": "turnos" },
-  { "url": "/api/shifts/?/start", "method": "PATCH", "model": "turnos" },
-  { "url": "/api/shifts/?", "method": "PATCH", "model": "turnos" },
-  { "url": "/api/shifts/?", "method": "DELETE", "model": "turnos" },
-
-  { "url": "/api/stops", "method": "GET", "model": "paradas" },
-  { "url": "/api/stops/?", "method": "GET", "model": "paradas" },
-  { "url": "/api/stops/nearest", "method": "GET", "model": "paradas" },
-  { "url": "/api/stops", "method": "POST", "model": "paradas" },
-  { "url": "/api/stops/?", "method": "PUT", "model": "paradas" },
-  { "url": "/api/stops/?", "method": "DELETE", "model": "paradas" },
-
-  { "url": "/api/tickets", "method": "GET", "model": "boletos" },
-  { "url": "/api/tickets/?", "method": "GET", "model": "boletos" },
-  { "url": "/api/tickets/by-person/?", "method": "GET", "model": "boletos" },
-  { "url": "/api/tickets/?/detail", "method": "GET", "model": "boletos" },
-  { "url": "/api/tickets", "method": "POST", "model": "boletos" },
-  { "url": "/api/tickets/?", "method": "PATCH", "model": "boletos" },
-  { "url": "/api/tickets/?", "method": "DELETE", "model": "boletos" },
-
-  {
-    "url": "/api/reports/revenue-by-payment",
-    "method": "GET",
-    "model": "reportes"
-  },
-  {
-    "url": "/api/reports/passenger-age-distribution",
-    "method": "GET",
-    "model": "reportes"
-  },
-  {
-    "url": "/api/reports/incident-trends",
-    "method": "GET",
-    "model": "reportes"
+    "model": "clima"
   }
 ]
