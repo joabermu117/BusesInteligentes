@@ -52,6 +52,11 @@ import AdminGruposList from "./grupos/pages/AdminGruposList";
 
 import TurnosList from "./turnos/pages/TurnosList";
 import MisGrupos from "./grupos/pages/MisGrupos";
+import BandejaEntrada from "./mensajes/pages/BandejaEntrada";
+import MensajesEnviados from "./mensajes/pages/MensajesEnviados";
+import NuevoMensajeDirecto from "./mensajes/pages/NuevoMensajeDirecto";
+import EnviarMensajeGrupo from "./mensajes/pages/EnviarMensajeGrupo";
+import AlertasMasivas from "./mensajes/pages/AlertasMasivas";
 
 const RequireAuth = () => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -121,6 +126,11 @@ function App() {
               <Route path="/grupos/admin/:id" element={<GrupoDetalle />} />
               <Route path="/grupos/:id" element={<GrupoDetalle />} />
               <Route path="/grupos" element={<GruposPublicos />} />
+              <Route path="/mensajes/bandeja" element={<BandejaEntrada />} />
+              <Route path="/mensajes/enviados" element={<MensajesEnviados />} />
+              <Route path="/mensajes/nuevo" element={<NuevoMensajeDirecto />} />
+              <Route path="/mensajes/grupo" element={<EnviarMensajeGrupo />} />
+              <Route path="/mensajes/alertas" element={<AlertasMasivas />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </Route>

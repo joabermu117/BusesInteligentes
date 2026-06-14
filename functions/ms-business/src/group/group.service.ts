@@ -1,11 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Like, Repository } from 'typeorm';
+import { In, Like, Repository } from 'typeorm';
 import { Citizen } from '../citizen/entities/citizen.entity';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { Group } from './entities/group.entity';
 import { GroupPerson } from '../group-person/entities/group-person.entity';
+import { GroupMembershipLog } from '../group-person/entities/group-membership-log.entity';
 
 @Injectable()
 export class GroupService {
@@ -16,6 +17,8 @@ export class GroupService {
     private readonly citizenRepository: Repository<Citizen>,
     @InjectRepository(GroupPerson)
     private readonly groupPersonRepository: Repository<GroupPerson>,
+    @InjectRepository(GroupMembershipLog)
+    private readonly logRepository: Repository<GroupMembershipLog>,
   ) {}
 
   async create(createGroupDto: CreateGroupDto): Promise<Group> {
@@ -31,6 +34,7 @@ export class GroupService {
     });
     const savedGroup = await this.groupRepository.save(group);
 
+    // Agregar creador como admin
     await this.groupPersonRepository.save(
       this.groupPersonRepository.create({
         group_id: savedGroup.id!,
@@ -38,6 +42,44 @@ export class GroupService {
         role: 'admin',
       }),
     );
+
+    // Agregar miembros iniciales
+    const initialMembers = createGroupDto.member_person_ids ?? [];
+    const uniqueMembers = [...new Set(initialMembers)].filter(
+      (id) => id !== createGroupDto.created_by_person_id,
+    );
+
+    if (uniqueMembers.length > 0) {
+      const memberEntities = await this.citizenRepository.find({
+        where: { person_id: In(uniqueMembers), isActive: true },
+      });
+
+      const foundIds = new Set(memberEntities.map((c) => c.person_id));
+      const notFound = uniqueMembers.filter((id) => !foundIds.has(id));
+      if (notFound.length > 0) {
+        throw new NotFoundException(`Citizens not found: ${notFound.join(', ')}`);
+      }
+
+      const membersToSave = uniqueMembers.map((personId) =>
+        this.groupPersonRepository.create({
+          group_id: savedGroup.id!,
+          person_id: personId,
+          role: 'member',
+        }),
+      );
+      await this.groupPersonRepository.save(membersToSave);
+
+      // Registrar logs de ingreso
+      const logs = uniqueMembers.map((personId) =>
+        this.logRepository.create({
+          group_id: savedGroup.id!,
+          person_id: personId,
+          action: 'joined',
+          action_by_person_id: createGroupDto.created_by_person_id,
+        }),
+      );
+      await this.logRepository.save(logs);
+    }
 
     return savedGroup;
   }

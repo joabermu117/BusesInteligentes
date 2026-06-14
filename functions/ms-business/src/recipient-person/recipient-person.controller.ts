@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { CreateRecipientPersonDto } from './dto/create-recipient-person.dto';
 import { UpdateRecipientPersonDto } from './dto/update-recipient-person.dto';
 import { RecipientPersonService } from './recipient-person.service';
@@ -28,6 +28,11 @@ export class RecipientPersonController {
     @Body() updateRecipientPersonDto: UpdateRecipientPersonDto,
   ) {
     return this.recipientPersonService.update(+id, updateRecipientPersonDto);
+  }
+
+  @Patch(':id/read')
+  markAsRead(@Param('id') id: string) {
+    return this.recipientPersonService.markAsRead(+id);
   }
 
   @Delete(':id')

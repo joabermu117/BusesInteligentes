@@ -87,6 +87,16 @@ export class CitizenService {
     return await this.citizenRepository.save(updated);
   }
 
+  async search(q: string): Promise<Citizen[]> {
+    if (!q || q.trim().length < 2) return [];
+    return await this.citizenRepository
+      .createQueryBuilder('c')
+      .where('c.name LIKE :q', { q: `%${q.trim()}%` })
+      .andWhere('c.isActive = true')
+      .limit(20)
+      .getMany();
+  }
+
   async remove(person_id: string): Promise<{ message: string }> {
     const citizen = await this.findOne(person_id);
     await this.citizenRepository.remove(citizen);

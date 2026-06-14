@@ -3,6 +3,7 @@ export interface Group {
   name: string;
   description?: string;
   is_public: boolean;
+  image_url?: string;
   created_at?: string;
   created_by_person_id?: string;
   created_by?: {
@@ -41,13 +42,16 @@ export interface CreateGroupPayload {
   name: string;
   description?: string;
   is_public?: boolean;
+  image_url?: string;
   created_by_person_id: string;
+  member_person_ids?: string[];
 }
 
 export interface UpdateGroupPayload {
   name?: string;
   description?: string;
   is_public?: boolean;
+  image_url?: string;
 }
 
 export const GROUP_ACTION_LABELS: Record<string, string> = {

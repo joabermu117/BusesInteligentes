@@ -18,6 +18,9 @@ export class Group {
   @Column({ type: 'boolean', default: true })
   is_public?: boolean;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  image_url?: string;
+
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   created_at?: Date;
 

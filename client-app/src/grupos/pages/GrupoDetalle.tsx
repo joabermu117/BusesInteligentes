@@ -6,6 +6,7 @@ import PersonRemoveRounded from "@mui/icons-material/PersonRemoveRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -315,40 +316,50 @@ const GrupoDetalle = () => {
         alignItems="flex-start"
         mb={3}
       >
-        <Box>
-          <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
-            <Typography variant="h4" fontWeight={700}>
-              {group.name}
-            </Typography>
-            <Chip
-              label={group.is_public ? "Público" : "Privado"}
-              size="small"
-              color={group.is_public ? "success" : "default"}
-              variant="outlined"
+        <Stack direction="row" spacing={2} alignItems="flex-start">
+          {group.image_url && (
+            <Avatar
+              src={group.image_url}
+              alt={group.name}
+              variant="rounded"
+              sx={{ width: 80, height: 80 }}
             />
-            {isAdmin && (
-              <Chip
-                label="Administrador"
-                size="small"
-                color="primary"
-                icon={<AdminPanelSettingsRounded />}
-              />
-            )}
-            {isSystemAdmin && (
-              <Chip
-                label="Admin sistema"
-                size="small"
-                color="warning"
-                icon={<AdminPanelSettingsRounded />}
-              />
-            )}
-          </Stack>
-          {group.description && (
-            <Typography variant="body2" color="text.secondary">
-              {group.description}
-            </Typography>
           )}
-        </Box>
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+              <Typography variant="h4" fontWeight={700}>
+                {group.name}
+              </Typography>
+              <Chip
+                label={group.is_public ? "Público" : "Privado"}
+                size="small"
+                color={group.is_public ? "success" : "default"}
+                variant="outlined"
+              />
+              {isAdmin && (
+                <Chip
+                  label="Administrador"
+                  size="small"
+                  color="primary"
+                  icon={<AdminPanelSettingsRounded />}
+                />
+              )}
+              {isSystemAdmin && (
+                <Chip
+                  label="Admin sistema"
+                  size="small"
+                  color="warning"
+                  icon={<AdminPanelSettingsRounded />}
+                />
+              )}
+            </Stack>
+            {group.description && (
+              <Typography variant="body2" color="text.secondary">
+                {group.description}
+              </Typography>
+            )}
+          </Box>
+        </Stack>
 
         {isMember && !isSystemAdmin && (
           <Button
