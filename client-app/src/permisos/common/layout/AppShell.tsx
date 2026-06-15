@@ -252,6 +252,12 @@ const adminItems: NavigationItem[] = [
     description: "Crea y administra grupos del sistema.",
     icon: <GroupsRounded />,
   },
+  {
+    path: "/reportes/tiempo-real",
+    label: "Tiempo real",
+    description: "Monitoreo en vivo de flota, mapa e incidentes.",
+    icon: <GpsFixedRounded />,
+  },
 ];
 
 const navigationGroups: NavigationGroup[] = [

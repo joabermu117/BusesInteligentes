@@ -38,6 +38,7 @@ import RecargaEpayco from "./recarga/pages/RecargaEpayco";
 import ReporteEdades from "./reportes/pages/ReporteEdades";
 import ReporteIncidentes from "./reportes/pages/ReporteIncidentes";
 import ReporteIngresos from "./reportes/pages/ReporteIngresos";
+import ReporteTiempoReal from "./reportes/pages/ReporteTiempoReal";
 import SchedulesList from "./schedules/pages/SchedulesList";
 import MisTarjetas from "./tarjetas/pages/MisTarjetas";
 import AdminRoutesList from "./viajes/pages/AdminRoutesList";
@@ -105,6 +106,10 @@ function App() {
               <Route
                 path="/reportes/incidentes"
                 element={<ReporteIncidentes />}
+              />
+              <Route
+                path="/reportes/tiempo-real"
+                element={<ReporteTiempoReal />}
               />
               <Route path="/incidentes" element={<IncidentsList />} />
               <Route

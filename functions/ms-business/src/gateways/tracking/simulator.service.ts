@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Bus } from '../../buses/entities/bus.entity';
+import { Gps } from '../../gps/entities/gps.entity';
 import { Route } from '../../route/entities/route.entity';
 import { RouteStop } from '../../routes-stops/entities/route-stop.entity';
 import { TrackingService } from './tracking.service';
@@ -26,6 +27,8 @@ export class BusSimulatorService {
   constructor(
     @InjectRepository(Bus)
     private readonly busRepository: Repository<Bus>,
+    @InjectRepository(Gps)
+    private readonly gpsRepository: Repository<Gps>,
     @InjectRepository(Route)
     private readonly routeRepository: Repository<Route>,
     @InjectRepository(RouteStop)
@@ -58,6 +61,16 @@ export class BusSimulatorService {
     }
 
     this.simulatedBuses = [];
+
+    // Ensure every bus has a GPS record (create if missing)
+    for (const bus of buses) {
+      if (!bus.gps) {
+        const newGps = this.gpsRepository.create({ bus, active: true });
+        const savedGps = await this.gpsRepository.save(newGps);
+        bus.gps = savedGps;
+        this.logger.log(`GPS record created for bus #${bus.id}`);
+      }
+    }
 
     for (let i = 0; i < buses.length; i++) {
       const bus = buses[i];
