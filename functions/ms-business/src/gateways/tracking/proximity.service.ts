@@ -204,6 +204,9 @@ export class ProximityService {
             routeName,
             estimatedMinutes,
             stopName: routeStop.stop.name ?? `Paradero #${sub.stopId}`,
+            citizenId: sub.citizenId,
+            routeId: sub.routeId,
+            stopId: sub.stopId,
           });
 
           // Deactivate subscription after notification to avoid spamming

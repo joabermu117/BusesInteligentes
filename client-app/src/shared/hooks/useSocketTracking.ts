@@ -33,6 +33,9 @@ export interface ProximityNotification {
   routeName: string;
   estimatedMinutes: number;
   stopName: string;
+  citizenId?: string;
+  routeId?: number;
+  stopId?: number;
 }
 
 interface UseSocketTrackingOptions {

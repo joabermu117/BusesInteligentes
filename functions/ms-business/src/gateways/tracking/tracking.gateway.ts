@@ -158,6 +158,9 @@ export class TrackingGateway
       routeName: string;
       estimatedMinutes: number;
       stopName: string;
+      citizenId?: string;
+      routeId?: number;
+      stopId?: number;
     },
   ) {
     this.server?.to(clientId).emit('busProximity', notification);

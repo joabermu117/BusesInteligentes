@@ -1,3 +1,5 @@
+import CreditCardRounded from '@mui/icons-material/CreditCardRounded';
+import GpsFixedRounded from '@mui/icons-material/GpsFixedRounded';
 import {
   Alert,
   Button,
@@ -5,6 +7,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Stack,
   Typography,
 } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
@@ -15,11 +18,10 @@ import type { ProximityNotification } from '../../../shared/hooks/useSocketTrack
 
 /**
  * Global proximity notification listener.
- * Mount this once at the AppShell level — it will:
- *  1. Join the citizen's personal room for proximity alerts.
- *  2. Show a Dialog when a bus proximity notification arrives,
- *     regardless of which page the user is on.
- *  3. Provide a button to "Ver en mapa" that navigates to the tracking page.
+ * Mount this once at the AppShell level. Shows a dialog with:
+ *  - Bus info (route, plate, stop, ETA)
+ *  - Button to go pay/board the bus
+ *  - Button to view on map
  */
 const GlobalProximityListener = () => {
   const navigate = useNavigate();
@@ -48,6 +50,11 @@ const GlobalProximityListener = () => {
   const handleViewOnMap = () => {
     setNotification(null);
     navigate('/buses/tracking');
+  };
+
+  const handlePayAndBoard = () => {
+    setNotification(null);
+    navigate('/abordar');
   };
 
   const handleDismiss = () => {
@@ -89,20 +96,25 @@ const GlobalProximityListener = () => {
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 2.5, py: 1.5 }}>
-        <Button onClick={handleDismiss} color="inherit">
+      <DialogActions sx={{ px: 2.5, py: 1.5, flexDirection: { xs: 'column', sm: 'row' }, gap: 1 }}>
+        <Button onClick={handleDismiss} color="inherit" fullWidth>
           Descartar
         </Button>
         <Button
-          variant="contained"
+          variant="outlined"
           onClick={handleViewOnMap}
-          startIcon={
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-          }
+          fullWidth
+          startIcon={<GpsFixedRounded />}
         >
           Ver en mapa
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handlePayAndBoard}
+          fullWidth
+          startIcon={<CreditCardRounded />}
+        >
+          Pagar y abordar
         </Button>
       </DialogActions>
     </Dialog>
