@@ -97,6 +97,12 @@ export class RecipientPersonService {
     return await this.recipientPersonRepository.save(recipientPerson);
   }
 
+  async markAsRead(id: number): Promise<RecipientPerson> {
+    const rp = await this.findOne(id);
+    rp.read_at = rp.read_at ?? new Date();
+    return this.recipientPersonRepository.save(rp);
+  }
+
   async remove(id: number): Promise<{ message: string }> {
     const recipientPerson = await this.findOne(id);
     await this.recipientPersonRepository.remove(recipientPerson);

@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AlertsModule } from './alerts/alerts.module';
 import { AddressModule } from './address/address.module';
 import { BoardingModule } from './boarding/boarding.module';
 import { BusesModule } from './buses/buses.module';
@@ -10,6 +12,7 @@ import { CitizenModule } from './citizen/citizen.module';
 import { CompaniesModule } from './companies/companies.module';
 import { ContractModule } from './contract/contract.module';
 import { DriverModule } from './driver/driver.module';
+import { FcmModule } from './notifications-fcm/fcm.module';
 import { NotificationsModule } from './gateways/notifications/notifications.module';
 import { GpsModule } from './gps/gps.module';
 import { GroupModule } from './group/group.module';
@@ -38,7 +41,10 @@ import { WeatherModule } from './weather/weather.module';
   imports: [
     WeatherModule,
     TrackingModule,
+    FcmModule,
     NotificationsModule,
+    ScheduleModule.forRoot(),
+    AlertsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

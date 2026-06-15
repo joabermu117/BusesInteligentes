@@ -1,15 +1,17 @@
 import {
+  ConnectedSocket,
+  MessageBody,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  SubscribeMessage,
-  MessageBody,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 
 @WebSocketGateway({
   cors: { origin: '*' },
+  namespace: '/notifications',
 })
 export class NotificationsGateway
   implements OnGatewayConnection, OnGatewayDisconnect
@@ -18,23 +20,49 @@ export class NotificationsGateway
   server?: Server;
 
   handleConnection(client: Socket) {
-    const query = client.handshake.query;
-    console.log(`Nuevo dispositivo conectado: ${client.id}`);
-    console.log('Query del socket:', JSON.stringify(query));
-    client.emit('notifications', { hello: 'world' });
+    console.log(`[WS] Conectado: ${client.id}`);
+    client.emit('connected', { socketId: client.id });
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Dispositivo desconectado: ${client.id}`);
+    console.log(`[WS] Desconectado: ${client.id}`);
   }
 
-  @SubscribeMessage('message')
-  handleMessage(@MessageBody() data: any): string {
-    console.log('Mensaje recibido:', data);
-    return 'Mensaje recibido correctamente';
+  @SubscribeMessage('join-room')
+  handleJoinRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { personId: string },
+  ) {
+    if (data?.personId) {
+      client.join(`person:${data.personId}`);
+      console.log(`[WS] ${client.id} unido a room person:${data.personId}`);
+      return { joined: `person:${data.personId}` };
+    }
+    return { error: 'personId requerido' };
+  }
+
+  @SubscribeMessage('leave-room')
+  handleLeaveRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { personId: string },
+  ) {
+    if (data?.personId) {
+      client.leave(`person:${data.personId}`);
+      return { left: `person:${data.personId}` };
+    }
   }
 
   broadcastNotification(payload: any) {
-    this.server?.emit('notifications', payload);
+    this.server?.emit('notification', payload);
+  }
+
+  sendToUser(personId: string, event: string, payload: any) {
+    this.server?.to(`person:${personId}`).emit(event, payload);
+  }
+
+  sendToMany(personIds: string[], event: string, payload: any) {
+    for (const id of personIds) {
+      this.server?.to(`person:${id}`).emit(event, payload);
+    }
   }
 }

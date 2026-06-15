@@ -4,28 +4,32 @@ import ConfirmationNumberRounded from "@mui/icons-material/ConfirmationNumberRou
 import DashboardRounded from "@mui/icons-material/DashboardRounded";
 import DirectionsBusRounded from "@mui/icons-material/DirectionsBusRounded";
 import DomainRounded from "@mui/icons-material/DomainRounded";
+import EmailRounded from "@mui/icons-material/EmailRounded";
 import ExitToAppRounded from "@mui/icons-material/ExitToAppRounded";
 import ExpandLessRounded from "@mui/icons-material/ExpandLessRounded";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import GppGoodRounded from "@mui/icons-material/GppGoodRounded";
 import GpsFixedRounded from "@mui/icons-material/GpsFixedRounded";
 import GroupRounded from "@mui/icons-material/GroupRounded";
-import NotificationsActiveRounded from "@mui/icons-material/NotificationsActiveRounded";
-import UmbrellaRounded from "@mui/icons-material/UmbrellaRounded";
+import GroupsRounded from "@mui/icons-material/GroupsRounded";
 import HistoryRounded from "@mui/icons-material/HistoryRounded";
 import LogoutRounded from "@mui/icons-material/LogoutRounded";
 import MapRounded from "@mui/icons-material/MapRounded";
 import MenuRounded from "@mui/icons-material/MenuRounded";
 import NearMeRounded from "@mui/icons-material/NearMeRounded";
+import NotificationsActiveRounded from "@mui/icons-material/NotificationsActiveRounded";
 import PersonRounded from "@mui/icons-material/PersonRounded";
 import ScheduleRounded from "@mui/icons-material/ScheduleRounded";
+import SendRounded from "@mui/icons-material/SendRounded";
 import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import TimeToLeaveRounded from "@mui/icons-material/TimeToLeaveRounded";
+import UmbrellaRounded from "@mui/icons-material/UmbrellaRounded";
 import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
 import WorkHistoryRounded from "@mui/icons-material/WorkHistoryRounded";
 import {
   AppBar,
   Avatar,
+  Badge,
   Box,
   Button,
   Chip,
@@ -52,7 +56,8 @@ import {
   getUserNameFromToken,
 } from "../../../config/httpClient";
 import { useRoleStore } from "../../stores/useRoleStore";
-import GroupsRounded from "@mui/icons-material/GroupsRounded";
+import { useUnreadCount } from "../../../mensajes/stores/useMessagesStore";
+import { useFirebaseMessaging } from "../../../mensajes/hooks/useFirebaseMessaging";
 
 type NavigationItem = {
   path: string;
@@ -149,6 +154,19 @@ const citizenItems: NavigationItem[] = [
     label: "Grupos",
     description: "Únete a grupos públicos de la comunidad.",
     icon: <GroupsRounded />,
+  },
+  {
+    path: "/mensajes/bandeja",
+    label: "Mensajes",
+    description: "Bandeja de entrada y mensajes recibidos.",
+    icon: <EmailRounded />,
+    matchPath: "/mensajes",
+  },
+  {
+    path: "/mensajes/enviados",
+    label: "Enviados",
+    description: "Mensajes que has enviado.",
+    icon: <SendRounded />,
   },
 ];
 
@@ -257,6 +275,12 @@ const adminItems: NavigationItem[] = [
     label: "Tiempo real",
     description: "Monitoreo en vivo de flota, mapa e incidentes.",
     icon: <GpsFixedRounded />,
+  },
+  {
+    path: "/mensajes/alertas",
+    label: "Alertas masivas",
+    description: "Envía notificaciones a todos los ciudadanos.",
+    icon: <NotificationsActiveRounded />,
   },
 ];
 
@@ -400,10 +424,14 @@ const AppShell = () => {
 
   const { roles } = useRoleStore();
 
+  // Inicializar Firebase Cloud Messaging para notificaciones push
+  useFirebaseMessaging();
+
   const userName = getUserNameFromToken();
   const userEmail = getUserEmailFromToken();
   const userRoleIds = getAuthRoles();
   const userId = getAuthUserId();
+  const { data: unreadCounts } = useUnreadCount(userId ?? "");
 
   const firstRoleName = useMemo(() => {
     if (userRoleIds.length === 0) return null;
@@ -547,6 +575,17 @@ const AppShell = () => {
                 </Stack>
               </Box>
             </Stack>
+
+            {/* Messages button */}
+            <IconButton
+              color="inherit"
+              onClick={() => navigate("/mensajes/bandeja")}
+              title="Bandeja de entrada"
+            >
+              <Badge badgeContent={unreadCounts?.total} color="error" max={99}>
+                <EmailRounded />
+              </Badge>
+            </IconButton>
 
             {/* Profile button */}
             <Button

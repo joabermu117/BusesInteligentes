@@ -21,6 +21,9 @@ import { AUTH_TOKEN_STORAGE_KEY } from "../../config/httpClient";
 import { extractErrorMessage } from "../../shared/utils/errorHandler";
 import { useJoinGroup, usePublicGroups } from "../stores/useGroupsStore";
 
+const NOTIFICATIONS_URL =
+  import.meta.env.VITE_NOTIFICATIONS_URL || "http://localhost:8082";
+
 const getUserIdFromToken = (): string | null => {
   try {
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -41,29 +44,68 @@ const GruposPublicos = () => {
 
   const personId = getUserIdFromToken();
 
-  const handleJoin = async (groupId: number) => {
+  const isAlreadyMember = (group: any) =>
+    group.groupPersons?.some(
+      (gp: any) => gp.person_id === personId && !gp.is_blocked,
+    );
+
+  const isBlocked = (group: any) =>
+    group.groupPersons?.some(
+      (gp: any) => gp.person_id === personId && gp.is_blocked === true,
+    );
+
+  const handleJoin = async (group: any) => {
     if (!personId) {
-      enqueueSnackbar("No se pudo identificar tu usuario.", { variant: "error" });
+      enqueueSnackbar("No se pudo identificar tu usuario.", {
+        variant: "error",
+      });
       return;
     }
     try {
-      await joinGroup({ groupId, personId });
+      await joinGroup({ groupId: group.id, personId });
+
       enqueueSnackbar("¡Te uniste al grupo exitosamente! Bienvenido.", {
         variant: "success",
       });
+
+      // Notificación de bienvenida por email
+      const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+      const payload = token ? JSON.parse(atob(token.split(".")[1])) : null;
+      const userEmail = payload?.email;
+      const userName = payload?.name ?? "Usuario";
+
+      if (userEmail) {
+        fetch(`${NOTIFICATIONS_URL}/api/public/notifications/send-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: userEmail,
+            subject: `¡Bienvenido al grupo "${group.name}"!`,
+            title: "Bienvenida al grupo",
+            user_name: userName,
+            message: `Te has unido exitosamente al grupo <strong>${group.name}</strong>.<br/><br/>
+              ${group.description ? `<strong>Descripción:</strong> ${group.description}<br/><br/>` : ""}
+              Ya puedes participar y recibir mensajes de este grupo.`,
+            footer: "Si no solicitaste unirte a este grupo, contáctanos.",
+          }),
+        }).catch(() => {});
+      }
     } catch (e) {
-      enqueueSnackbar(extractErrorMessage(e, "No fue posible unirse al grupo"), {
-        variant: "error",
-      });
+      enqueueSnackbar(
+        extractErrorMessage(e, "No fue posible unirse al grupo"),
+        { variant: "error" },
+      );
     }
   };
 
-  const isAlreadyMember = (group: any) =>
-    group.groupPersons?.some((gp: any) => gp.person_id === personId);
-
   return (
     <Box className="page-enter">
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={1}
+      >
         <Box>
           <Typography variant="h4" fontWeight={700}>
             Grupos públicos
@@ -82,7 +124,7 @@ const GruposPublicos = () => {
       </Stack>
 
       <TextField
-        placeholder="Buscar grupos por nombre..."
+        placeholder="Buscar grupos por nombre o descripción..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         size="small"
@@ -106,6 +148,8 @@ const GruposPublicos = () => {
         <Stack spacing={2}>
           {groups.map((group) => {
             const alreadyMember = isAlreadyMember(group);
+            const blocked = isBlocked(group);
+
             return (
               <Card key={group.id} variant="outlined">
                 <CardContent>
@@ -116,24 +160,57 @@ const GruposPublicos = () => {
                     spacing={1}
                   >
                     <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        mb={0.5}
+                        flexWrap="wrap"
+                        useFlexGap
+                      >
                         <Typography variant="h6" fontWeight={700}>
                           {group.name}
                         </Typography>
-                        <Chip label="Público" size="small" color="success" variant="outlined" />
+                        <Chip
+                          label="Público"
+                          size="small"
+                          color="success"
+                          variant="outlined"
+                        />
                         {alreadyMember && (
-                          <Chip label="Ya eres miembro" size="small" color="primary" />
+                          <Chip
+                            label="Ya eres miembro"
+                            size="small"
+                            color="primary"
+                          />
+                        )}
+                        {blocked && (
+                          <Chip
+                            label="Bloqueado"
+                            size="small"
+                            color="error"
+                          />
                         )}
                       </Stack>
                       {group.description && (
-                        <Typography variant="body2" color="text.secondary" mb={1}>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          mb={1}
+                        >
                           {group.description}
                         </Typography>
                       )}
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        <PeopleRounded sx={{ fontSize: 16, color: "text.secondary" }} />
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        alignItems="center"
+                      >
+                        <PeopleRounded
+                          sx={{ fontSize: 16, color: "text.secondary" }}
+                        />
                         <Typography variant="caption" color="text.secondary">
-                          {group.groupPersons?.length ?? 0} miembros
+                          {group.groupPersons?.filter((gp: any) => !gp.is_blocked).length ?? 0} miembros
                         </Typography>
                       </Stack>
                     </Box>
@@ -146,16 +223,24 @@ const GruposPublicos = () => {
                       >
                         Ver detalles
                       </Button>
-                      {!alreadyMember && (
+                      {blocked ? (
+                        <Chip
+                          label="No puedes unirte"
+                          size="small"
+                          color="error"
+                          variant="outlined"
+                          sx={{ alignSelf: "center" }}
+                        />
+                      ) : !alreadyMember ? (
                         <Button
                           variant="contained"
                           size="small"
                           disabled={isJoining}
-                          onClick={() => handleJoin(group.id)}
+                          onClick={() => handleJoin(group)}
                         >
                           Unirse
                         </Button>
-                      )}
+                      ) : null}
                     </Stack>
                   </Stack>
                 </CardContent>

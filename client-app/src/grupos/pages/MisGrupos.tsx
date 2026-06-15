@@ -3,6 +3,7 @@ import GroupsRounded from "@mui/icons-material/GroupsRounded";
 import PeopleRounded from "@mui/icons-material/PeopleRounded";
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -88,33 +89,43 @@ const MisGrupos = () => {
                     alignItems={{ sm: "center" }}
                     spacing={1}
                   >
-                    <Box sx={{ flex: 1 }}>
-                      <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
-                        <Typography variant="h6" fontWeight={700}>
-                          {group.name}
-                        </Typography>
-                        <Chip
-                          label={group.is_public ? "Público" : "Privado"}
-                          size="small"
-                          color={group.is_public ? "success" : "default"}
-                          variant="outlined"
+                    <Stack direction="row" spacing={2} alignItems="flex-start" sx={{ flex: 1 }}>
+                      {group.image_url && (
+                        <Avatar
+                          src={group.image_url}
+                          alt={group.name}
+                          variant="rounded"
+                          sx={{ width: 56, height: 56, flexShrink: 0 }}
                         />
-                        {myMembership?.role === "admin" && (
-                          <Chip label="Admin" size="small" color="primary" />
-                        )}
-                      </Stack>
-                      {group.description && (
-                        <Typography variant="body2" color="text.secondary" mb={1}>
-                          {group.description}
-                        </Typography>
                       )}
-                      <Stack direction="row" spacing={0.5} alignItems="center">
-                        <PeopleRounded sx={{ fontSize: 16, color: "text.secondary" }} />
-                        <Typography variant="caption" color="text.secondary">
-                          {group.groupPersons?.length ?? 0} miembros
-                        </Typography>
-                      </Stack>
-                    </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                          <Typography variant="h6" fontWeight={700}>
+                            {group.name}
+                          </Typography>
+                          <Chip
+                            label={group.is_public ? "Público" : "Privado"}
+                            size="small"
+                            color={group.is_public ? "success" : "default"}
+                            variant="outlined"
+                          />
+                          {myMembership?.role === "admin" && (
+                            <Chip label="Admin" size="small" color="primary" />
+                          )}
+                        </Stack>
+                        {group.description && (
+                          <Typography variant="body2" color="text.secondary" mb={1}>
+                            {group.description}
+                          </Typography>
+                        )}
+                        <Stack direction="row" spacing={0.5} alignItems="center">
+                          <PeopleRounded sx={{ fontSize: 16, color: "text.secondary" }} />
+                          <Typography variant="caption" color="text.secondary">
+                            {group.groupPersons?.length ?? 0} miembros
+                          </Typography>
+                        </Stack>
+                      </Box>
+                    </Stack>
 
                     <Button
                       variant="outlined"

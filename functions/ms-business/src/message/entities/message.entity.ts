@@ -21,8 +21,26 @@ export class Message {
   @JoinColumn({ name: 'sender_person_id', referencedColumnName: 'person_id' })
   sender?: Citizen;
 
-  @Column({ type: 'enum', enum: ['personal', 'group'] })
+  @Column({ type: 'enum', enum: ['personal', 'group', 'mass_alert'] })
   message_type?: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude?: number;
+
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude?: number;
+
+  @Column({ type: 'boolean', default: false })
+  is_urgent?: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  scheduled_at?: Date;
+
+  @Column({ type: 'boolean', default: false })
+  is_readonly?: boolean;
+
+  @Column({ type: 'boolean', default: false })
+  is_dispatched?: boolean;
 
   @OneToMany(() => RecipientPerson, (recipientPerson) => recipientPerson.message)
   recipientPersons?: RecipientPerson[];

@@ -1,14 +1,20 @@
 import {
+  Autocomplete,
+  Chip,
+  CircularProgress,
   FormControlLabel,
   Stack,
   Switch,
   TextField,
+  Typography,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useEffect, useState } from "react";
 import FormDialog from "../../permisos/common/components/forms/FormDialog";
 import { AUTH_TOKEN_STORAGE_KEY } from "../../config/httpClient";
 import { extractErrorMessage } from "../../shared/utils/errorHandler";
+import type { CitizenSearchResult } from "../../mensajes/models/message";
+import { useCitizenSearch } from "../../mensajes/stores/useMessagesStore";
 import type { CreateGroupPayload, Group } from "../models/group";
 import { useCreateGroup, useUpdateGroup } from "../stores/useGroupsStore";
 
@@ -22,6 +28,7 @@ const emptyForm: CreateGroupPayload = {
   name: "",
   description: "",
   is_public: true,
+  image_url: "",
   created_by_person_id: "",
 };
 
@@ -44,6 +51,10 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
   const isSubmitting = isCreating || isUpdating;
 
   const [form, setForm] = useState<CreateGroupPayload>(emptyForm);
+  const [memberSearchQ, setMemberSearchQ] = useState("");
+  const [selectedMembers, setSelectedMembers] = useState<CitizenSearchResult[]>([]);
+
+  const { data: searchResults, isFetching: isSearching } = useCitizenSearch(memberSearchQ);
 
   useEffect(() => {
     if (group) {
@@ -51,6 +62,7 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
         name: group.name,
         description: group.description ?? "",
         is_public: group.is_public,
+        image_url: group.image_url ?? "",
         created_by_person_id: group.created_by_person_id ?? "",
       });
     } else {
@@ -59,6 +71,8 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
         created_by_person_id: getUserIdFromToken(),
       });
     }
+    setSelectedMembers([]);
+    setMemberSearchQ("");
   }, [group, open]);
 
   const handleChange =
@@ -76,13 +90,20 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
             name: form.name,
             description: form.description,
             is_public: form.is_public,
+            image_url: form.image_url,
           },
         });
         enqueueSnackbar("Grupo actualizado correctamente.", {
           variant: "success",
         });
       } else {
-        await createGroup(form);
+        const creatorId = getUserIdFromToken();
+        const memberIds = selectedMembers.map((m) => m.person_id);
+        await createGroup({
+          ...form,
+          created_by_person_id: creatorId,
+          member_person_ids: memberIds.length > 0 ? memberIds : undefined,
+        });
         enqueueSnackbar("Grupo creado correctamente.", { variant: "success" });
       }
       onClose();
@@ -126,6 +147,65 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
           rows={3}
           inputProps={{ maxLength: 500 }}
           placeholder="Describe el propósito del grupo..."
+        />
+
+        {!isEditing && (
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">Miembros iniciales (opcional)</Typography>
+            <Autocomplete
+              multiple
+              options={searchResults ?? []}
+              getOptionLabel={(o) => o.name ?? o.person_id}
+              filterOptions={(x) => x}
+              inputValue={memberSearchQ}
+              onInputChange={(_, v) => setMemberSearchQ(v)}
+              value={selectedMembers}
+              onChange={(_, v) => setSelectedMembers(v)}
+              loading={isSearching}
+              noOptionsText={
+                memberSearchQ.length < 2
+                  ? "Escribe al menos 2 caracteres para buscar"
+                  : "Sin resultados"
+              }
+              isOptionEqualToValue={(a, b) => a.person_id === b.person_id}
+              renderTags={(value, getTagProps) =>
+                value.map((opt, idx) => (
+                  <Chip
+                    key={opt.person_id}
+                    label={opt.name ?? opt.person_id}
+                    size="small"
+                    {...getTagProps({ index: idx })}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  placeholder="Buscar ciudadanos..."
+                  helperText="Selecciona miembros para agregar al crear el grupo"
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isSearching ? <CircularProgress size={16} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Stack>
+        )}
+
+        <TextField
+          label="URL de imagen del grupo (opcional)"
+          value={form.image_url ?? ""}
+          onChange={handleChange("image_url")}
+          fullWidth
+          inputProps={{ maxLength: 500 }}
+          placeholder="https://ejemplo.com/imagen.png"
+          helperText="URL pública de la imagen o ícono del grupo"
         />
 
         <FormControlLabel

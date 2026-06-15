@@ -9,7 +9,7 @@ export class CreateMessageDto {
   @IsNotEmpty()
   sender_person_id: string;
 
-  @IsEnum(['personal', 'group'])
+  @IsEnum(['personal', 'group', 'mass_alert'])
   @IsNotEmpty()
   message_type: string;
 }

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CitizenService } from './citizen.service';
 import { CreateCitizenDto } from './dto/create-citizen.dto';
@@ -28,6 +29,11 @@ export class CitizenController {
   @Patch(':person_id/deactivate')
   deactivate(@Param('person_id') person_id: string) {
     return this.citizenService.deactivate(person_id);
+  }
+
+  @Get('search')
+  search(@Query('q') q: string) {
+    return this.citizenService.search(q);
   }
 
   @Get()

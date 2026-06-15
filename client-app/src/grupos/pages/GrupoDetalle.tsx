@@ -6,6 +6,7 @@ import PersonRemoveRounded from "@mui/icons-material/PersonRemoveRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -19,7 +20,7 @@ import {
   Typography,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ConfirmActionDialog from "../../permisos/common/components/ConfirmActionDialog";
 import { AUTH_TOKEN_STORAGE_KEY } from "../../config/httpClient";
@@ -35,6 +36,12 @@ import {
   useRemoveMember,
 } from "../stores/useGroupsStore";
 
+const MS_SECURITY_URL =
+  import.meta.env.VITE_API_URL_PERMISOS?.replace("/api", "") ||
+  "http://localhost:8081";
+const NOTIFICATIONS_URL =
+  import.meta.env.VITE_NOTIFICATIONS_URL || "http://localhost:8082";
+
 const getUserIdFromToken = (): string | null => {
   try {
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -44,6 +51,41 @@ const getUserIdFromToken = (): string | null => {
   } catch {
     return null;
   }
+};
+
+const getUserById = async (
+  userId: string,
+): Promise<{ name: string; email: string } | null> => {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    const res = await fetch(`${MS_SECURITY_URL}/api/users/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+};
+
+const sendEmail = async (
+  to: string,
+  userName: string,
+  subject: string,
+  message: string,
+) => {
+  await fetch(`${NOTIFICATIONS_URL}/api/public/notifications/send-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      to,
+      subject,
+      title: subject,
+      user_name: userName,
+      message,
+      footer: "Sistema de Buses Inteligentes",
+    }),
+  }).catch(() => {});
 };
 
 const GrupoDetalle = () => {
@@ -65,30 +107,78 @@ const GrupoDetalle = () => {
 
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [searchMember, setSearchMember] = useState("");
+  const [logUsers, setLogUsers] = useState<Record<string, string>>({});
 
   const currentMember = members?.find((m) => m.person_id === personId);
   const isAdmin = currentMember?.role === "admin";
   const isMember = !!currentMember;
 
-  // Admin del sistema si viene desde /grupos/admin/:id
   const isSystemAdmin = location.pathname.includes("/grupos/admin/");
-
-  // Puede gestionar si es admin del grupo O admin del sistema
   const canManage = isAdmin || isSystemAdmin;
 
-  const filteredMembers = members?.filter((m) =>
-    m.person?.name?.toLowerCase().includes(searchMember.toLowerCase()) ||
-    m.person_id.toLowerCase().includes(searchMember.toLowerCase()),
+  const filteredMembers = members?.filter(
+    (m) =>
+      (m.person as any)?.name
+        ?.toLowerCase()
+        .includes(searchMember.toLowerCase()) ||
+      m.person_id.toLowerCase().includes(searchMember.toLowerCase()),
   );
+
+  // Resolver nombres del log desde ms-security
+  useEffect(() => {
+    if (!logs || logs.length === 0) return;
+
+    const ids = new Set<string>();
+    logs.forEach((log) => {
+      if (log.person_id) ids.add(log.person_id);
+      if (log.action_by_person_id) ids.add(log.action_by_person_id);
+    });
+
+    const resolveNames = async () => {
+      const resolved: Record<string, string> = {};
+      for (const id of ids) {
+        const user = await getUserById(id);
+        if (user?.name) resolved[id] = user.name;
+      }
+      setLogUsers(resolved);
+    };
+
+    resolveNames();
+  }, [logs]);
 
   const handleLeave = async () => {
     if (!personId) return;
     try {
       await leaveGroup({ groupId, personId });
-      enqueueSnackbar("Abandonaste el grupo exitosamente.", { variant: "success" });
+      enqueueSnackbar("Abandonaste el grupo exitosamente.", {
+        variant: "success",
+      });
+
+      // Notificar a los admins del grupo
+      const admins = members?.filter(
+        (m) => m.role === "admin" && m.person_id !== personId,
+      );
+      const leavingUser = await getUserById(personId);
+      if (admins && admins.length > 0 && leavingUser) {
+        for (const admin of admins) {
+          const adminUser = await getUserById(admin.person_id!);
+          if (adminUser?.email) {
+            await sendEmail(
+              adminUser.email,
+              adminUser.name,
+              `Un miembro abandonó el grupo "${group?.name}"`,
+              `El usuario <strong>${leavingUser.name}</strong> ha abandonado voluntariamente el grupo <strong>${group?.name}</strong>.`,
+            );
+          }
+        }
+      }
+
       navigate("/grupos");
     } catch (e) {
-      enqueueSnackbar(extractErrorMessage(e, "Error al abandonar el grupo"), { variant: "error" });
+      enqueueSnackbar(
+        extractErrorMessage(e, "Error al abandonar el grupo"),
+        { variant: "error" },
+      );
     } finally {
       setLeaveDialogOpen(false);
     }
@@ -97,30 +187,92 @@ const GrupoDetalle = () => {
   const handleRemove = async (targetPersonId: string) => {
     if (!personId) return;
     try {
-      await removeMember({ groupId, personId: targetPersonId, actionBy: personId });
+      await removeMember({
+        groupId,
+        personId: targetPersonId,
+        actionBy: personId,
+      });
       enqueueSnackbar("Miembro removido del grupo.", { variant: "success" });
+
+      // Notificar al miembro removido
+      const targetUser = await getUserById(targetPersonId);
+      if (targetUser?.email) {
+        await sendEmail(
+          targetUser.email,
+          targetUser.name,
+          `Has sido removido del grupo "${group?.name}"`,
+          `Has sido removido del grupo <strong>${group?.name}</strong> por un administrador.<br/><br/>
+          Ya no recibirás mensajes de este grupo.`,
+        );
+      }
     } catch (e) {
-      enqueueSnackbar(extractErrorMessage(e, "Error al remover miembro"), { variant: "error" });
+      enqueueSnackbar(
+        extractErrorMessage(e, "Error al remover miembro"),
+        { variant: "error" },
+      );
     }
   };
 
   const handlePromote = async (targetPersonId: string) => {
     if (!personId) return;
     try {
-      await promoteMember({ groupId, personId: targetPersonId, actionBy: personId });
-      enqueueSnackbar("Miembro promovido a administrador.", { variant: "success" });
+      await promoteMember({
+        groupId,
+        personId: targetPersonId,
+        actionBy: personId,
+      });
+      enqueueSnackbar("Miembro promovido a administrador.", {
+        variant: "success",
+      });
+
+      // Notificar al miembro promovido
+      const targetUser = await getUserById(targetPersonId);
+      if (targetUser?.email) {
+        await sendEmail(
+          targetUser.email,
+          targetUser.name,
+          `Eres administrador del grupo "${group?.name}"`,
+          `Has sido promovido a <strong>administrador</strong> del grupo <strong>${group?.name}</strong>.<br/><br/>
+          Ahora puedes gestionar los miembros del grupo.`,
+        );
+      }
     } catch (e) {
-      enqueueSnackbar(extractErrorMessage(e, "Error al promover miembro"), { variant: "error" });
+      enqueueSnackbar(
+        extractErrorMessage(e, "Error al promover miembro"),
+        { variant: "error" },
+      );
     }
   };
 
   const handleBlock = async (targetPersonId: string) => {
     if (!personId) return;
     try {
-      await blockMember({ groupId, personId: targetPersonId, actionBy: personId });
-      enqueueSnackbar("Miembro bloqueado. No podrá volver a unirse.", { variant: "success" });
+      await blockMember({
+        groupId,
+        personId: targetPersonId,
+        actionBy: personId,
+      });
+      enqueueSnackbar(
+        "Miembro bloqueado y removido. No podrá volver a unirse.",
+        { variant: "success" },
+      );
+
+      // Notificar al miembro bloqueado
+      const targetUser = await getUserById(targetPersonId);
+      if (targetUser?.email) {
+        await sendEmail(
+          targetUser.email,
+          targetUser.name,
+          `Has sido bloqueado del grupo "${group?.name}"`,
+          `Has sido bloqueado del grupo <strong>${group?.name}</strong> por un administrador.<br/><br/>
+          No podrás volver a unirte a este grupo.`,
+        );
+      }
     } catch (e) {
-      enqueueSnackbar(extractErrorMessage(e, "Error al bloquear miembro"), { variant: "error" });
+      enqueueSnackbar(
+        extractErrorMessage(e, "Error al bloquear miembro"),
+        { variant: "error" },
+      );
     }
   };
 
@@ -158,44 +310,57 @@ const GrupoDetalle = () => {
       </Button>
 
       {/* Header */}
-      <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={3}>
-        <Box>
-          <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
-            <Typography variant="h4" fontWeight={700}>
-              {group.name}
-            </Typography>
-            <Chip
-              label={group.is_public ? "Público" : "Privado"}
-              size="small"
-              color={group.is_public ? "success" : "default"}
-              variant="outlined"
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="flex-start"
+        mb={3}
+      >
+        <Stack direction="row" spacing={2} alignItems="flex-start">
+          {group.image_url && (
+            <Avatar
+              src={group.image_url}
+              alt={group.name}
+              variant="rounded"
+              sx={{ width: 80, height: 80 }}
             />
-            {/* Solo mostrar chip Admin si es admin del grupo, no del sistema */}
-            {isAdmin && (
-              <Chip
-                label="Administrador"
-                size="small"
-                color="primary"
-                icon={<AdminPanelSettingsRounded />}
-              />
-            )}
-            {isSystemAdmin && (
-              <Chip
-                label="Admin sistema"
-                size="small"
-                color="warning"
-                icon={<AdminPanelSettingsRounded />}
-              />
-            )}
-          </Stack>
-          {group.description && (
-            <Typography variant="body2" color="text.secondary">
-              {group.description}
-            </Typography>
           )}
-        </Box>
+          <Box>
+            <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+              <Typography variant="h4" fontWeight={700}>
+                {group.name}
+              </Typography>
+              <Chip
+                label={group.is_public ? "Público" : "Privado"}
+                size="small"
+                color={group.is_public ? "success" : "default"}
+                variant="outlined"
+              />
+              {isAdmin && (
+                <Chip
+                  label="Administrador"
+                  size="small"
+                  color="primary"
+                  icon={<AdminPanelSettingsRounded />}
+                />
+              )}
+              {isSystemAdmin && (
+                <Chip
+                  label="Admin sistema"
+                  size="small"
+                  color="warning"
+                  icon={<AdminPanelSettingsRounded />}
+                />
+              )}
+            </Stack>
+            {group.description && (
+              <Typography variant="body2" color="text.secondary">
+                {group.description}
+              </Typography>
+            )}
+          </Box>
+        </Stack>
 
-        {/* Botón abandonar — solo si es miembro y NO es admin del sistema */}
         {isMember && !isSystemAdmin && (
           <Button
             variant="outlined"
@@ -232,11 +397,15 @@ const GrupoDetalle = () => {
               {filteredMembers?.map((member) => (
                 <Card key={member.person_id} variant="outlined">
                   <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
                       <Box>
                         <Stack direction="row" spacing={1} alignItems="center">
                           <Typography variant="body2" fontWeight={600}>
-                            {member.person?.name ?? member.person_id}
+                            {(member.person as any)?.name ?? member.person_id}
                           </Typography>
                           {member.role === "admin" && (
                             <Chip
@@ -247,18 +416,23 @@ const GrupoDetalle = () => {
                             />
                           )}
                           {member.is_blocked && (
-                            <Chip label="Bloqueado" size="small" color="error" />
+                            <Chip
+                              label="Bloqueado"
+                              size="small"
+                              color="error"
+                            />
                           )}
                         </Stack>
                         <Typography variant="caption" color="text.secondary">
                           Se unió:{" "}
                           {member.joined_at
-                            ? new Date(member.joined_at).toLocaleDateString("es-CO")
+                            ? new Date(member.joined_at).toLocaleDateString(
+                                "es-CO",
+                              )
                             : "—"}
                         </Typography>
                       </Box>
 
-                      {/* Botones de gestión — canManage incluye admin sistema y admin grupo */}
                       {canManage && member.person_id !== personId && (
                         <Stack direction="row" spacing={0.5}>
                           {member.role !== "admin" && (
@@ -267,7 +441,9 @@ const GrupoDetalle = () => {
                                 size="small"
                                 color="primary"
                                 disabled={isPromoting}
-                                onClick={() => handlePromote(member.person_id!)}
+                                onClick={() =>
+                                  handlePromote(member.person_id!)
+                                }
                               >
                                 <StarRounded fontSize="small" />
                               </IconButton>
@@ -303,7 +479,7 @@ const GrupoDetalle = () => {
           )}
         </Box>
 
-        {/* Panel log — visible para admin grupo y admin sistema */}
+        {/* Panel log */}
         {canManage && (
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6" fontWeight={700} mb={1}>
@@ -319,12 +495,13 @@ const GrupoDetalle = () => {
                   <Card key={log.id} variant="outlined">
                     <CardContent sx={{ py: 1, "&:last-child": { pb: 1 } }}>
                       <Typography variant="body2" fontWeight={600}>
-                        {log.person_id}
+                        {logUsers[log.person_id] ?? log.person_id}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {GROUP_ACTION_LABELS[log.action] ?? log.action}
-                        {log.action_by_person_id &&
-                          ` por ${log.action_by_person_id}`}
+                        {log.action_by_person_id && (
+                          ` por ${logUsers[log.action_by_person_id] ?? log.action_by_person_id}`
+                        )}
                       </Typography>
                       <br />
                       <Typography variant="caption" color="text.secondary">
