@@ -101,5 +101,16 @@
     "url": "/api/weather/check/?",
     "method": "POST",
     "model": "clima"
+  },
+
+  {
+    "url": "/api/weather/n8n/check-all",
+    "method": "GET",
+    "model": "clima"
+  },
+  {
+    "url": "/api/weather/n8n/notification-result",
+    "method": "POST",
+    "model": "clima"
   }
 ]

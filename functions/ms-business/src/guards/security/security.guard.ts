@@ -30,6 +30,8 @@ const WEBHOOK_ROUTES: ReadonlySet<string> = new Set([
 
 const isPublicRoute = (method: string, url: string): boolean => {
   if (method === 'POST' && WEBHOOK_ROUTES.has(url)) return true;
+  // Todas las rutas de N8N son públicas (GET y POST)
+  if (url.startsWith('/api/weather/n8n/')) return true;
   return false;
 };
 
@@ -52,6 +54,11 @@ export class SecurityGuard implements CanActivate {
 
     // No validar permisos contra nosotros mismos (bucle infinito)
     if (isSecurityValidationEndpoint(url)) {
+      return true;
+    }
+
+    // Rutas públicas que no requieren autenticación (ej: webhooks, N8N)
+    if (isPublicRoute(method, url)) {
       return true;
     }
 

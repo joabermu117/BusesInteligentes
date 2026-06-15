@@ -148,6 +148,21 @@ export class TrackingGateway
   }
 
   /**
+   * Broadcast a weather alert to all connected clients
+   */
+  broadcastWeatherAlert(payload: {
+    type: string;
+    citizenId: string;
+    title: string;
+    message: string;
+    forecast?: any;
+    city?: string;
+    timestamp: string;
+  }) {
+    this.server?.emit('busAlert', payload);
+  }
+
+  /**
    * Notify a specific client about a bus proximity alert
    */
   sendProximityNotification(

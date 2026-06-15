@@ -58,7 +58,7 @@ import {
 import { useRoleStore } from "../../stores/useRoleStore";
 import { useUnreadCount } from "../../../mensajes/stores/useMessagesStore";
 import { useFirebaseMessaging } from "../../../mensajes/hooks/useFirebaseMessaging";
-import GlobalProximityListener from "../components/GlobalProximityListener";
+import GlobalNotificationListener from "../components/GlobalProximityListener";
 
 type NavigationItem = {
   path: string;
@@ -661,7 +661,7 @@ const AppShell = () => {
       </Box>
 
       {/* Global proximity notification listener — works across all pages */}
-      <GlobalProximityListener />
+      <GlobalNotificationListener />
     </Box>
   );
 };

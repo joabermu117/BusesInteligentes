@@ -5,6 +5,7 @@ import { Cron } from '@nestjs/schedule';
 import axios from 'axios';
 import { WeatherPreference } from './entities/weather-preference.entity';
 import { NotificationsGateway } from '../gateways/notifications/notifications.gateway';
+import { TrackingGateway } from '../gateways/tracking/tracking.gateway';
 import { CreateWeatherPreferenceDto, UpdateWeatherPreferenceDto } from './dto/weather-preference.dto';
 
 export interface WeatherForecast {
@@ -31,6 +32,7 @@ export class WeatherService {
     @InjectRepository(WeatherPreference)
     private readonly weatherPrefRepository: Repository<WeatherPreference>,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly trackingGateway: TrackingGateway,
   ) {}
 
   // ── Preferences CRUD ────────────────────────────────────────
@@ -205,7 +207,7 @@ export class WeatherService {
    * Run every day at 6:00 AM to check weather and send alerts
    * This handles the N8N-like scheduled automation
    */
-  @Cron('0 6 * * *')
+  // @Cron('0 6 * * *') // Disabled: N8N is the orchestrator now
   async dailyWeatherCheck() {
     this.logger.log('⏰ Ejecutando verificación diaria del clima...');
 
@@ -226,20 +228,22 @@ export class WeatherService {
 
         const message = this.generateWeatherMessage(result.forecast, city);
 
-        // Send notification via WebSocket to the citizen
-        this.notificationsGateway.broadcastNotification({
-          type: 'weather_alert',
-          citizenId: pref.citizenId,
-          title: '☀️ Alerta del clima',
-          message,
-          forecast: result.forecast,
-          city,
-          timestamp: new Date().toISOString(),
-        });
+        // Send notification via WebSocket only if preferred channel is push
+        if (pref.preferredChannel === 'push') {
+          this.notificationsGateway.broadcastNotification({
+            type: 'weather_alert',
+            citizenId: pref.citizenId,
+            title: '☀️ Alerta del clima',
+            message,
+            forecast: result.forecast,
+            city,
+            timestamp: new Date().toISOString(),
+          });
 
-        this.logger.log(
-          `✅ Alerta de clima enviada a ciudadano ${pref.citizenId}: ${message}`,
-        );
+          this.logger.log(
+            `✅ Alerta push enviada a ciudadano ${pref.citizenId}: ${message}`,
+          );
+        }
       } catch (error) {
         this.logger.error(
           `Error sending weather alert to ${pref.citizenId}: ${error}`,
@@ -249,6 +253,92 @@ export class WeatherService {
   }
 
   // ── Manual trigger for testing ──────────────────────────────
+
+  /**
+   * Get all citizens with active weather alerts and their forecast.
+   * Used by N8N to know who to notify.
+   */
+  async getN8nWeatherCheckData(): Promise<
+    Array<{
+      citizenId: string;
+      email: string;
+      preferredChannel: string;
+      habitualTravelTime: string;
+      city: string;
+      forecast: WeatherForecast | null;
+      message: string;
+      rainLikely: boolean;
+    }>
+  > {
+    const activePrefs = await this.weatherPrefRepository.find({
+      where: { weatherAlertsEnabled: true, active: true },
+    });
+
+    const results: Array<{
+      citizenId: string;
+      email: string;
+      preferredChannel: string;
+      habitualTravelTime: string;
+      city: string;
+      forecast: WeatherForecast | null;
+      message: string;
+      rainLikely: boolean;
+    }> = [];
+
+    for (const pref of activePrefs) {
+      const city = pref.city || 'Manizales';
+      const result = await this.getWeatherForecast(city);
+
+      if (!result.forecast) continue;
+
+      const message = this.generateWeatherMessage(result.forecast, city);
+
+      results.push({
+        citizenId: pref.citizenId ?? '',
+        email: pref.email || `${pref.citizenId}@example.com`,
+        preferredChannel: pref.preferredChannel ?? 'push',
+        habitualTravelTime: pref.habitualTravelTime ?? '07:00',
+        city,
+        forecast: result.forecast,
+        message,
+        rainLikely: result.rainLikely,
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Broadcast a weather alert via WebSocket (called after N8N sends notification)
+   */
+  async broadcastWeatherAlert(
+    citizenId: string,
+    message: string,
+    forecast?: any,
+    cityOverride?: string,
+  ): Promise<void> {
+    const pref = await this.getPreference(citizenId);
+    if (!pref) return;
+
+    const city = cityOverride || pref.city || 'Manizales';
+    const weatherPayload = {
+      type: 'weather_alert',
+      citizenId,
+      title: '☀️ Alerta del clima',
+      message,
+      forecast: forecast ?? null,
+      city,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Always broadcast: N8N decides who gets push vs email
+    this.notificationsGateway.broadcastNotification(weatherPayload);
+
+    // Also emit to tracking namespace so GlobalNotificationListener receives it
+    this.trackingGateway.broadcastWeatherAlert(weatherPayload);
+
+    this.logger.log(`Alerta de clima enviada a ciudadano ${citizenId}: ${message}`);
+  }
 
   async triggerWeatherCheckForCitizen(citizenId: string): Promise<{
     message: string;

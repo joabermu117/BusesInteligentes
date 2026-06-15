@@ -83,4 +83,46 @@ export class WeatherController {
   async checkWeather(@Param('citizenId') citizenId: string) {
     return this.weatherService.triggerWeatherCheckForCitizen(citizenId);
   }
+
+  // ── N8N Integration Endpoints ────────────────────────────────
+
+  /**
+   * GET /api/weather/n8n/check-all
+   * Returns all citizens with active weather alerts and their forecast.
+   * N8N calls this endpoint every day at 6:00 AM, then processes each
+   * result and sends notifications via email/push accordingly.
+   */
+  @Get('n8n/check-all')
+  async n8nCheckAll() {
+    return this.weatherService.getN8nWeatherCheckData();
+  }
+
+  /**
+   * POST /api/weather/n8n/notification-result
+   * N8N calls this endpoint after sending a notification to mark it
+   * as delivered in the system and optionally broadcast via WebSocket.
+   */
+  @Post('n8n/notification-result')
+  async n8nNotificationResult(
+    @Body()
+    data: {
+      citizenId: string;
+      success: boolean;
+      channel: string;
+      message: string;
+      forecast?: any;
+      city?: string;
+      error?: string;
+    },
+  ) {
+    if (data.success) {
+      await this.weatherService.broadcastWeatherAlert(
+        data.citizenId,
+        data.message,
+        data.forecast,
+        data.city,
+      );
+    }
+    return { received: true };
+  }
 }
