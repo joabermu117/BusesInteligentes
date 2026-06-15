@@ -52,6 +52,20 @@ export class TrackingGateway
     this.routeSubscriptions.delete(client.id);
   }
 
+  @SubscribeMessage('join')
+  handleJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { citizenId: string },
+  ) {
+    if (data?.citizenId) {
+      client.join(data.citizenId);
+      console.log(
+        `[Tracking] Cliente ${client.id} unido a sala personal: ${data.citizenId}`,
+      );
+    }
+    return { success: true };
+  }
+
   @SubscribeMessage('subscribeRoute')
   handleSubscribeRoute(
     @ConnectedSocket() client: Socket,

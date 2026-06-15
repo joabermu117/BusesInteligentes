@@ -41,6 +41,8 @@ export class ProximityService {
     private readonly scheduleRepository: Repository<Schedule>,
     @InjectRepository(RouteStop)
     private readonly routeStopRepository: Repository<RouteStop>,
+    @InjectRepository(Route)
+    private readonly routeRepository: Repository<Route>,
     private readonly trackingGateway: TrackingGateway,
   ) {}
 
@@ -120,19 +122,50 @@ export class ProximityService {
         relations: ['bus', 'bus.gps'],
       });
 
+      // Also include simulated buses (GPS active, no shift) that have route info
+      const simulatedBuses = await this.gpsRepository.find({
+        where: { active: true },
+        relations: ['bus'],
+      });
+
+      const allCandidates: Array<{ busId: number; plate: string; lat: number; lng: number; routeId?: number }> = [];
+
+      // Buses with active shifts
       for (const shift of activeShifts) {
         if (!shift.bus?.gps?.latitude || !shift.bus?.gps?.longitude) continue;
         if (!shift.bus.gps.active) continue;
 
-        // Check if this bus is on the same route
         const schedule = await this.scheduleRepository.findOne({
-          where: {
-            bus: { id: shift.bus.id },
-            status: 'in_progress',
-          },
+          where: { bus: { id: shift.bus.id }, status: 'in_progress' },
           relations: ['route'],
         });
-        if (!schedule?.route || schedule.route.id !== sub.routeId) continue;
+
+        allCandidates.push({
+          busId: shift.bus.id!,
+          plate: shift.bus.plate ?? `Bus #${shift.bus.id}`,
+          lat: Number(shift.bus.gps.latitude),
+          lng: Number(shift.bus.gps.longitude),
+          routeId: schedule?.route?.id,
+        });
+      }
+
+      // Simulated buses (without shift) — for academic demo
+      for (const gps of simulatedBuses) {
+        if (!gps.bus || !gps.latitude || !gps.longitude) continue;
+        if (activeShifts.some((s) => s.bus?.id === gps.bus!.id)) continue;
+        // For simulated buses we check all routes since we don't have a schedule
+        allCandidates.push({
+          busId: gps.bus.id!,
+          plate: gps.bus.plate ?? `Bus #${gps.bus.id}`,
+          lat: Number(gps.latitude),
+          lng: Number(gps.longitude),
+          routeId: undefined, // unknown — will check all route stops
+        });
+      }
+
+      for (const candidate of allCandidates) {
+        // If bus has a known route and it doesn't match the subscription, skip
+        if (candidate.routeId !== undefined && candidate.routeId !== sub.routeId) continue;
 
         // Get stop coordinates
         const routeStop = await this.routeStopRepository.findOne({
@@ -141,10 +174,16 @@ export class ProximityService {
         });
         if (!routeStop?.stop?.latitude || !routeStop?.stop?.longitude) continue;
 
+        // Get route name
+        const route = await this.routeRepository.findOne({
+          where: { id: sub.routeId },
+        });
+        const routeName = route?.name ?? `Ruta #${sub.routeId}`;
+
         // Calculate distance
         const distance = this.haversineDistance(
-          Number(shift.bus.gps.latitude),
-          Number(shift.bus.gps.longitude),
+          candidate.lat,
+          candidate.lng,
           Number(routeStop.stop.latitude),
           Number(routeStop.stop.longitude),
         );
@@ -155,14 +194,14 @@ export class ProximityService {
         // If bus is within the configured notification window
         if (estimatedMinutes <= sub.notificationMinutes && estimatedMinutes > 0) {
           this.logger.log(
-            `Bus ${shift.bus.plate} está a ~${estimatedMinutes} min del paradero #${sub.stopId} para ciudadano ${sub.citizenId}`,
+            `Bus ${candidate.plate} está a ~${estimatedMinutes} min del paradero #${sub.stopId} para ciudadano ${sub.citizenId}`,
           );
 
           // Send proximity notification via WebSocket
           this.trackingGateway.sendProximityNotification(sub.citizenId, {
-            busId: shift.bus.id!,
-            plate: shift.bus.plate ?? `Bus #${shift.bus.id}`,
-            routeName: schedule.route.name ?? `Ruta #${sub.routeId}`,
+            busId: candidate.busId,
+            plate: candidate.plate,
+            routeName,
             estimatedMinutes,
             stopName: routeStop.stop.name ?? `Paradero #${sub.stopId}`,
           });

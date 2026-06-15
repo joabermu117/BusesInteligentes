@@ -23,7 +23,6 @@ import { useRutas } from '../../viajes/stores/useRutasStore';
 import { useParaderosByRuta } from '../../viajes/stores/useRutasStore';
 import httpClient from '../../config/httpClient';
 import { getAuthUserId } from '../../config/httpClient';
-import useSocketTracking, { type ProximityNotification } from '../../shared/hooks/useSocketTracking';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -54,7 +53,6 @@ const ProximityNotificationPage = () => {
   const [subscribing, setSubscribing] = useState(false);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [snackbar, setSnackbar] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
-  const [proximityAlert, setProximityAlert] = useState<ProximityNotification | null>(null);
 
   const { data: paraderos } = useParaderosByRuta(
     selectedRouteId ? Number(selectedRouteId) : 0,
@@ -76,29 +74,6 @@ const ProximityNotificationPage = () => {
   useEffect(() => {
     loadSubscriptions();
   }, [loadSubscriptions]);
-
-  // Handle proximity notification from socket
-  const handleProximity = useCallback((notification: ProximityNotification) => {
-    setProximityAlert(notification);
-    // Vibrate if possible
-    if (navigator.vibrate) {
-      navigator.vibrate([200, 100, 200]);
-    }
-  }, []);
-
-  // Subscribe to citizenId-specific socket room for proximity
-  const { connected } = useSocketTracking({
-    subscribeAll: false,
-    onProximityNotification: handleProximity,
-  });
-
-  // Also need to join a personal room - we'll handle this via the subscription
-  useEffect(() => {
-    if (connected && citizenId) {
-      // The tracking gateway will send to the specific socket
-      // For now, the proximity service sends to the citizen ID as socket ID
-    }
-  }, [connected, citizenId]);
 
   const handleSubscribe = async () => {
     if (!selectedRouteId || !selectedStopId || !citizenId) return;
@@ -145,47 +120,6 @@ const ProximityNotificationPage = () => {
         title="Notificación de bus próximo"
         subtitle="Activa alertas para que te avisemos cuando tu bus esté cerca de tu paradero."
       />
-
-      {/* Connection status */}
-      <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
-        <Box
-          sx={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            bgcolor: connected ? '#2e7d32' : '#d32f2f',
-          }}
-        />
-        <Typography variant="caption" color="text.secondary">
-          {connected ? 'Recibiendo notificaciones en vivo' : 'Conectando...'}
-        </Typography>
-      </Stack>
-
-      {/* Proximity Alert */}
-      {proximityAlert && (
-        <Alert
-          severity="info"
-          sx={{ mb: 3 }}
-          action={
-            <Button
-              size="small"
-              onClick={() => setProximityAlert(null)}
-              color="inherit"
-            >
-              Cerrar
-            </Button>
-          }
-        >
-          <Typography variant="body1" fontWeight={700}>
-            🚌 ¡Tu bus está cerca!
-          </Typography>
-          <Typography variant="body2">
-            {proximityAlert.routeName} · Bus {proximityAlert.plate} · Llegada
-            estimada: ~{proximityAlert.estimatedMinutes} min al paradero{' '}
-            {proximityAlert.stopName}
-          </Typography>
-        </Alert>
-      )}
 
       <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
         {/* Subscribe form */}
