@@ -58,7 +58,7 @@ import {
 import { useRoleStore } from "../../stores/useRoleStore";
 import { useUnreadCount } from "../../../mensajes/stores/useMessagesStore";
 import { useFirebaseMessaging } from "../../../mensajes/hooks/useFirebaseMessaging";
-import { AssignmentRounded, FeedbackRounded, ManageSearchRounded } from "@mui/icons-material";
+import { AssignmentRounded, EventAvailableRounded, FeedbackRounded, ManageSearchRounded } from "@mui/icons-material";
 
 type NavigationItem = {
   path: string;
@@ -180,6 +180,12 @@ const citizenItems: NavigationItem[] = [
     label: "Consultar PQRS",
     description: "Consulta el estado de tu PQRS con el número de radicado.",
     icon: <ManageSearchRounded />,
+  },
+  {
+    path: "/citas",
+    label: "Agendar Cita",
+    description: "Reserva una cita de atención personalizada.",
+    icon: <EventAvailableRounded />,
   },
 ];
 
