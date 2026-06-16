@@ -35,6 +35,7 @@ import { TicketModule } from './ticket/ticket.module';
 import { RouteStopsModule } from './routes-stops/route-stops.module';
 import { TrackingModule } from './gateways/tracking/tracking.module';
 import { WeatherModule } from './weather/weather.module';
+import { PqrsModule } from './pqrs/pqrs.module';
 
 @Module({
   providers: [{ provide: APP_GUARD, useClass: SecurityGuard }],
@@ -87,6 +88,7 @@ import { WeatherModule } from './weather/weather.module';
     GroupModule,
     BoardingModule,
     RouteStopsModule,
+    PqrsModule,
   ],
 })
 export class AppModule {}

@@ -58,6 +58,7 @@ import {
 import { useRoleStore } from "../../stores/useRoleStore";
 import { useUnreadCount } from "../../../mensajes/stores/useMessagesStore";
 import { useFirebaseMessaging } from "../../../mensajes/hooks/useFirebaseMessaging";
+import { AssignmentRounded, FeedbackRounded, ManageSearchRounded } from "@mui/icons-material";
 
 type NavigationItem = {
   path: string;
@@ -168,6 +169,18 @@ const citizenItems: NavigationItem[] = [
     description: "Mensajes que has enviado.",
     icon: <SendRounded />,
   },
+  {
+    path: "/pqrs",
+    label: "PQRS",
+    description: "Peticiones, quejas, reclamos y sugerencias.",
+    icon: <FeedbackRounded />,
+  },
+  {
+    path: "/pqrs/consultar",
+    label: "Consultar PQRS",
+    description: "Consulta el estado de tu PQRS con el número de radicado.",
+    icon: <ManageSearchRounded />,
+  },
 ];
 
 const driverItems: NavigationItem[] = [
@@ -275,6 +288,12 @@ const adminItems: NavigationItem[] = [
     label: "Alertas masivas",
     description: "Envía notificaciones a todos los ciudadanos.",
     icon: <NotificationsActiveRounded />,
+  },
+  {
+    path: "/pqrs/admin",
+    label: "Gestión PQRS",
+    description: "Administra y responde las PQRS del sistema.",
+    icon: <AssignmentRounded />,
   },
 ];
 

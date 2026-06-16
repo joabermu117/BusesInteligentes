@@ -28,8 +28,16 @@ const WEBHOOK_ROUTES: ReadonlySet<string> = new Set([
   '/api/recharge/epayco/webhook',
 ]);
 
+// ✅ Rutas públicas del sistema que no requieren JWT
+const PUBLIC_API_ROUTES: ReadonlySet<string> = new Set([
+  '/api/public/pqrs',
+]);
+
 const isPublicRoute = (method: string, url: string): boolean => {
   if (method === 'POST' && WEBHOOK_ROUTES.has(url)) return true;
+  if (method === 'POST' && PUBLIC_API_ROUTES.has(url)) return true; // ✅
+  if (method === 'GET' && url.startsWith('/api/public/pqrs')) return true; // ✅ consulta por radicado
+  if (method === 'PATCH' && url.startsWith('/api/public/pqrs/') && url.endsWith('/estado')) return true; // ✅
   return false;
 };
 
@@ -55,6 +63,11 @@ export class SecurityGuard implements CanActivate {
       return true;
     }
 
+    // ✅ Bypass para rutas públicas del sistema
+    if (isPublicRoute(method, url)) {
+      return true;
+    }
+
     if (!headers.authorization) {
       throw new UnauthorizedException('Token de autorización faltante');
     }
@@ -77,7 +90,10 @@ export class SecurityGuard implements CanActivate {
     } catch (error: unknown) {
       // Si ms-security no está disponible o devuelve error interno,
       // permitir el acceso para no bloquear toda la app.
-      if (error instanceof AxiosError && (!error.response || error.response.status >= 500)) {
+      if (
+        error instanceof AxiosError &&
+        (!error.response || error.response.status >= 500)
+      ) {
         this.logger.warn(
           `ms-security no disponible o error interno (${error.code} ${error.response?.status}), permitiendo acceso a ${method} ${url}`,
         );
@@ -88,7 +104,9 @@ export class SecurityGuard implements CanActivate {
         throw error;
       }
 
-      this.logger.error(`Error al validar permisos: ${(error as Error).message}`);
+      this.logger.error(
+        `Error al validar permisos: ${(error as Error).message}`,
+      );
       if (error instanceof AxiosError && error.response) {
         this.logger.error(
           `Respuesta de ms-security: status=${error.response.status}, data=${JSON.stringify(error.response.data)}`,

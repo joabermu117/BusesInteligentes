@@ -1,17 +1,18 @@
 package com.adm.ms_security.Services;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import org.springframework.stereotype.Service;
+
 import com.adm.ms_security.Models.Role;
 import com.adm.ms_security.Models.User;
 import com.adm.ms_security.Models.UserRole;
 import com.adm.ms_security.Repositories.RoleRepository;
 import com.adm.ms_security.Repositories.UserRepository;
 import com.adm.ms_security.Repositories.UserRoleRepository;
-import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 
 @Service
 /**
@@ -164,6 +165,26 @@ public class UserRoleService {
         }
 
         return true;
+    }
+
+    public List<java.util.Map<String, String>> getUserEmailsByRoleName(String roleName) {
+        Role role = theRoleRepository.findAll().stream()
+            .filter(r -> r.getName() != null && r.getName().equalsIgnoreCase(roleName))
+            .findFirst()
+            .orElse(null);
+
+        if (role == null) return new ArrayList<>();
+
+        List<java.util.Map<String, String>> result = new ArrayList<>();
+        for (UserRole ur : theUserRoleRepository.findAllByRole(role)) {
+            if (ur.getUser() != null && ur.getUser().getEmail() != null) {
+                java.util.Map<String, String> info = new java.util.HashMap<>();
+                info.put("email", ur.getUser().getEmail());
+                info.put("name", ur.getUser().getName() != null ? ur.getUser().getName() : "Usuario");
+                result.add(info);
+            }
+        }
+        return result;
     }
 
 }

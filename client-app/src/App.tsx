@@ -58,6 +58,10 @@ import NuevoMensajeDirecto from "./mensajes/pages/NuevoMensajeDirecto";
 import EnviarMensajeGrupo from "./mensajes/pages/EnviarMensajeGrupo";
 import AlertasMasivas from "./mensajes/pages/AlertasMasivas";
 
+import PqrsPage from "./pqrs/pages/PqrsPage";
+import AdminPqrsList from "./pqrs/pages/AdminPqrsList";
+import ConsultarPqrs from "./pqrs/pages/ConsultarPqrs";
+
 const RequireAuth = () => {
   const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
 
@@ -131,6 +135,9 @@ function App() {
               <Route path="/mensajes/nuevo" element={<NuevoMensajeDirecto />} />
               <Route path="/mensajes/grupo" element={<EnviarMensajeGrupo />} />
               <Route path="/mensajes/alertas" element={<AlertasMasivas />} />
+              <Route path="/pqrs" element={<PqrsPage />} />
+              <Route path="/pqrs/consultar" element={<ConsultarPqrs />} />
+              <Route path="/pqrs/admin" element={<AdminPqrsList />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Route>
           </Route>

@@ -1,9 +1,8 @@
 package com.adm.ms_security.Controllers;
 
-import java.util.Map;
 import java.util.List;
+import java.util.Map;
 
-import com.adm.ms_security.Models.UserRole;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.adm.ms_security.Models.UserRole;
 import com.adm.ms_security.Services.UserRoleService;
 
 @CrossOrigin
@@ -32,6 +32,13 @@ public class UserRoleController {
     @GetMapping("user/{userId}")
     public List<UserRole> getRolesByUser(@PathVariable String userId) {
         return this.theUserRoleService.getRolesByUser(userId);
+    }
+
+    @GetMapping("by-role-name/{roleName}/emails")
+    public ResponseEntity<List<java.util.Map<String, String>>> getEmailsByRoleName(
+            @PathVariable String roleName) {
+        List<java.util.Map<String, String>> emails = this.theUserRoleService.getUserEmailsByRoleName(roleName);
+        return ResponseEntity.ok(emails);
     }
 
     // Asigna un rol al usuario.
