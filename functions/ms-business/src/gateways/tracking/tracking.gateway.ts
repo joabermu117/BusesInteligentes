@@ -52,6 +52,20 @@ export class TrackingGateway
     this.routeSubscriptions.delete(client.id);
   }
 
+  @SubscribeMessage('join')
+  handleJoin(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { citizenId: string },
+  ) {
+    if (data?.citizenId) {
+      client.join(data.citizenId);
+      console.log(
+        `[Tracking] Cliente ${client.id} unido a sala personal: ${data.citizenId}`,
+      );
+    }
+    return { success: true };
+  }
+
   @SubscribeMessage('subscribeRoute')
   handleSubscribeRoute(
     @ConnectedSocket() client: Socket,
@@ -134,6 +148,21 @@ export class TrackingGateway
   }
 
   /**
+   * Broadcast a weather alert to all connected clients
+   */
+  broadcastWeatherAlert(payload: {
+    type: string;
+    citizenId: string;
+    title: string;
+    message: string;
+    forecast?: any;
+    city?: string;
+    timestamp: string;
+  }) {
+    this.server?.emit('busAlert', payload);
+  }
+
+  /**
    * Notify a specific client about a bus proximity alert
    */
   sendProximityNotification(
@@ -144,6 +173,9 @@ export class TrackingGateway
       routeName: string;
       estimatedMinutes: number;
       stopName: string;
+      citizenId?: string;
+      routeId?: number;
+      stopId?: number;
     },
   ) {
     this.server?.to(clientId).emit('busProximity', notification);

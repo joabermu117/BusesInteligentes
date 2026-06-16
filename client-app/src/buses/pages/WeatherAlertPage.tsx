@@ -23,7 +23,7 @@ import WbSunnyRounded from '@mui/icons-material/WbSunnyRounded';
 import UmbrellaRounded from '@mui/icons-material/UmbrellaRounded';
 import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '../../permisos/common/components/PageHeader';
-import httpClient, { getAuthUserId } from '../../config/httpClient';
+import httpClient, { getAuthUserId, getUserEmailFromToken } from '../../config/httpClient';
 import { useSocketTracking } from '../../shared/hooks/useSocketTracking';
 import type { BusAlert } from '../../shared/hooks/useSocketTracking';
 
@@ -150,12 +150,13 @@ const WeatherAlertPage = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      const userEmail = getUserEmailFromToken();
       const payload = {
-        citizenId,
         weatherAlertsEnabled: enabled,
         habitualTravelTime: travelTime,
         city,
         preferredChannel: channel,
+        email: userEmail || undefined,
       };
 
       if (prefs?.id) {

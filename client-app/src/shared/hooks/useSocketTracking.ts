@@ -25,6 +25,10 @@ export interface BusAlert {
   message: string;
   severity: string;
   routeId?: number;
+  // Weather alert fields
+  title?: string;
+  forecast?: { temperature: number; condition: string; icon: string };
+  city?: string;
 }
 
 export interface ProximityNotification {
@@ -33,6 +37,9 @@ export interface ProximityNotification {
   routeName: string;
   estimatedMinutes: number;
   stopName: string;
+  citizenId?: string;
+  routeId?: number;
+  stopId?: number;
 }
 
 interface UseSocketTrackingOptions {

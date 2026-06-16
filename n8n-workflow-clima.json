@@ -1,0 +1,444 @@
+{
+  "name": "Alertas Clima - Buses Inteligentes",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 200]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule (6 AM)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:3000/api/weather/n8n/check-all",
+        "options": {}
+      },
+      "id": "check-weather",
+      "name": "Check Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.rainLikely }}",
+              "operation": "equal",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "filter-rain",
+      "name": "Filter Rainy Days",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 250]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.preferredChannel }}",
+              "operation": "equal",
+              "value2": "push"
+            }
+          ]
+        }
+      },
+      "id": "filter-channel-rain",
+      "name": "Filter Channel (Lluvia)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 50]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.preferredChannel }}",
+              "operation": "equal",
+              "value2": "push"
+            }
+          ]
+        }
+      },
+      "id": "filter-channel-fair",
+      "name": "Filter Channel (Favorable)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 450]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8082/api/public/notifications/send-email",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "subject",
+              "value": "🌧️ Alerta de lluvia - Buses Inteligentes"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "title",
+              "value": "Alerta del Clima"
+            },
+            {
+              "name": "user_name",
+              "value": "={{ $json.email.split('@')[0] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-email-rain",
+      "name": "Send Email (Lluvia)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 100]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:8082/api/public/notifications/send-email",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "to",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "subject",
+              "value": "☀️ Clima favorable - Buses Inteligentes"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "title",
+              "value": "Alerta del Clima"
+            },
+            {
+              "name": "user_name",
+              "value": "={{ $json.email.split('@')[0] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "send-email-fair",
+      "name": "Send Email (Clima favorable)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1120, 500]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:3000/api/weather/n8n/notification-result",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "citizenId",
+              "value": "={{ $json.citizenId }}"
+            },
+            {
+              "name": "success",
+              "value": true
+            },
+            {
+              "name": "channel",
+              "value": "={{ $json.preferredChannel }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "forecast",
+              "value": "={{ $json.forecast }}"
+            },
+            {
+              "name": "city",
+              "value": "={{ $json.city }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mark-notified-rain-push",
+      "name": "Mark as Notified (Push - Lluvia)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, -50]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:3000/api/weather/n8n/notification-result",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "citizenId",
+              "value": "={{ $json.citizenId }}"
+            },
+            {
+              "name": "success",
+              "value": true
+            },
+            {
+              "name": "channel",
+              "value": "={{ $json.preferredChannel }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "forecast",
+              "value": "={{ $json.forecast }}"
+            },
+            {
+              "name": "city",
+              "value": "={{ $json.city }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mark-notified-fair-push",
+      "name": "Mark as Notified (Push - Favorable)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 350]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:3000/api/weather/n8n/notification-result",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "citizenId",
+              "value": "={{ $json.citizenId }}"
+            },
+            {
+              "name": "success",
+              "value": true
+            },
+            {
+              "name": "channel",
+              "value": "={{ $json.preferredChannel }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "forecast",
+              "value": "={{ $json.forecast }}"
+            },
+            {
+              "name": "city",
+              "value": "={{ $json.city }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mark-notified-rain-email",
+      "name": "Mark as Notified (Email - Lluvia)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 100]
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:3000/api/weather/n8n/notification-result",
+        "method": "POST",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "citizenId",
+              "value": "={{ $json.citizenId }}"
+            },
+            {
+              "name": "success",
+              "value": true
+            },
+            {
+              "name": "channel",
+              "value": "={{ $json.preferredChannel }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "forecast",
+              "value": "={{ $json.forecast }}"
+            },
+            {
+              "name": "city",
+              "value": "={{ $json.city }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "mark-notified-fair-email",
+      "name": "Mark as Notified (Email - Favorable)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1340, 500]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule (6 AM)": {
+      "main": [
+        [
+          {
+            "node": "Check Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Weather": {
+      "main": [
+        [
+          {
+            "node": "Filter Rainy Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Rainy Days": {
+      "main": [
+        [
+          {
+            "node": "Filter Channel (Lluvia)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Filter Channel (Favorable)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Channel (Lluvia)": {
+      "main": [
+        [
+          {
+            "node": "Mark as Notified (Push - Lluvia)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Email (Lluvia)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Channel (Favorable)": {
+      "main": [
+        [
+          {
+            "node": "Mark as Notified (Push - Favorable)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Email (Clima favorable)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (Lluvia)": {
+      "main": [
+        [
+          {
+            "node": "Mark as Notified (Email - Lluvia)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (Clima favorable)": {
+      "main": [
+        [
+          {
+            "node": "Mark as Notified (Email - Favorable)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

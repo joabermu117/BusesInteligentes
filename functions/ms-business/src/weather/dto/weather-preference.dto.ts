@@ -19,6 +19,10 @@ export class CreateWeatherPreferenceDto {
   @IsOptional()
   @IsString()
   preferredChannel?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
 }
 
 export class UpdateWeatherPreferenceDto {
@@ -37,4 +41,8 @@ export class UpdateWeatherPreferenceDto {
   @IsOptional()
   @IsString()
   preferredChannel?: string;
+
+  @IsOptional()
+  @IsString()
+  email?: string;
 }

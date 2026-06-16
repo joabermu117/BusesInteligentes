@@ -35,6 +35,8 @@ const PUBLIC_API_ROUTES: ReadonlySet<string> = new Set([
 
 const isPublicRoute = (method: string, url: string): boolean => {
   if (method === 'POST' && WEBHOOK_ROUTES.has(url)) return true;
+  // Todas las rutas de N8N son públicas (GET y POST)
+  if (url.startsWith('/api/weather/n8n/')) return true;
   if (method === 'POST' && PUBLIC_API_ROUTES.has(url)) return true; // ✅
   if (method === 'GET' && url.startsWith('/api/public/pqrs')) return true; // ✅ consulta por radicado
   if (method === 'PATCH' && url.startsWith('/api/public/pqrs/') && url.endsWith('/estado')) return true; // ✅
@@ -63,7 +65,7 @@ export class SecurityGuard implements CanActivate {
       return true;
     }
 
-    // ✅ Bypass para rutas públicas del sistema
+    // Rutas públicas que no requieren autenticación (ej: webhooks, N8N)
     if (isPublicRoute(method, url)) {
       return true;
     }

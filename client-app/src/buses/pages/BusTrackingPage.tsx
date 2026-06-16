@@ -1,3 +1,5 @@
+import PlayArrowRounded from "@mui/icons-material/PlayArrowRounded";
+import StopRounded from "@mui/icons-material/StopRounded";
 import {
   Alert,
   Box,
@@ -13,32 +15,37 @@ import {
   Snackbar,
   Stack,
   Typography,
-} from '@mui/material';
-import PlayArrowRounded from '@mui/icons-material/PlayArrowRounded';
-import StopRounded from '@mui/icons-material/StopRounded';
-import { MapContainer, Marker, Popup, TileLayer, Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { useState, useMemo, useEffect, useCallback, memo } from 'react';
-import PageHeader from '../../permisos/common/components/PageHeader';
-import { useRutas } from '../../viajes/stores/useRutasStore';
-import useSocketTracking from '../../shared/hooks/useSocketTracking';
-import type { BusLocationData } from '../../shared/hooks/useSocketTracking';
-import httpClient from '../../config/httpClient';
+} from "@mui/material";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+  useMap,
+} from "react-leaflet";
+import httpClient from "../../config/httpClient";
+import PageHeader from "../../permisos/common/components/PageHeader";
+import type { BusLocationData, ProximityNotification } from "../../shared/hooks/useSocketTracking";
+import useSocketTracking from "../../shared/hooks/useSocketTracking";
+import { useRutas } from "../../viajes/stores/useRutasStore";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 // ── Bus icon factory ──────────────────────────────────────────
 const createBusIcon = (status: string, isSelected: boolean) => {
   const colors: Record<string, string> = {
-    normal: '#2e7d32',
-    delayed: '#ed6c02',
-    incident: '#d32f2f',
+    normal: "#2e7d32",
+    delayed: "#ed6c02",
+    incident: "#d32f2f",
   };
-  const bg = colors[status] || '#1976d2';
+  const bg = colors[status] || "#1976d2";
   const size = isSelected ? 40 : 32;
   return L.divIcon({
-    className: 'custom-bus-marker',
+    className: "custom-bus-marker",
     html: `<div style="
       background:${bg};color:white;width:${size}px;height:${size}px;
       border-radius:50%;display:flex;align-items:center;justify-content:center;
@@ -55,11 +62,40 @@ const createBusIcon = (status: string, isSelected: boolean) => {
   });
 };
 
-const STOP_ICON = L.divIcon({
-  className: 'custom-stop-marker',
-  html: `<div style="background:#0288d1;color:white;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.2);">P</div>`,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
+// ── Stop icon (numbered) ─────────────────────────────────────
+const createStopIcon = (index: number) =>
+  L.divIcon({
+    className: "custom-stop-marker",
+    html: `<div style="
+      background:#1565c0;color:white;width:26px;height:26px;
+      border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-size:12px;font-weight:700;
+      border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.25);
+    ">${index}</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+
+const ORIGIN_ICON = L.divIcon({
+  className: "custom-origin-marker",
+  html: `<div style="
+    background:#2e7d32;color:white;width:32px;height:32px;
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:700;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);
+  ">O</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+});
+
+const DESTINATION_ICON = L.divIcon({
+  className: "custom-destination-marker",
+  html: `<div style="
+    background:#d32f2f;color:white;width:32px;height:32px;
+    border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:14px;font-weight:700;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);
+  ">D</div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
 });
 
 // ── Auto-fit map bounds ──────────────────────────────────────
@@ -74,7 +110,7 @@ const FitBounds = memo(({ points }: { points: [number, number][] }) => {
   return null;
 });
 
-// ── Bus Marker Component (memoized for performance) ──────────
+// ── Bus Marker Component (memoized) ──────────────────────────
 const BusMarker = memo(
   ({
     bus,
@@ -96,17 +132,16 @@ const BusMarker = memo(
             🚌 {bus.plate}
           </Typography>
           <Typography variant="caption" color="text.secondary" display="block">
-            {bus.routeName ?? 'Sin ruta asignada'}
+            {bus.routeName ?? "Sin ruta asignada"}
           </Typography>
           <Divider sx={{ my: 0.5 }} />
           <Stack spacing={0.3}>
             <Typography variant="caption">
-              📍 Última actualización:{' '}
-              {new Date(bus.lastUpdate).toLocaleTimeString()}
+              📍 {new Date(bus.lastUpdate).toLocaleTimeString()}
             </Typography>
             {bus.currentStopName && (
               <Typography variant="caption">
-                🏁 Paradero cercano: {bus.currentStopName}
+                🏁 Cerca de: {bus.currentStopName}
               </Typography>
             )}
             {bus.passengers !== undefined && (
@@ -121,8 +156,20 @@ const BusMarker = memo(
             )}
           </Stack>
           <Chip
-            label={bus.status === 'normal' ? 'Normal' : bus.status === 'delayed' ? 'Retrasado' : 'Incidente'}
-            color={bus.status === 'normal' ? 'success' : bus.status === 'delayed' ? 'warning' : 'error'}
+            label={
+              bus.status === "normal"
+                ? "Normal"
+                : bus.status === "delayed"
+                  ? "Retrasado"
+                  : "Incidente"
+            }
+            color={
+              bus.status === "normal"
+                ? "success"
+                : bus.status === "delayed"
+                  ? "warning"
+                  : "error"
+            }
             size="small"
             sx={{ mt: 0.5 }}
           />
@@ -134,15 +181,36 @@ const BusMarker = memo(
 
 // ── Main Component ───────────────────────────────────────────
 const BusTrackingPage = () => {
-  const { data: rutas, isLoading: loadingRutas } = useRutas();
+  const { data: rutas } = useRutas();
   const [selectedRouteId, setSelectedRouteId] = useState<number | undefined>();
   const [selectedBus, setSelectedBus] = useState<BusLocationData | null>(null);
-  const [stopsByRoute, setStopsByRoute] = useState<Array<{ stop_id: number; name: string; latitude: number; longitude: number }>>([]);
+  const [stopsByRoute, setStopsByRoute] = useState<
+    Array<{
+      stop_id: number;
+      name: string;
+      address: string;
+      latitude: number;
+      longitude: number;
+    }>
+  >([]);
+  const [selectedRutaInfo, setSelectedRutaInfo] = useState<{
+    name: string;
+    origin: string;
+    destination: string;
+  } | null>(null);
 
   // ── Simulator ─────────────────────────────────────────────
   const [simulatorRunning, setSimulatorRunning] = useState(false);
   const [simulatorLoading, setSimulatorLoading] = useState(false);
   const [simulatorMsg, setSimulatorMsg] = useState<string | null>(null);
+
+  // ── Proximity notifications ──────────────────────────────
+  const [proximityAlert, setProximityAlert] = useState<ProximityNotification | null>(null);
+
+  const handleProximity = useCallback((notification: ProximityNotification) => {
+    setProximityAlert(notification);
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+  }, []);
 
   const toggleSimulator = useCallback(async () => {
     setSimulatorLoading(true);
@@ -150,23 +218,28 @@ const BusTrackingPage = () => {
       if (simulatorRunning) {
         await httpClient.post(`${API_URL}/api/simulator/stop`);
         setSimulatorRunning(false);
-        setSimulatorMsg('🛑 Simulador detenido');
+        setSimulatorMsg("🛑 Simulador detenido");
       } else {
-        const { data } = await httpClient.post(`${API_URL}/api/simulator/start`);
+        const { data } = await httpClient.post(
+          `${API_URL}/api/simulator/start`,
+        );
         setSimulatorRunning(true);
         setSimulatorMsg(`🚍 ${data.message}`);
       }
     } catch {
-      setSimulatorMsg('Error al controlar el simulador');
+      setSimulatorMsg("Error al controlar el simulador");
     } finally {
       setSimulatorLoading(false);
     }
   }, [simulatorRunning]);
 
   useEffect(() => {
-    httpClient.get(`${API_URL}/api/simulator/status`).then(({ data }) => {
-      setSimulatorRunning(data.running);
-    }).catch(() => {});
+    httpClient
+      .get(`${API_URL}/api/simulator/status`)
+      .then(({ data }) => {
+        setSimulatorRunning(data.running);
+      })
+      .catch(() => {});
   }, []);
 
   const handleBusLocationUpdate = useCallback((data: BusLocationData) => {
@@ -177,23 +250,31 @@ const BusTrackingPage = () => {
     routeId: selectedRouteId,
     subscribeAll: !selectedRouteId,
     onBusLocationUpdate: handleBusLocationUpdate,
+    onProximityNotification: handleProximity,
   });
 
-  // Load stops when a route is selected
+  // Load route info and stops when a route is selected
   useEffect(() => {
     if (!selectedRouteId) {
       setStopsByRoute([]);
+      setSelectedRutaInfo(null);
       return;
     }
     httpClient
       .get(`${API_URL}/api/routes/${selectedRouteId}`)
       .then((res) => {
         const route = res.data;
+        setSelectedRutaInfo({
+          name: route.name || `Ruta #${route.id}`,
+          origin: route.origin || "",
+          destination: route.destination || "",
+        });
         const stops = (route.routeStops || [])
           .sort((a: any, b: any) => a.order_index - b.order_index)
           .map((rs: any) => ({
             stop_id: rs.stop_id,
             name: rs.stop?.name || `Paradero #${rs.stop_id}`,
+            address: rs.stop?.address || "",
             latitude: Number(rs.stop?.latitude),
             longitude: Number(rs.stop?.longitude),
           }));
@@ -210,13 +291,19 @@ const BusTrackingPage = () => {
     return activeBuses;
   }, [activeBuses, selectedRouteId]);
 
+  // Polyline coordinates for the route
+  const polylineCoords = useMemo(() => {
+    return stopsByRoute
+      .filter((s) => s.latitude && s.longitude)
+      .map((s) => [s.latitude, s.longitude] as [number, number]);
+  }, [stopsByRoute]);
+
   // Map points for fitBounds
   const mapPoints = useMemo(() => {
-    const pts: [number, number][] = [];
+    const pts: [number, number][] = [...polylineCoords];
     filteredBuses.forEach((b) => pts.push([b.latitude, b.longitude]));
-    stopsByRoute.forEach((s) => pts.push([s.latitude, s.longitude]));
     return pts;
-  }, [filteredBuses, stopsByRoute]);
+  }, [polylineCoords, filteredBuses]);
 
   // ETA calculation
   const [etas, setEtas] = useState<Record<number, number>>({});
@@ -248,7 +335,7 @@ const BusTrackingPage = () => {
     <Box className="page-enter">
       <PageHeader
         title="Seguimiento de buses en tiempo real"
-        subtitle="Selecciona una ruta para ver la ubicación de los buses en el mapa"
+        subtitle="Selecciona una ruta para ver la ubicación de los buses y sus paraderos en el mapa"
       />
 
       {lastAlert && (
@@ -256,24 +343,56 @@ const BusTrackingPage = () => {
           sx={{
             p: 2,
             mb: 2,
-            bgcolor: lastAlert.severity === 'high' || lastAlert.severity === 'critical' ? 'error.light' : 'warning.light',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            bgcolor:
+              lastAlert.severity === "high" || lastAlert.severity === "critical"
+                ? "error.light"
+                : "warning.light",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
           }}
         >
           <Typography variant="body2" fontWeight={600}>
             ⚠️ {lastAlert.message}
           </Typography>
-          <Chip label="Cerrar" size="small" onClick={clearAlert} sx={{ cursor: 'pointer' }} />
+          <Chip
+            label="Cerrar"
+            size="small"
+            onClick={clearAlert}
+            sx={{ cursor: "pointer" }}
+          />
         </Paper>
       )}
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3 }}>
+      {proximityAlert && (
+        <Alert
+          severity="info"
+          sx={{ mb: 2 }}
+          action={
+            <Chip
+              label="Cerrar"
+              size="small"
+              onClick={() => setProximityAlert(null)}
+              sx={{ cursor: "pointer" }}
+            />
+          }
+        >
+          <Typography variant="body1" fontWeight={700}>
+            🚌 ¡Tu bus está cerca!
+          </Typography>
+          <Typography variant="body2">
+            {proximityAlert.routeName} · Bus {proximityAlert.plate} · Llegada
+            estimada: ~{proximityAlert.estimatedMinutes} min al paradero{' '}
+            {proximityAlert.stopName}
+          </Typography>
+        </Alert>
+      )}
+
+      <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 3 }}>
         <FormControl size="small" sx={{ minWidth: 250 }}>
           <InputLabel>Filtrar por ruta</InputLabel>
           <Select
-            value={selectedRouteId ?? ''}
+            value={selectedRouteId ?? ""}
             label="Filtrar por ruta"
             onChange={(e) => {
               const val = e.target.value;
@@ -295,19 +414,19 @@ const BusTrackingPage = () => {
             sx={{
               width: 10,
               height: 10,
-              borderRadius: '50%',
-              bgcolor: connected ? '#2e7d32' : '#d32f2f',
+              borderRadius: "50%",
+              bgcolor: connected ? "#2e7d32" : "#d32f2f",
             }}
           />
           <Typography variant="caption" color="text.secondary">
-            {connected ? 'Conectado en vivo' : 'Desconectado'}
+            {connected ? "Conectado en vivo" : "Desconectado"}
           </Typography>
         </Stack>
 
         <Button
-          variant={simulatorRunning ? 'outlined' : 'contained'}
+          variant={simulatorRunning ? "outlined" : "contained"}
           size="small"
-          color={simulatorRunning ? 'error' : 'primary'}
+          color={simulatorRunning ? "error" : "primary"}
           startIcon={
             simulatorLoading ? (
               <CircularProgress size={16} />
@@ -320,19 +439,36 @@ const BusTrackingPage = () => {
           onClick={toggleSimulator}
           disabled={simulatorLoading}
         >
-          {simulatorRunning ? 'Detener simulación' : 'Simular buses'}
+          {simulatorRunning ? "Detener simulación" : "Simular buses"}
         </Button>
 
-        <Chip label={`${filteredBuses.length} buses activos`} color="primary" size="small" />
+        <Chip
+          label={`${filteredBuses.length} buses activos`}
+          color="primary"
+          size="small"
+        />
+        {selectedRutaInfo && stopsByRoute.length > 0 && (
+          <Chip
+            label={`${stopsByRoute.length} paraderos`}
+            variant="outlined"
+            size="small"
+          />
+        )}
       </Stack>
 
-      <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+      <Box
+        sx={{
+          display: "flex",
+          gap: 2,
+          flexDirection: { xs: "column", md: "row" },
+        }}
+      >
         {/* Map */}
-        <Paper sx={{ flex: 1, overflow: 'hidden', minHeight: 500 }}>
+        <Paper sx={{ flex: 1, overflow: "hidden", minHeight: 500 }}>
           <MapContainer
             center={[-12.0464, -77.0428]}
             zoom={12}
-            style={{ height: 500, width: '100%' }}
+            style={{ height: 500, width: "100%" }}
             scrollWheelZoom
           >
             <TileLayer
@@ -342,25 +478,64 @@ const BusTrackingPage = () => {
 
             {mapPoints.length > 0 && <FitBounds points={mapPoints} />}
 
+            {/* Route polyline connecting stops */}
+            {polylineCoords.length >= 2 && (
+              <Polyline
+                positions={polylineCoords}
+                color="#1565c0"
+                weight={3}
+                opacity={0.6}
+                dashArray="10 6"
+              />
+            )}
+
             {/* Route stops */}
-            {stopsByRoute.map((stop) => (
-              <Marker
-                key={stop.stop_id}
-                position={[stop.latitude, stop.longitude]}
-                icon={STOP_ICON}
-              >
-                <Popup>
-                  <Typography variant="body2" fontWeight={600}>
-                    {stop.name}
-                  </Typography>
-                  {etas[stop.stop_id] !== undefined && (
-                    <Typography variant="caption" color="primary">
-                      🕐 Llegada estimada: ~{etas[stop.stop_id]} min
-                    </Typography>
-                  )}
-                </Popup>
-              </Marker>
-            ))}
+            {stopsByRoute.map((stop, idx) => {
+              if (!stop.latitude || !stop.longitude) return null;
+              let icon = createStopIcon(idx + 1);
+              if (idx === 0) icon = ORIGIN_ICON;
+              else if (idx === stopsByRoute.length - 1) icon = DESTINATION_ICON;
+
+              return (
+                <Marker
+                  key={stop.stop_id}
+                  position={[stop.latitude, stop.longitude]}
+                  icon={icon}
+                >
+                  <Popup>
+                    <Box sx={{ minWidth: 180 }}>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {idx === 0
+                          ? "🟢 Salida: "
+                          : idx === stopsByRoute.length - 1
+                            ? "🔴 Destino: "
+                            : ""}
+                        {stop.name}
+                      </Typography>
+                      {stop.address && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          display="block"
+                        >
+                          {stop.address}
+                        </Typography>
+                      )}
+                      {etas[stop.stop_id] !== undefined && (
+                        <Typography
+                          variant="caption"
+                          color="primary"
+                          display="block"
+                          sx={{ mt: 0.5 }}
+                        >
+                          🕐 Bus estimado en ~{etas[stop.stop_id]} min
+                        </Typography>
+                      )}
+                    </Box>
+                  </Popup>
+                </Marker>
+              );
+            })}
 
             {/* Active buses */}
             {filteredBuses.map((bus) => (
@@ -374,59 +549,160 @@ const BusTrackingPage = () => {
           </MapContainer>
         </Paper>
 
-        {/* Bus list panel */}
-        <Paper sx={{ width: { xs: '100%', md: 320 }, p: 2, maxHeight: 500, overflow: 'auto' }}>
-          <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-            Buses activos
-          </Typography>
-          {filteredBuses.length === 0 ? (
-            <Typography variant="body2" color="text.secondary">
-              No hay buses activos en este momento.
-            </Typography>
-          ) : (
-            <Stack spacing={1}>
-              {filteredBuses.map((bus) => (
-                <Paper
-                  key={bus.busId}
-                  variant="outlined"
-                  sx={{
-                    p: 1.5,
-                    cursor: 'pointer',
-                    bgcolor: selectedBus?.busId === bus.busId ? 'action.selected' : 'transparent',
-                    borderLeft: 4,
-                    borderLeftColor:
-                      bus.status === 'normal'
-                        ? 'success.main'
-                        : bus.status === 'delayed'
-                          ? 'warning.main'
-                          : 'error.main',
-                  }}
-                  onClick={() => setSelectedBus(bus)}
-                >
-                  <Typography variant="body2" fontWeight={700}>
-                    🚌 {bus.plate}
+        {/* Right panel */}
+        <Box
+          sx={{
+            width: { xs: "100%", md: 320 },
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          {/* Route info */}
+          {selectedRutaInfo && (
+            <Paper sx={{ p: 2 }}>
+              <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+                {selectedRutaInfo.name}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                display="block"
+              >
+                {selectedRutaInfo.origin} → {selectedRutaInfo.destination}
+              </Typography>
+              {stopsByRoute.length > 0 && (
+                <>
+                  <Divider sx={{ my: 1.5 }} />
+                  <Typography
+                    variant="caption"
+                    fontWeight={600}
+                    sx={{ mb: 1, display: "block" }}
+                  >
+                    Paraderos de la ruta ({stopsByRoute.length})
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {bus.routeName ?? 'Sin ruta'}
-                  </Typography>
-                  <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
-                    <Chip
-                      label={bus.status === 'normal' ? 'Normal' : bus.status === 'delayed' ? 'Retraso' : 'Incidente'}
-                      size="small"
-                      color={bus.status === 'normal' ? 'success' : bus.status === 'delayed' ? 'warning' : 'error'}
-                      variant="outlined"
-                    />
-                    {bus.currentStopName && (
-                      <Typography variant="caption" color="text.secondary">
-                        {bus.currentStopName}
-                      </Typography>
-                    )}
+                  <Stack spacing={0.5}>
+                    {stopsByRoute.map((stop, idx) => (
+                      <Box
+                        key={stop.stop_id}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          py: 0.3,
+                          px: 1,
+                          borderRadius: 1,
+                          bgcolor:
+                            etas[stop.stop_id] !== undefined
+                              ? "action.hover"
+                              : "transparent",
+                        }}
+                      >
+                        <Chip
+                          label={idx + 1}
+                          size="small"
+                          color={
+                            idx === 0
+                              ? "success"
+                              : idx === stopsByRoute.length - 1
+                                ? "error"
+                                : "default"
+                          }
+                          sx={{ minWidth: 28, fontSize: 11 }}
+                        />
+                        <Typography variant="caption" sx={{ flex: 1 }}>
+                          {stop.name}
+                        </Typography>
+                        {etas[stop.stop_id] !== undefined && (
+                          <Typography
+                            variant="caption"
+                            fontWeight={700}
+                            color="primary"
+                          >
+                            {etas[stop.stop_id]} min
+                          </Typography>
+                        )}
+                      </Box>
+                    ))}
                   </Stack>
-                </Paper>
-              ))}
-            </Stack>
+                </>
+              )}
+            </Paper>
           )}
-        </Paper>
+
+          {/* Active buses list */}
+          <Paper sx={{ p: 2, flex: 1, maxHeight: 400, overflow: "auto" }}>
+            <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5 }}>
+              Buses activos {selectedRouteId ? "en esta ruta" : ""}
+            </Typography>
+            {filteredBuses.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No hay buses activos en este momento.
+              </Typography>
+            ) : (
+              <Stack spacing={1}>
+                {filteredBuses.map((bus) => (
+                  <Paper
+                    key={bus.busId}
+                    variant="outlined"
+                    sx={{
+                      p: 1.5,
+                      cursor: "pointer",
+                      bgcolor:
+                        selectedBus?.busId === bus.busId
+                          ? "action.selected"
+                          : "transparent",
+                      borderLeft: 4,
+                      borderLeftColor:
+                        bus.status === "normal"
+                          ? "success.main"
+                          : bus.status === "delayed"
+                            ? "warning.main"
+                            : "error.main",
+                    }}
+                    onClick={() => setSelectedBus(bus)}
+                  >
+                    <Typography variant="body2" fontWeight={700}>
+                      🚌 {bus.plate}
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      display="block"
+                    >
+                      {bus.routeName ?? "Sin ruta"}
+                    </Typography>
+                    <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+                      <Chip
+                        label={
+                          bus.status === "normal"
+                            ? "Normal"
+                            : bus.status === "delayed"
+                              ? "Retraso"
+                              : "Incidente"
+                        }
+                        size="small"
+                        color={
+                          bus.status === "normal"
+                            ? "success"
+                            : bus.status === "delayed"
+                              ? "warning"
+                              : "error"
+                        }
+                        variant="outlined"
+                      />
+                      {bus.currentStopName && (
+                        <Typography variant="caption" color="text.secondary">
+                          {bus.currentStopName}
+                        </Typography>
+                      )}
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            )}
+          </Paper>
+        </Box>
       </Box>
 
       {/* Selected bus detail */}
@@ -435,33 +711,45 @@ const BusTrackingPage = () => {
           <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
             🚌 Detalle del bus {selectedBus.plate}
           </Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4}>
+          <Stack direction={{ xs: "column", sm: "row" }} spacing={4}>
             <Stack spacing={1}>
               <Typography variant="body2">
-                <strong>Ruta:</strong> {selectedBus.routeName ?? 'Sin asignar'}
+                <strong>Ruta:</strong> {selectedBus.routeName ?? "Sin asignar"}
               </Typography>
               <Typography variant="body2">
-                <strong>Última ubicación:</strong>{' '}
+                <strong>Última ubicación:</strong>{" "}
                 {new Date(selectedBus.lastUpdate).toLocaleString()}
               </Typography>
               <Typography variant="body2">
-                <strong>Paradero cercano:</strong>{' '}
-                {selectedBus.currentStopName ?? '—'}
+                <strong>Paradero cercano:</strong>{" "}
+                {selectedBus.currentStopName ?? "—"}
               </Typography>
             </Stack>
             <Stack spacing={1}>
               <Typography variant="body2">
-                <strong>Pasajeros:</strong> {selectedBus.passengers ?? '—'}
+                <strong>Pasajeros:</strong> {selectedBus.passengers ?? "—"}
               </Typography>
               <Typography variant="body2">
-                <strong>Velocidad:</strong> {selectedBus.speed ?? '—'} km/h
+                <strong>Velocidad:</strong> {selectedBus.speed ?? "—"} km/h
               </Typography>
               <Typography variant="body2">
-                <strong>Estado:</strong>{' '}
+                <strong>Estado:</strong>{" "}
                 <Chip
-                  label={selectedBus.status === 'normal' ? 'Normal' : selectedBus.status === 'delayed' ? 'Retrasado' : 'Incidente'}
+                  label={
+                    selectedBus.status === "normal"
+                      ? "Normal"
+                      : selectedBus.status === "delayed"
+                        ? "Retrasado"
+                        : "Incidente"
+                  }
                   size="small"
-                  color={selectedBus.status === 'normal' ? 'success' : selectedBus.status === 'delayed' ? 'warning' : 'error'}
+                  color={
+                    selectedBus.status === "normal"
+                      ? "success"
+                      : selectedBus.status === "delayed"
+                        ? "warning"
+                        : "error"
+                  }
                 />
               </Typography>
             </Stack>
@@ -479,10 +767,13 @@ const BusTrackingPage = () => {
                   <Box
                     key={stop.stop_id}
                     sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
+                      display: "flex",
+                      justifyContent: "space-between",
                       p: 0.5,
-                      bgcolor: etas[stop.stop_id] <= 2 ? 'success.light' : 'transparent',
+                      bgcolor:
+                        etas[stop.stop_id] <= 2
+                          ? "success.light"
+                          : "transparent",
                       borderRadius: 1,
                     }}
                   >
@@ -490,7 +781,11 @@ const BusTrackingPage = () => {
                     <Typography
                       variant="body2"
                       fontWeight={600}
-                      color={etas[stop.stop_id] <= 2 ? 'success.dark' : 'text.primary'}
+                      color={
+                        etas[stop.stop_id] <= 2
+                          ? "success.dark"
+                          : "text.primary"
+                      }
                     >
                       {etas[stop.stop_id]} min
                     </Typography>
@@ -506,11 +801,11 @@ const BusTrackingPage = () => {
         open={!!simulatorMsg}
         autoHideDuration={4000}
         onClose={() => setSimulatorMsg(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           onClose={() => setSimulatorMsg(null)}
-          severity={simulatorMsg?.includes('Error') ? 'error' : 'info'}
+          severity={simulatorMsg?.includes("Error") ? "error" : "info"}
           variant="filled"
         >
           {simulatorMsg}

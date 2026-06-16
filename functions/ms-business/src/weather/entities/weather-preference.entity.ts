@@ -20,6 +20,9 @@ export class WeatherPreference {
   @Column({ type: 'varchar', length: 50, default: 'push' })
   preferredChannel?: string; // 'email', 'whatsapp', 'push'
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  email?: string;
+
   @Column({ default: true })
   active?: boolean;
 }

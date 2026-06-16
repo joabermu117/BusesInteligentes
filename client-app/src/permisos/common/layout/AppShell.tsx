@@ -58,6 +58,7 @@ import {
 import { useRoleStore } from "../../stores/useRoleStore";
 import { useUnreadCount } from "../../../mensajes/stores/useMessagesStore";
 import { useFirebaseMessaging } from "../../../mensajes/hooks/useFirebaseMessaging";
+import GlobalNotificationListener from "../components/GlobalProximityListener";
 import { AssignmentRounded, EventAvailableRounded, FeedbackRounded, ManageSearchRounded } from "@mui/icons-material";
 
 type NavigationItem = {
@@ -288,6 +289,12 @@ const adminItems: NavigationItem[] = [
     label: "Grupos",
     description: "Crea y administra grupos del sistema.",
     icon: <GroupsRounded />,
+  },
+  {
+    path: "/reportes/tiempo-real",
+    label: "Tiempo real",
+    description: "Monitoreo en vivo de flota, mapa e incidentes.",
+    icon: <GpsFixedRounded />,
   },
   {
     path: "/mensajes/alertas",
@@ -677,6 +684,9 @@ const AppShell = () => {
           <Outlet />
         </Container>
       </Box>
+
+      {/* Global proximity notification listener — works across all pages */}
+      <GlobalNotificationListener />
     </Box>
   );
 };
