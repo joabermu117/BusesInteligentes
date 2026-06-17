@@ -28,7 +28,7 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:3000/api/weather/n8n/check-all",
+        "url": "http://host.docker.internal:3000/api/weather/n8n/check-all",
         "options": {}
       },
       "id": "check-weather",
@@ -93,7 +93,7 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:8082/api/public/notifications/send-email",
+        "url": "http://host.docker.internal:8082/api/public/notifications/send-email",
         "method": "POST",
         "sendBody": true,
         "bodyParameters": {
@@ -130,7 +130,7 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:8082/api/public/notifications/send-email",
+        "url": "http://host.docker.internal:8082/api/public/notifications/send-email",
         "method": "POST",
         "sendBody": true,
         "bodyParameters": {
@@ -167,7 +167,7 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:3000/api/weather/n8n/notification-result",
+        "url": "http://host.docker.internal:3000/api/weather/n8n/notification-result",
         "method": "POST",
         "sendBody": true,
         "bodyParameters": {
@@ -208,7 +208,7 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:3000/api/weather/n8n/notification-result",
+        "url": "http://host.docker.internal:3000/api/weather/n8n/notification-result",
         "method": "POST",
         "sendBody": true,
         "bodyParameters": {
@@ -249,7 +249,7 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:3000/api/weather/n8n/notification-result",
+        "url": "http://host.docker.internal:3000/api/weather/n8n/notification-result",
         "method": "POST",
         "sendBody": true,
         "bodyParameters": {
@@ -290,7 +290,7 @@
     },
     {
       "parameters": {
-        "url": "http://127.0.0.1:3000/api/weather/n8n/notification-result",
+        "url": "http://host.docker.internal:3000/api/weather/n8n/notification-result",
         "method": "POST",
         "sendBody": true,
         "bodyParameters": {

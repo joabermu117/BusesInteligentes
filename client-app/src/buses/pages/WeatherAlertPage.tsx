@@ -1,4 +1,7 @@
+import UmbrellaRounded from "@mui/icons-material/UmbrellaRounded";
+import WbSunnyRounded from "@mui/icons-material/WbSunnyRounded";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -17,17 +20,17 @@ import {
   Switch,
   TextField,
   Typography,
-  Alert,
-} from '@mui/material';
-import WbSunnyRounded from '@mui/icons-material/WbSunnyRounded';
-import UmbrellaRounded from '@mui/icons-material/UmbrellaRounded';
-import { useState, useEffect, useCallback } from 'react';
-import PageHeader from '../../permisos/common/components/PageHeader';
-import httpClient, { getAuthUserId, getUserEmailFromToken } from '../../config/httpClient';
-import { useSocketTracking } from '../../shared/hooks/useSocketTracking';
-import type { BusAlert } from '../../shared/hooks/useSocketTracking';
+} from "@mui/material";
+import { useCallback, useEffect, useState } from "react";
+import httpClient, {
+  getAuthUserId,
+  getUserEmailFromToken,
+} from "../../config/httpClient";
+import PageHeader from "../../permisos/common/components/PageHeader";
+import type { BusAlert } from "../../shared/hooks/useSocketTracking";
+import { useSocketTracking } from "../../shared/hooks/useSocketTracking";
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 interface WeatherPreference {
   id?: number;
@@ -52,14 +55,14 @@ interface ForecastResult {
 }
 
 const CHANNEL_OPTIONS = [
-  { value: 'push', label: 'Notificación Push' },
-  { value: 'email', label: 'Email' },
-  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: "push", label: "Notificación Push" },
+  { value: "email", label: "Email" },
+  { value: "whatsapp", label: "WhatsApp" },
 ];
 
 const WeatherAlertPage = () => {
   const userId = getAuthUserId();
-  const citizenId = userId ?? '';
+  const citizenId = userId ?? "";
 
   const [prefs, setPrefs] = useState<WeatherPreference | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,14 +75,14 @@ const WeatherAlertPage = () => {
   } | null>(null);
   const [snackbar, setSnackbar] = useState<{
     message: string;
-    severity: 'success' | 'error' | 'info';
+    severity: "success" | "error" | "info";
   } | null>(null);
 
   // Form state
   const [enabled, setEnabled] = useState(false);
-  const [travelTime, setTravelTime] = useState('07:00');
-  const [city, setCity] = useState('Manizales');
-  const [channel, setChannel] = useState('push');
+  const [travelTime, setTravelTime] = useState("07:00");
+  const [city, setCity] = useState("Manizales");
+  const [channel, setChannel] = useState("push");
 
   // Load preferences
   const loadPrefs = useCallback(async () => {
@@ -91,9 +94,9 @@ const WeatherAlertPage = () => {
       if (data) {
         setPrefs(data);
         setEnabled(data.weatherAlertsEnabled ?? false);
-        setTravelTime(data.habitualTravelTime || '07:00');
-        setCity(data.city || 'Manizales');
-        setChannel(data.preferredChannel || 'push');
+        setTravelTime(data.habitualTravelTime || "07:00");
+        setCity(data.city || "Manizales");
+        setChannel(data.preferredChannel || "push");
       }
     } catch {
       // Not found = first time
@@ -108,7 +111,7 @@ const WeatherAlertPage = () => {
 
   // Listen for weather alerts via socket
   const handleAlert = useCallback((alert: BusAlert) => {
-    if (alert.type === 'weather_alert') {
+    if (alert.type === "weather_alert") {
       setLastNotification({
         message: alert.message,
         timestamp: new Date().toLocaleTimeString(),
@@ -121,31 +124,8 @@ const WeatherAlertPage = () => {
     onBusAlert: handleAlert,
   });
 
-  // Listen for weather notifications from the main socket
-  useEffect(() => {
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:3000';
-    const socket = new WebSocket(`ws://${socketUrl.replace('http://', '').replace('https://', '')}`);
-
-    // Listen for notifications
-    const handleNotification = (event: MessageEvent) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'weather_alert' && data.citizenId === citizenId) {
-          setLastNotification({
-            message: data.message,
-            timestamp: new Date().toLocaleTimeString(),
-          });
-        }
-      } catch {}
-    };
-
-    // For socket.io we need a different approach - this will be handled by the notification gateway
-    // For now, we simulate with the tracking socket
-
-    return () => {
-      socket.close();
-    };
-  }, [citizenId]);
+  // Weather alerts are handled globally by GlobalNotificationListener
+  // No need for local socket listener
 
   const handleSave = async () => {
     setSaving(true);
@@ -173,13 +153,16 @@ const WeatherAlertPage = () => {
 
       setSnackbar({
         message: enabled
-          ? 'Alertas de clima activadas. Recibirás información cada mañana.'
-          : 'Alertas de clima desactivadas.',
-        severity: 'success',
+          ? "Alertas de clima activadas. Recibirás información cada mañana."
+          : "Alertas de clima desactivadas.",
+        severity: "success",
       });
       loadPrefs();
     } catch {
-      setSnackbar({ message: 'Error al guardar preferencias', severity: 'error' });
+      setSnackbar({
+        message: "Error al guardar preferencias",
+        severity: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -193,7 +176,10 @@ const WeatherAlertPage = () => {
       );
       setForecast(data as ForecastResult);
     } catch {
-      setSnackbar({ message: 'Error al consultar el clima', severity: 'error' });
+      setSnackbar({
+        message: "Error al consultar el clima",
+        severity: "error",
+      });
     } finally {
       setCheckingWeather(false);
     }
@@ -201,7 +187,7 @@ const WeatherAlertPage = () => {
 
   if (loading) {
     return (
-      <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
+      <Box sx={{ display: "grid", placeItems: "center", py: 8 }}>
         <CircularProgress />
       </Box>
     );
@@ -236,7 +222,7 @@ const WeatherAlertPage = () => {
         </Alert>
       )}
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={3}>
+      <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
         {/* Settings form */}
         <Card sx={{ flex: 1 }}>
           <CardContent>
@@ -291,9 +277,7 @@ const WeatherAlertPage = () => {
                 <Select
                   value={channel}
                   label="Canal de notificación"
-                  onChange={(e: any) =>
-                    setChannel(e.target.value)
-                  }
+                  onChange={(e: any) => setChannel(e.target.value)}
                 >
                   {CHANNEL_OPTIONS.map((opt) => (
                     <MenuItem key={opt.value} value={opt.value}>
@@ -309,7 +293,7 @@ const WeatherAlertPage = () => {
                 disabled={saving}
                 fullWidth
               >
-                {saving ? 'Guardando...' : 'Guardar preferencias'}
+                {saving ? "Guardando..." : "Guardar preferencias"}
               </Button>
             </Stack>
           </CardContent>
@@ -336,12 +320,12 @@ const WeatherAlertPage = () => {
               sx={{ mb: 3 }}
             >
               {checkingWeather
-                ? 'Consultando...'
-                : `Ver clima en ${city || 'Manizales'}`}
+                ? "Consultando..."
+                : `Ver clima en ${city || "Manizales"}`}
             </Button>
 
             {forecast?.forecast ? (
-              <Paper variant="outlined" sx={{ p: 3, textAlign: 'center' }}>
+              <Paper variant="outlined" sx={{ p: 3, textAlign: "center" }}>
                 <Typography variant="h2" sx={{ fontSize: 48, mb: 1 }}>
                   {forecast.forecast.icon}
                 </Typography>
@@ -368,8 +352,8 @@ const WeatherAlertPage = () => {
                       size="small"
                       color={
                         forecast.forecast.precipitationProbability > 50
-                          ? 'warning'
-                          : 'success'
+                          ? "warning"
+                          : "success"
                       }
                     />
                   </Stack>
@@ -395,7 +379,7 @@ const WeatherAlertPage = () => {
                       ¡No olvides tu paraguas! 🌧️
                     </Typography>
                     <Typography variant="caption">
-                      Probabilidad de lluvia:{' '}
+                      Probabilidad de lluvia:{" "}
                       {forecast.forecast.precipitationProbability}%. Considera
                       salir 15 minutos antes.
                     </Typography>
@@ -424,11 +408,11 @@ const WeatherAlertPage = () => {
         open={!!snackbar}
         autoHideDuration={4000}
         onClose={() => setSnackbar(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
         <Alert
           onClose={() => setSnackbar(null)}
-          severity={snackbar?.severity ?? 'info'}
+          severity={snackbar?.severity ?? "info"}
           variant="filled"
         >
           {snackbar?.message}
