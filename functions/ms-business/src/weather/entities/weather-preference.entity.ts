@@ -5,7 +5,7 @@ export class WeatherPreference {
   @PrimaryGeneratedColumn()
   id?: number;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, default: '' })
   citizenId?: string;
 
   @Column({ default: false })
