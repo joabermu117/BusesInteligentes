@@ -1,6 +1,7 @@
 import { IsBoolean, IsOptional, IsString } from 'class-validator';
 
 export class CreateWeatherPreferenceDto {
+  @IsOptional()
   @IsString()
   citizenId?: string;
 
