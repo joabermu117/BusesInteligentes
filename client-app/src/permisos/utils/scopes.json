@@ -112,5 +112,206 @@
     "url": "/api/weather/n8n/notification-result",
     "method": "POST",
     "model": "clima"
+  },
+
+  {
+    "url": "/api/groups",
+    "method": "GET",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/public",
+    "method": "GET",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?",
+    "method": "GET",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups",
+    "method": "POST",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?",
+    "method": "PUT",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?",
+    "method": "DELETE",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?/persons",
+    "method": "GET",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?/persons",
+    "method": "POST",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?/persons/?/promote",
+    "method": "PATCH",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?/persons/?/block",
+    "method": "PATCH",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?/persons/?",
+    "method": "DELETE",
+    "model": "grupos"
+  },
+  {
+    "url": "/api/groups/?/log",
+    "method": "GET",
+    "model": "grupos"
+  },
+
+  {
+    "url": "/api/citizens/search",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+
+  {
+    "url": "/api/messages",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/?",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages",
+    "method": "POST",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/?",
+    "method": "PUT",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/?",
+    "method": "DELETE",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/personal",
+    "method": "POST",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/group",
+    "method": "POST",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/inbox/?/unread-count",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/inbox/?",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/sent/?",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/?/read-receipts",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/messages/?/read-group",
+    "method": "PATCH",
+    "model": "mensajeria"
+  },
+
+  {
+    "url": "/api/recipient-persons",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-persons",
+    "method": "POST",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-persons/?",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-persons/?",
+    "method": "PUT",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-persons/?/read",
+    "method": "PATCH",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-persons/?",
+    "method": "DELETE",
+    "model": "mensajeria"
+  },
+
+  {
+    "url": "/api/recipient-groups",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-groups",
+    "method": "POST",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-groups/?",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-groups/?",
+    "method": "PUT",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/recipient-groups/?",
+    "method": "DELETE",
+    "model": "mensajeria"
+  },
+
+  {
+    "url": "/api/alerts",
+    "method": "GET",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/alerts",
+    "method": "POST",
+    "model": "mensajeria"
+  },
+  {
+    "url": "/api/alerts/stats/?",
+    "method": "GET",
+    "model": "mensajeria"
   }
 ]
