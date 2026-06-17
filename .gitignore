@@ -1,1 +1,55 @@
+# AI tools
 .aider*
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Firebase credentials
+**/firebase-service-account.json
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+target/
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test / coverage
+coverage/
+.nyc_output/
+htmlcov/
+.pytest_cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# IDEs & editors
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# OS
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Maven wrapper (downloaded at build time)
+.mvn/wrapper/maven-wrapper.jar

@@ -54,7 +54,12 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
   const [memberSearchQ, setMemberSearchQ] = useState("");
   const [selectedMembers, setSelectedMembers] = useState<CitizenSearchResult[]>([]);
 
-  const { data: searchResults, isFetching: isSearching } = useCitizenSearch(memberSearchQ);
+  const { data: searchResults, isFetching: isSearching } = useCitizenSearch(
+    memberSearchQ,
+    getUserIdFromToken(),
+  );
+
+  const MIN_INITIAL_MEMBERS = 2;
 
   useEffect(() => {
     if (group) {
@@ -114,7 +119,9 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
     }
   };
 
-  const isFormValid = form.name.trim().length >= 3;
+  const isFormValid =
+    form.name.trim().length >= 3 &&
+    (isEditing || selectedMembers.length >= MIN_INITIAL_MEMBERS);
 
   return (
     <FormDialog
@@ -151,7 +158,15 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
 
         {!isEditing && (
           <Stack spacing={1}>
-            <Typography variant="subtitle2">Miembros iniciales (opcional)</Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="baseline">
+              <Typography variant="subtitle2">Miembros iniciales</Typography>
+              <Typography
+                variant="caption"
+                color={selectedMembers.length < MIN_INITIAL_MEMBERS ? "error" : "text.secondary"}
+              >
+                {selectedMembers.length}/{MIN_INITIAL_MEMBERS} mínimo
+              </Typography>
+            </Stack>
             <Autocomplete
               multiple
               options={searchResults ?? []}
@@ -182,7 +197,7 @@ const GrupoFormDialog = ({ open, group, onClose }: GrupoFormDialogProps) => {
                 <TextField
                   {...params}
                   placeholder="Buscar ciudadanos..."
-                  helperText="Selecciona miembros para agregar al crear el grupo"
+                  helperText={`Debes agregar al menos ${MIN_INITIAL_MEMBERS} miembros además de ti`}
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (

@@ -1,0 +1,176 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    restart: unless-stopped
+    networks:
+      - buses-network
+    ports:
+      - "3308:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_DATABASE: ${DB_NAME:-ms_business_db}
+      MYSQL_USER: ${DB_USER:-Joaquin}
+      MYSQL_PASSWORD: ${DB_PASS:-Jacobo22}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "127.0.0.1",
+          "-uroot",
+          "-p${MYSQL_ROOT_PASSWORD:-rootpass}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: unless-stopped
+    networks:
+      - buses-network
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  ms-security:
+    build:
+      context: ./functions/ms-security
+      dockerfile: Dockerfile
+    container_name: ms-security
+    restart: unless-stopped
+    networks:
+      - buses-network
+    ports:
+      - "8081:8081"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: ${SERVER_PORT:-8081}
+      MONGODB_DATABASE: ${MONGODB_DATABASE:-db_security}
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017/db_security}
+      JWT_SECRET: ${JWT_SECRET:-change-this-jwt-secret-before-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-3600000}
+      FIREBASE_CREDENTIALS_PATH: ${FIREBASE_CREDENTIALS_PATH:-file:/app/firebase-service-account.json}
+      SECURITY_RECAPTCHA_SECRET_KEY: ${SECURITY_RECAPTCHA_SECRET_KEY:-}
+      SECURITY_PASSWORD_RECOVERY_RESET_URL: ${SECURITY_PASSWORD_RECOVERY_RESET_URL:-http://localhost:5173/reset-password}
+      SECURITY_2FA_ENABLED: ${SECURITY_2FA_ENABLED:-false}
+      SECURITY_AUTHORIZATION_ENABLED: ${SECURITY_AUTHORIZATION_ENABLED:-false}
+      APP_MAIL_ENABLED: ${APP_MAIL_ENABLED:-true}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-Notificaciones Buses <no-reply@buses-inteligentes.local>}
+      BUSINESS_MS_URL: ${BUSINESS_MS_URL:-http://ms-business:3000}
+    volumes:
+      - ./functions/ms-business/firebase-service-account.json:/app/firebase-service-account.json:ro
+
+  ms-business:
+    build:
+      context: ./functions/ms-business
+      dockerfile: Dockerfile
+    container_name: ms-business
+    restart: unless-stopped
+    networks:
+      - buses-network
+    ports:
+      - "3000:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ms-security:
+        condition: service_started
+    environment:
+      PORT: ${PORT:-3000}
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_USER: ${DB_USER:-Joaquin}
+      DB_PASS: ${DB_PASS:-Jacobo22}
+      DB_NAME: ${DB_NAME:-ms_business_db}
+      MS_SECURITY: ${MS_SECURITY:-http://ms-security:8081}
+      FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH:-firebase-service-account.json}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://localhost:4200}
+    volumes:
+      - ./functions/ms-business/firebase-service-account.json:/app/firebase-service-account.json:ro
+
+  ms-notifications:
+    build:
+      context: ./functions/ms-notifications
+      dockerfile: Dockerfile
+    container_name: ms-notifications
+    restart: unless-stopped
+    networks:
+      - buses-network
+    ports:
+      - "8082:8082"
+    environment:
+      SERVER_PORT: ${NOTIFICATIONS_SERVER_PORT:-8082}
+      HOST: 0.0.0.0
+      MAIL_ENABLED: ${MAIL_ENABLED:-true}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      MAIL_FROM: ${NOTIFICATIONS_MAIL_FROM:-notificaciones@buses-inteligentes.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Notificaciones Buses}
+      APP_NAME: ${APP_NAME:-Buses Inteligentes}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-soporte@buses-inteligentes.local}
+
+  client-app:
+    build:
+      context: ./client-app
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+        VITE_API_URL_PERMISOS: ${VITE_API_URL_PERMISOS:-http://localhost:8081/api}
+        VITE_API_URL_SECURITY: ${VITE_API_URL_SECURITY:-http://localhost:8081/api/public/security}
+        VITE_RECAPTCHA_SITE_KEY: ${VITE_RECAPTCHA_SITE_KEY:-}
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET:-}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID:-}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID:-}
+        VITE_FIREBASE_MEASUREMENT_ID: ${VITE_FIREBASE_MEASUREMENT_ID:-}
+        VITE_FIREBASE_VAPID_KEY: ${VITE_FIREBASE_VAPID_KEY:-}
+        VITE_EPAYCO_URL: ${VITE_EPAYCO_URL:-https://checkout.epayco.co/checkout.js}
+        VITE_EPAYCO_PUBLIC_KEY: ${VITE_EPAYCO_PUBLIC_KEY:-}
+        VITE_NOTIFICATIONS_URL: ${VITE_NOTIFICATIONS_URL:-http://localhost:8082}
+        VITE_N8N_PQRS_URL: ${VITE_N8N_PQRS_URL:-}
+        VITE_N8N_PQRS_ESTADO_URL: ${VITE_N8N_PQRS_ESTADO_URL:-}
+        VITE_N8N_CITAS_DISPONIBILIDAD_URL: ${VITE_N8N_CITAS_DISPONIBILIDAD_URL:-}
+        VITE_N8N_CITAS_AGENDAR_URL: ${VITE_N8N_CITAS_AGENDAR_URL:-}
+        VITE_N8N_CITAS_CANCELAR_URL: ${VITE_N8N_CITAS_CANCELAR_URL:-}
+    container_name: client-app
+    restart: unless-stopped
+    networks:
+      - buses-network
+    ports:
+      - "5173:80"
+    depends_on:
+      - ms-business
+      - ms-security
+
+networks:
+  buses-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  mongo_data:

@@ -7,6 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Citizen } from '../citizen/entities/citizen.entity';
 import { Group } from '../group/entities/group.entity';
+import { NotificationsGateway } from '../gateways/notifications/notifications.gateway';
+import { FcmService } from '../notifications-fcm/fcm.service';
 import { CreateGroupPersonDto } from './dto/create-group-person.dto';
 import { UpdateGroupPersonDto } from './dto/update-group-person.dto';
 import { GroupMembershipLog } from './entities/group-membership-log.entity';
@@ -23,6 +25,8 @@ export class GroupPersonService {
     private readonly citizenRepository: Repository<Citizen>,
     @InjectRepository(GroupMembershipLog)
     private readonly logRepository: Repository<GroupMembershipLog>,
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly fcmService: FcmService,
   ) {}
 
   private async log(
@@ -75,7 +79,26 @@ export class GroupPersonService {
     });
     const saved = await this.groupPersonRepository.save(groupPerson);
     await this.log(groupId, personId, 'joined', actionBy);
+
+    const actor = await this.citizenRepository.findOne({ where: { person_id: actionBy } });
+    this.notifyAddedToGroup(group, personId, actor?.name);
+
     return saved;
+  }
+
+  private notifyAddedToGroup(group: Group, personId: string, addedByName?: string | null): void {
+    this.notificationsGateway.sendToUser(personId, 'added-to-group', {
+      groupId: group.id,
+      groupName: group.name,
+      addedByName,
+    });
+
+    this.fcmService.sendPushToUser(
+      personId,
+      'Te agregaron a un grupo',
+      `${addedByName ?? 'Un administrador'} te agregó al grupo "${group.name}"`,
+      { type: 'group-added', groupId: String(group.id) },
+    );
   }
 
   async create(dto: CreateGroupPersonDto): Promise<GroupPerson> {

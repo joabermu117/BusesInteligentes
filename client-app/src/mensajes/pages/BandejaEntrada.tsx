@@ -1,3 +1,4 @@
+import DeleteRounded from "@mui/icons-material/DeleteRounded";
 import EmailRounded from "@mui/icons-material/EmailRounded";
 import GroupsRounded from "@mui/icons-material/GroupsRounded";
 import MarkEmailReadRounded from "@mui/icons-material/MarkEmailReadRounded";
@@ -24,15 +25,18 @@ import {
   Stack,
   Tab,
   Tabs,
+  TextField,
   Typography,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthUserId } from "../../config/httpClient";
 import { formatMessageDate } from "../../shared/utils/dateFormat";
+import { useGroups } from "../../grupos/stores/useGroupsStore";
 import type { InboxItem } from "../models/message";
 import {
+  useDeleteGroupMessage,
   useInbox,
   useMarkGroupRead,
   useMarkPersonalRead,
@@ -55,6 +59,8 @@ const BandejaEntrada = () => {
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
   const [page, setPage] = useState(1);
   const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   const type = tab === "all" ? undefined : tab;
   const { data: inboxData, isLoading } = useInbox(personId, {
@@ -62,10 +68,25 @@ const BandejaEntrada = () => {
     unread: unreadOnly,
     page,
     limit: PAGE_SIZE,
+    dateFrom: dateFrom || undefined,
+    dateTo: dateTo || undefined,
   });
   const { data: counts } = useUnreadCount(personId);
   const { mutateAsync: markPersonal } = useMarkPersonalRead();
   const { mutateAsync: markGroup } = useMarkGroupRead();
+  const { mutateAsync: deleteGroupMsg, isPending: isDeletingMsg } = useDeleteGroupMessage();
+
+  // Grupos donde el usuario es admin (para permitir eliminar mensajes inapropiados)
+  const { data: allGroups } = useGroups();
+  const adminGroupIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const g of allGroups ?? []) {
+      if (g.groupPersons?.some((gp) => gp.person_id === personId && gp.role === "admin")) {
+        ids.add(g.id);
+      }
+    }
+    return ids;
+  }, [allGroups, personId]);
 
   const inbox = inboxData?.items ?? [];
   const total = inboxData?.total ?? 0;
@@ -124,6 +145,10 @@ const BandejaEntrada = () => {
         else setHasNewMessages(true);
         qc.invalidateQueries({ queryKey: ["unread-count"] });
       },
+      "group-message-deleted": () => {
+        qc.invalidateQueries({ queryKey: ["inbox"] });
+        qc.invalidateQueries({ queryKey: ["unread-count"] });
+      },
     },
     (connected) => {
       if (!connected) {
@@ -141,7 +166,11 @@ const BandejaEntrada = () => {
   const handleOpen = async (item: InboxItem) => {
     setSelectedItem(item);
     try {
-      if (item.inbox_type === "personal" && item.recipient_id && !item.read_at) {
+      if (
+        (item.inbox_type === "personal" || item.inbox_type === "mass_alert") &&
+        item.recipient_id &&
+        !item.read_at
+      ) {
         await markPersonal(item.recipient_id);
       } else if (item.inbox_type === "group" && !item.read_at && item.group) {
         await markGroup({ messageId: item.message.id, groupId: item.group.id, personId });
@@ -167,6 +196,21 @@ const BandejaEntrada = () => {
     const senderName = selectedItem.message.sender?.name ?? senderId;
     navigate("/mensajes/nuevo", { state: { replyTo: senderId, replyName: senderName } });
     setSelectedItem(null);
+  };
+
+  const handleDeleteGroupMessage = async () => {
+    if (!selectedItem?.group) return;
+    try {
+      await deleteGroupMsg({
+        messageId: selectedItem.message.id,
+        groupId: selectedItem.group.id,
+        actorPersonId: personId,
+      });
+      enqueueSnackbar("Mensaje eliminado del grupo", { variant: "success" });
+      setSelectedItem(null);
+    } catch {
+      enqueueSnackbar("No se pudo eliminar el mensaje", { variant: "error" });
+    }
   };
 
   return (
@@ -228,6 +272,30 @@ const BandejaEntrada = () => {
           />
         </Tabs>
         <Box flex={1} />
+        <TextField
+          label="Desde"
+          type="date"
+          size="small"
+          value={dateFrom}
+          onChange={(e) => {
+            setDateFrom(e.target.value);
+            setPage(1);
+          }}
+          InputLabelProps={{ shrink: true }}
+          sx={{ width: 150 }}
+        />
+        <TextField
+          label="Hasta"
+          type="date"
+          size="small"
+          value={dateTo}
+          onChange={(e) => {
+            setDateTo(e.target.value);
+            setPage(1);
+          }}
+          InputLabelProps={{ shrink: true }}
+          sx={{ width: 150 }}
+        />
         <Chip
           label={unreadOnly ? "Solo no leídos" : "Todos"}
           onClick={() => {
@@ -393,6 +461,20 @@ const BandejaEntrada = () => {
                   Responder
                 </Button>
               )}
+              {selectedItem.inbox_type === "group" &&
+                selectedItem.group &&
+                adminGroupIds.has(selectedItem.group.id) && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<DeleteRounded />}
+                    onClick={handleDeleteGroupMessage}
+                    disabled={isDeletingMsg}
+                    size="small"
+                  >
+                    Eliminar
+                  </Button>
+                )}
               <Button
                 variant="outlined"
                 onClick={() => setSelectedItem(null)}

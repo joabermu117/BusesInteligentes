@@ -8,6 +8,7 @@ import type {
   UnreadCount,
 } from "../models/message";
 import {
+  deleteGroupMessage,
   fetchAlertStats,
   fetchAlerts,
   fetchInbox,
@@ -24,7 +25,14 @@ import {
 
 export const useInbox = (
   personId: string,
-  opts?: { type?: "personal" | "group"; unread?: boolean; page?: number; limit?: number },
+  opts?: {
+    type?: "personal" | "group";
+    unread?: boolean;
+    page?: number;
+    limit?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  },
 ) =>
   useQuery<{ items: InboxItem[]; total: number; page: number; limit: number }>({
     queryKey: ["inbox", personId, opts],
@@ -109,6 +117,18 @@ export const useMarkGroupRead = () => {
   return useMutation({
     mutationFn: ({ messageId, groupId, personId }: { messageId: number; groupId: number; personId: string }) =>
       markGroupMessageRead(messageId, groupId, personId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inbox"] });
+      qc.invalidateQueries({ queryKey: ["unread-count"] });
+    },
+  });
+};
+
+export const useDeleteGroupMessage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ messageId, groupId, actorPersonId }: { messageId: number; groupId: number; actorPersonId: string }) =>
+      deleteGroupMessage(messageId, groupId, actorPersonId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inbox"] });
       qc.invalidateQueries({ queryKey: ["unread-count"] });

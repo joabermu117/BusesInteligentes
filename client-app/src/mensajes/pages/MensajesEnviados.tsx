@@ -107,56 +107,57 @@ const MensajesEnviados = () => {
         <Stack spacing={1.5}>
           {sent.map((msg) => (
             <Card key={msg.id} variant="outlined">
-              <CardActionArea onClick={() => setSelectedMsg(msg)}>
-                <CardContent>
-                  <Stack direction="row" spacing={1} alignItems="flex-start">
-                    <Box pt={0.25}>
-                      {msg.message_type === "group" ? (
-                        <GroupsRounded color="action" />
-                      ) : msg.is_urgent ? (
-                        <WarningAmberRounded color="error" />
-                      ) : (
-                        <EmailRounded color="action" />
-                      )}
-                    </Box>
-                    <Box flex={1} minWidth={0}>
-                      <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
-                        <Typography variant="body2" fontWeight={600} noWrap>
-                          {msg.message_type === "personal"
-                            ? `Para: ${(msg.recipientPersons ?? []).map((r) => r.recipient?.name ?? r.recipient_person_id).join(", ")}`
-                            : msg.message_type === "group"
-                            ? `Grupos: ${(msg.recipientGroups ?? []).map((rg) => rg.group?.name ?? rg.group_id).join(", ")}`
-                            : "Alerta masiva"}
-                        </Typography>
-                        {msg.is_urgent && <Chip label="Urgente" size="small" color="error" />}
-                        {msg.message_type === "mass_alert" && (
-                          <Chip label="Alerta" size="small" color="warning" />
+              <Stack direction="row" alignItems="stretch">
+                <CardActionArea onClick={() => setSelectedMsg(msg)} sx={{ flex: 1, minWidth: 0 }}>
+                  <CardContent>
+                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                      <Box pt={0.25}>
+                        {msg.message_type === "group" ? (
+                          <GroupsRounded color="action" />
+                        ) : msg.is_urgent ? (
+                          <WarningAmberRounded color="error" />
+                        ) : (
+                          <EmailRounded color="action" />
                         )}
-                        <Box flex={1} />
-                        <Typography variant="caption" color="text.secondary" whiteSpace="nowrap">
-                          {formatDate(msg.sent_at)}
+                      </Box>
+                      <Box flex={1} minWidth={0}>
+                        <Stack direction="row" spacing={1} alignItems="center" mb={0.5}>
+                          <Typography variant="body2" fontWeight={600} noWrap>
+                            {msg.message_type === "personal"
+                              ? `Para: ${(msg.recipientPersons ?? []).map((r) => r.recipient?.name ?? r.recipient_person_id).join(", ")}`
+                              : msg.message_type === "group"
+                              ? `Grupos: ${(msg.recipientGroups ?? []).map((rg) => rg.group?.name ?? rg.group_id).join(", ")}`
+                              : "Alerta masiva"}
+                          </Typography>
+                          {msg.is_urgent && <Chip label="Urgente" size="small" color="error" />}
+                          {msg.message_type === "mass_alert" && (
+                            <Chip label="Alerta" size="small" color="warning" />
+                          )}
+                          <Box flex={1} />
+                          <Typography variant="caption" color="text.secondary" whiteSpace="nowrap">
+                            {formatDate(msg.sent_at)}
+                          </Typography>
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary" noWrap>
+                          {msg.content}
                         </Typography>
-                      </Stack>
-                      <Typography variant="body2" color="text.secondary" noWrap>
-                        {msg.content}
-                      </Typography>
-                    </Box>
-                    {msg.message_type === "group" && (
-                      <Button
-                        size="small"
-                        startIcon={<DoneAllRounded />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setReceiptsMsg(msg.id);
-                        }}
-                        sx={{ flexShrink: 0 }}
-                      >
-                        Leídos
-                      </Button>
-                    )}
-                  </Stack>
-                </CardContent>
-              </CardActionArea>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+                {msg.message_type === "group" && (
+                  <Box display="flex" alignItems="center" pr={2}>
+                    <Button
+                      size="small"
+                      startIcon={<DoneAllRounded />}
+                      onClick={() => setReceiptsMsg(msg.id)}
+                      sx={{ flexShrink: 0 }}
+                    >
+                      Leídos
+                    </Button>
+                  </Box>
+                )}
+              </Stack>
             </Card>
           ))}
 
@@ -189,9 +190,32 @@ const MensajesEnviados = () => {
                 Enviado: {formatDate(selectedMsg.sent_at)}
               </Typography>
               <Divider sx={{ my: 2 }} />
-              <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+              <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }} mb={2}>
                 {selectedMsg.content}
               </Typography>
+              {selectedMsg.message_type === "personal" && (selectedMsg.recipientPersons?.length ?? 0) > 0 && (
+                <>
+                  <Divider sx={{ mb: 1.5 }} />
+                  <Typography variant="subtitle2" mb={1}>
+                    Estado de lectura
+                  </Typography>
+                  <Stack spacing={0.5}>
+                    {selectedMsg.recipientPersons!.map((rp) => (
+                      <Stack key={rp.id} direction="row" justifyContent="space-between">
+                        <Typography variant="body2">
+                          {rp.recipient?.name ?? rp.recipient_person_id}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color={rp.read_at ? "success.main" : "text.secondary"}
+                        >
+                          {rp.read_at ? `Leído ${formatDate(rp.read_at)}` : "No leído"}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </>
+              )}
             </DialogContent>
           </>
         )}

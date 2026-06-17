@@ -284,6 +284,8 @@ export class MessageService {
     unreadOnly = false,
     page = 1,
     limit = 50,
+    dateFrom?: string,
+    dateTo?: string,
   ): Promise<{ items: any[]; total: number; page: number; limit: number }> {
     const results: any[] = [];
 
@@ -354,15 +356,27 @@ export class MessageService {
       }
     }
 
-    results.sort(
+    let filtered = results;
+    if (dateFrom) {
+      const from = new Date(dateFrom).getTime();
+      filtered = filtered.filter((r) => new Date(r.message.sent_at).getTime() >= from);
+    }
+    if (dateTo) {
+      // dateTo es inclusivo del día completo (hasta las 23:59:59.999)
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      filtered = filtered.filter((r) => new Date(r.message.sent_at).getTime() <= to.getTime());
+    }
+
+    filtered.sort(
       (a, b) =>
         new Date(b.message.sent_at).getTime() -
         new Date(a.message.sent_at).getTime(),
     );
 
-    const total = results.length;
+    const total = filtered.length;
     const offset = (page - 1) * limit;
-    const paged = results.slice(offset, offset + limit);
+    const paged = filtered.slice(offset, offset + limit);
 
     return { items: paged, total, page, limit };
   }
@@ -467,5 +481,49 @@ export class MessageService {
     }
 
     return this.groupReadRepo.save(record);
+  }
+
+  // ─── Eliminación de mensaje grupal por un administrador ──────────────────────
+
+  async removeGroupMessage(
+    messageId: number,
+    groupId: number,
+    actorPersonId: string,
+  ): Promise<{ message: string }> {
+    const isAdmin = await this.groupPersonRepo.findOne({
+      where: { group_id: groupId, person_id: actorPersonId, role: 'admin', is_blocked: false },
+    });
+    if (!isAdmin) {
+      throw new BadRequestException('Solo los administradores del grupo pueden eliminar mensajes');
+    }
+
+    const recipientGroup = await this.recipientGroupRepo.findOne({
+      where: { message_id: messageId, group_id: groupId },
+    });
+    if (!recipientGroup) {
+      throw new NotFoundException('Mensaje no encontrado en este grupo');
+    }
+
+    await this.recipientGroupRepo.remove(recipientGroup);
+    await this.groupReadRepo.delete({ message_id: messageId, group_id: groupId });
+
+    const [remainingGroups, remainingPersons] = await Promise.all([
+      this.recipientGroupRepo.count({ where: { message_id: messageId } }),
+      this.recipientPersonRepo.count({ where: { message_id: messageId } }),
+    ]);
+    if (remainingGroups === 0 && remainingPersons === 0) {
+      await this.messageRepo.delete({ id: messageId });
+    }
+
+    const members = await this.groupPersonRepo.find({
+      where: { group_id: groupId, is_blocked: false },
+    });
+    this.notificationsGateway.sendToMany(
+      members.map((m) => m.person_id!),
+      'group-message-deleted',
+      { messageId, groupId },
+    );
+
+    return { message: 'Mensaje eliminado del grupo' };
   }
 }

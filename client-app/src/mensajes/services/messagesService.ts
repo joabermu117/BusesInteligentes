@@ -63,17 +63,37 @@ export const fetchReadReceipts = async (messageId: number): Promise<ReadReceipt[
   return data;
 };
 
+export const deleteGroupMessage = async (
+  messageId: number,
+  groupId: number,
+  actorPersonId: string,
+): Promise<{ message: string }> => {
+  const { data } = await httpClient.delete(`${API_URL}/api/messages/${messageId}/group/${groupId}`, {
+    data: { actor_person_id: actorPersonId },
+  });
+  return data;
+};
+
 // ─── Bandeja de entrada ────────────────────────────────────────────────────────
 
 export const fetchInbox = async (
   personId: string,
-  opts?: { type?: "personal" | "group"; unread?: boolean; page?: number; limit?: number },
+  opts?: {
+    type?: "personal" | "group";
+    unread?: boolean;
+    page?: number;
+    limit?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  },
 ): Promise<{ items: InboxItem[]; total: number; page: number; limit: number }> => {
   const params: Record<string, string> = {};
   if (opts?.type) params.type = opts.type;
   if (opts?.unread) params.unread = "true";
   if (opts?.page) params.page = String(opts.page);
   if (opts?.limit) params.limit = String(opts.limit);
+  if (opts?.dateFrom) params.dateFrom = opts.dateFrom;
+  if (opts?.dateTo) params.dateTo = opts.dateTo;
   const { data } = await httpClient.get(`${API_URL}/api/messages/inbox/${personId}`, { params });
   return data;
 };

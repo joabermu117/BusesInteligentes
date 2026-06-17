@@ -5,11 +5,13 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 
 export class SendPersonalMessageDto {
   @IsString()
   @IsNotEmpty()
+  @MaxLength(500, { message: 'El mensaje no puede superar los 500 caracteres' })
   content: string;
 
   @IsString()

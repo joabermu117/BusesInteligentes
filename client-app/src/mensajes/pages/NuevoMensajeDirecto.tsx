@@ -226,13 +226,13 @@ const NuevoMensajeDirecto = () => {
           onChange={(e) => setContent(e.target.value)}
           onBlur={() => setContentTouched(true)}
           fullWidth
-          inputProps={{ maxLength: 2000 }}
+          inputProps={{ maxLength: 500 }}
           placeholder="Escribe tu mensaje aquí..."
           error={contentTouched && isContentEmpty}
           helperText={
             contentTouched && isContentEmpty
               ? "El mensaje no puede estar vacío"
-              : `${content.length}/2000`
+              : `${content.length}/500`
           }
         />
 

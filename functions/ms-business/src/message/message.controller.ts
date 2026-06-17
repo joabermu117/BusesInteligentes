@@ -42,6 +42,8 @@ export class MessageController {
     @Query('unread') unread?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
     return this.messageService.getInbox(
       personId,
@@ -49,6 +51,8 @@ export class MessageController {
       unread === 'true',
       page ? Math.max(1, +page) : 1,
       limit ? Math.min(100, Math.max(1, +limit)) : 50,
+      dateFrom,
+      dateTo,
     );
   }
 
@@ -88,6 +92,15 @@ export class MessageController {
     @Body() body: { group_id: number; person_id: string },
   ) {
     return this.messageService.markGroupMessageRead(+id, body.group_id, body.person_id);
+  }
+
+  @Delete(':id/group/:groupId')
+  removeGroupMessage(
+    @Param('id') id: string,
+    @Param('groupId') groupId: string,
+    @Body() body: { actor_person_id: string },
+  ) {
+    return this.messageService.removeGroupMessage(+id, +groupId, body.actor_person_id);
   }
 
   @Get(':id')
