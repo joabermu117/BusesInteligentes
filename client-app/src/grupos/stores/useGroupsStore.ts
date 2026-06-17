@@ -7,6 +7,7 @@ import type {
   UpdateGroupPayload,
 } from "../models/group";
 import {
+  addMemberByAdmin,
   blockMember,
   createGroup,
   deleteGroup,
@@ -110,6 +111,16 @@ export const usePromoteMember = () => {
   return useMutation({
     mutationFn: ({ groupId, personId, actionBy }: { groupId: number; personId: string; actionBy: string }) =>
       promoteMember(groupId, personId, actionBy),
+    onSuccess: (_, { groupId }) =>
+      qc.invalidateQueries({ queryKey: ["groups", groupId, "members"] }),
+  });
+};
+
+export const useAddMemberByAdmin = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ groupId, personId, actionBy }: { groupId: number; personId: string; actionBy: string }) =>
+      addMemberByAdmin(groupId, personId, actionBy),
     onSuccess: (_, { groupId }) =>
       qc.invalidateQueries({ queryKey: ["groups", groupId, "members"] }),
   });

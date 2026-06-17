@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -32,8 +33,13 @@ export class CitizenController {
   }
 
   @Get('search')
-  search(@Query('q') q: string) {
-    return this.citizenService.search(q);
+  search(
+    @Query('q') q: string,
+    @Query('excludePersonId') excludePersonId?: string,
+    @Headers('authorization') auth?: string,
+  ) {
+    const token = auth?.replace('Bearer ', '') || '';
+    return this.citizenService.search(q, token, excludePersonId);
   }
 
   @Get()

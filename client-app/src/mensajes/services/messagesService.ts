@@ -6,6 +6,7 @@ import type {
   GroupMessageRead,
   InboxItem,
   Message,
+  ReadReceipt,
   RecipientPerson,
   SendGroupMessagePayload,
   SendPersonalMessagePayload,
@@ -16,8 +17,13 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 // ─── Personas ──────────────────────────────────────────────────────────────────
 
-export const searchCitizens = async (q: string): Promise<CitizenSearchResult[]> => {
-  const { data } = await httpClient.get(`${API_URL}/api/citizens/search`, { params: { q } });
+export const searchCitizens = async (
+  q: string,
+  excludePersonId?: string,
+): Promise<CitizenSearchResult[]> => {
+  const { data } = await httpClient.get(`${API_URL}/api/citizens/search`, {
+    params: { q, excludePersonId },
+  });
   return data;
 };
 
@@ -52,7 +58,7 @@ export const markGroupMessageRead = async (
   return data;
 };
 
-export const fetchReadReceipts = async (messageId: number): Promise<GroupMessageRead[]> => {
+export const fetchReadReceipts = async (messageId: number): Promise<ReadReceipt[]> => {
   const { data } = await httpClient.get(`${API_URL}/api/messages/${messageId}/read-receipts`);
   return data;
 };
@@ -79,8 +85,14 @@ export const fetchUnreadCount = async (personId: string): Promise<UnreadCount> =
 
 // ─── Mensajes enviados ─────────────────────────────────────────────────────────
 
-export const fetchSent = async (personId: string): Promise<Message[]> => {
-  const { data } = await httpClient.get(`${API_URL}/api/messages/sent/${personId}`);
+export const fetchSent = async (
+  personId: string,
+  opts?: { page?: number; limit?: number },
+): Promise<{ items: Message[]; total: number; page: number; limit: number }> => {
+  const params: Record<string, string> = {};
+  if (opts?.page) params.page = String(opts.page);
+  if (opts?.limit) params.limit = String(opts.limit);
+  const { data } = await httpClient.get(`${API_URL}/api/messages/sent/${personId}`, { params });
   return data;
 };
 

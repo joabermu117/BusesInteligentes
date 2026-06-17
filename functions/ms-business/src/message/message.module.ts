@@ -5,6 +5,7 @@ import { GroupMessageRead } from '../group-message-read/entities/group-message-r
 import { GroupPerson } from '../group-person/entities/group-person.entity';
 import { Group } from '../group/entities/group.entity';
 import { NotificationsModule } from '../gateways/notifications/notifications.module';
+import { FcmModule } from '../notifications-fcm/fcm.module';
 import { RecipientGroup } from '../recipient-group/entities/recipient-group.entity';
 import { RecipientPerson } from '../recipient-person/entities/recipient-person.entity';
 import { MessageController } from './message.controller';
@@ -23,6 +24,7 @@ import { Message } from './entities/message.entity';
       GroupMessageRead,
     ]),
     NotificationsModule,
+    FcmModule,
   ],
   controllers: [MessageController],
   providers: [MessageService],

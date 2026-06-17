@@ -100,6 +100,18 @@ export const blockMember = async (
   return data;
 };
 
+export const addMemberByAdmin = async (
+  groupId: number,
+  personId: string,
+  actionBy: string,
+): Promise<GroupPerson> => {
+  const { data } = await httpClient.post(
+    `${API_URL}/api/groups/${groupId}/persons/add-by-admin`,
+    { person_id: personId, action_by: actionBy },
+  );
+  return data;
+};
+
 export const fetchMembershipLog = async (groupId: number): Promise<GroupMembershipLog[]> => {
   const { data } = await httpClient.get(`${API_URL}/api/groups/${groupId}/log`);
   return data;

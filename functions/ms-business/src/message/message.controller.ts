@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Put, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { SendGroupMessageDto } from './dto/send-group-message.dto';
 import { SendPersonalMessageDto } from './dto/send-personal-message.dto';
@@ -11,14 +12,22 @@ export class MessageController {
 
   // ─── Specific named routes first (before :id catch-all) ───────────────────────
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('personal')
-  sendPersonal(@Body() dto: SendPersonalMessageDto) {
-    return this.messageService.sendPersonal(dto);
+  sendPersonal(
+    @Body() dto: SendPersonalMessageDto,
+    @Headers('authorization') auth?: string,
+  ) {
+    return this.messageService.sendPersonal(dto, auth?.replace('Bearer ', ''));
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('group')
-  sendToGroup(@Body() dto: SendGroupMessageDto) {
-    return this.messageService.sendToGroup(dto);
+  sendToGroup(
+    @Body() dto: SendGroupMessageDto,
+    @Headers('authorization') auth?: string,
+  ) {
+    return this.messageService.sendToGroup(dto, auth?.replace('Bearer ', ''));
   }
 
   @Get('inbox/:personId/unread-count')
@@ -44,8 +53,16 @@ export class MessageController {
   }
 
   @Get('sent/:personId')
-  getSent(@Param('personId') personId: string) {
-    return this.messageService.getSent(personId);
+  getSent(
+    @Param('personId') personId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.messageService.getSent(
+      personId,
+      page ? Math.max(1, +page) : 1,
+      limit ? Math.min(100, Math.max(1, +limit)) : 50,
+    );
   }
 
   // ─── Generic CRUD ─────────────────────────────────────────────────────────────

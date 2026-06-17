@@ -2,10 +2,12 @@ import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRou
 import ArrowBackRounded from "@mui/icons-material/ArrowBackRounded";
 import BlockRounded from "@mui/icons-material/BlockRounded";
 import ExitToAppRounded from "@mui/icons-material/ExitToAppRounded";
+import PersonAddRounded from "@mui/icons-material/PersonAddRounded";
 import PersonRemoveRounded from "@mui/icons-material/PersonRemoveRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
 import {
   Alert,
+  Autocomplete,
   Avatar,
   Box,
   Button,
@@ -13,6 +15,10 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Stack,
   TextField,
@@ -25,8 +31,11 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ConfirmActionDialog from "../../permisos/common/components/ConfirmActionDialog";
 import { AUTH_TOKEN_STORAGE_KEY } from "../../config/httpClient";
 import { extractErrorMessage } from "../../shared/utils/errorHandler";
+import type { CitizenSearchResult } from "../../mensajes/models/message";
+import { useCitizenSearch } from "../../mensajes/stores/useMessagesStore";
 import { GROUP_ACTION_LABELS } from "../models/group";
 import {
+  useAddMemberByAdmin,
   useBlockMember,
   useGroup,
   useGroupMembers,
@@ -108,6 +117,13 @@ const GrupoDetalle = () => {
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [searchMember, setSearchMember] = useState("");
   const [logUsers, setLogUsers] = useState<Record<string, string>>({});
+  const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
+  const [addMemberSearchQ, setAddMemberSearchQ] = useState("");
+  const [selectedAddMember, setSelectedAddMember] = useState<CitizenSearchResult | null>(null);
+
+  const { mutateAsync: addMember, isPending: isAddingMember } = useAddMemberByAdmin();
+  const { data: citizenSearchResults, isFetching: isSearchingCitizens } =
+    useCitizenSearch(addMemberSearchQ);
 
   const currentMember = members?.find((m) => m.person_id === personId);
   const isAdmin = currentMember?.role === "admin";
@@ -276,6 +292,41 @@ const GrupoDetalle = () => {
     }
   };
 
+  const handleAddMember = async () => {
+    if (!personId || !selectedAddMember) return;
+    try {
+      await addMember({
+        groupId,
+        personId: selectedAddMember.person_id,
+        actionBy: personId,
+      });
+      enqueueSnackbar(
+        `${selectedAddMember.name ?? selectedAddMember.person_id} agregado al grupo.`,
+        { variant: "success" },
+      );
+      setAddMemberDialogOpen(false);
+      setSelectedAddMember(null);
+      setAddMemberSearchQ("");
+
+      // Notificar al nuevo miembro
+      const newMember = await getUserById(selectedAddMember.person_id);
+      if (newMember?.email) {
+        await sendEmail(
+          newMember.email,
+          newMember.name,
+          `Has sido agregado al grupo "${group?.name}"`,
+          `Has sido agregado al grupo <strong>${group?.name}</strong> por un administrador.<br/><br/>
+          Ahora puedes recibir mensajes del grupo.`,
+        );
+      }
+    } catch (e) {
+      enqueueSnackbar(
+        extractErrorMessage(e, "Error al agregar miembro"),
+        { variant: "error" },
+      );
+    }
+  };
+
   if (isLoadingGroup) {
     return (
       <Box display="flex" justifyContent="center" py={8}>
@@ -377,9 +428,21 @@ const GrupoDetalle = () => {
       <Stack direction={{ xs: "column", md: "row" }} spacing={3}>
         {/* Panel miembros */}
         <Box sx={{ flex: 1.5 }}>
-          <Typography variant="h6" fontWeight={700} mb={1}>
-            Miembros ({members?.length ?? 0})
-          </Typography>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+            <Typography variant="h6" fontWeight={700}>
+              Miembros ({members?.length ?? 0})
+            </Typography>
+            {canManage && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<PersonAddRounded />}
+                onClick={() => setAddMemberDialogOpen(true)}
+              >
+                Agregar
+              </Button>
+            )}
+          </Stack>
 
           <TextField
             placeholder="Buscar miembro..."
@@ -515,6 +578,80 @@ const GrupoDetalle = () => {
           </Box>
         )}
       </Stack>
+
+      {/* Diálogo agregar miembro */}
+      <Dialog
+        open={addMemberDialogOpen}
+        onClose={() => {
+          setAddMemberDialogOpen(false);
+          setSelectedAddMember(null);
+          setAddMemberSearchQ("");
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle fontWeight={700}>Agregar miembro al grupo</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <Typography variant="body2" color="text.secondary">
+              Busca un usuario por nombre o ID para agregarlo al grupo.
+            </Typography>
+            <Autocomplete
+              options={citizenSearchResults ?? []}
+              getOptionLabel={(o) => o.name ?? o.person_id}
+              filterOptions={(x) => x}
+              inputValue={addMemberSearchQ}
+              onInputChange={(_, v) => setAddMemberSearchQ(v)}
+              value={selectedAddMember}
+              onChange={(_, v) => setSelectedAddMember(v)}
+              loading={isSearchingCitizens}
+              noOptionsText={
+                addMemberSearchQ.length < 2
+                  ? "Escribe al menos 2 caracteres"
+                  : "Sin resultados"
+              }
+              isOptionEqualToValue={(a, b) => a.person_id === b.person_id}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Buscar ciudadano"
+                  placeholder="Nombre o ID..."
+                  InputProps={{
+                    ...params.InputProps,
+                    endAdornment: (
+                      <>
+                        {isSearchingCitizens ? <CircularProgress size={16} /> : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  }}
+                />
+              )}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
+              setAddMemberDialogOpen(false);
+              setSelectedAddMember(null);
+              setAddMemberSearchQ("");
+            }}
+            size="small"
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<PersonAddRounded />}
+            onClick={handleAddMember}
+            disabled={!selectedAddMember || isAddingMember}
+            size="small"
+          >
+            {isAddingMember ? "Agregando..." : "Agregar miembro"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

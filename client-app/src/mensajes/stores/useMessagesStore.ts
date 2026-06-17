@@ -37,13 +37,13 @@ export const useUnreadCount = (personId: string) =>
     queryKey: ["unread-count", personId],
     queryFn: () => fetchUnreadCount(personId),
     enabled: !!personId,
-    refetchInterval: 30_000,
+    refetchInterval: 15_000,
   });
 
-export const useSent = (personId: string) =>
-  useQuery<Message[]>({
-    queryKey: ["sent", personId],
-    queryFn: () => fetchSent(personId),
+export const useSent = (personId: string, opts?: { page?: number; limit?: number }) =>
+  useQuery<{ items: Message[]; total: number; page: number; limit: number }>({
+    queryKey: ["sent", personId, opts],
+    queryFn: () => fetchSent(personId, opts),
     enabled: !!personId,
   });
 
@@ -64,10 +64,10 @@ export const useAlertStats = (alertId: number) =>
     enabled: !!alertId,
   });
 
-export const useCitizenSearch = (q: string) =>
+export const useCitizenSearch = (q: string, excludePersonId?: string) =>
   useQuery({
-    queryKey: ["citizens-search", q],
-    queryFn: () => searchCitizens(q),
+    queryKey: ["citizens-search", q, excludePersonId],
+    queryFn: () => searchCitizens(q, excludePersonId),
     enabled: q.trim().length >= 2,
   });
 

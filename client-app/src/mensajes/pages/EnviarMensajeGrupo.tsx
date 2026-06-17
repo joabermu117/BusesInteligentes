@@ -8,7 +8,13 @@ import {
   Button,
   Checkbox,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   FormControlLabel,
+  LinearProgress,
   Stack,
   Switch,
   TextField,
@@ -34,7 +40,9 @@ const EnviarMensajeGrupo = () => {
 
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [content, setContent] = useState("");
+  const [contentTouched, setContentTouched] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
+  const [confirmUrgentOpen, setConfirmUrgentOpen] = useState(false);
 
   const { mutateAsync: sendMessage, isPending } = useSendGroupMessage();
 
@@ -43,8 +51,9 @@ const EnviarMensajeGrupo = () => {
       prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id],
     );
 
-  const handleSend = async () => {
-    if (!content.trim() || selectedGroupIds.length === 0) return;
+  const isContentEmpty = content.trim().length === 0;
+
+  const doSend = async () => {
     try {
       await sendMessage({
         content: content.trim(),
@@ -59,10 +68,21 @@ const EnviarMensajeGrupo = () => {
     }
   };
 
-  const canSend = content.trim().length > 0 && selectedGroupIds.length > 0 && !isPending;
+  const handleSend = async () => {
+    setContentTouched(true);
+    if (isContentEmpty || selectedGroupIds.length === 0) return;
+    if (isUrgent) {
+      setConfirmUrgentOpen(true);
+      return;
+    }
+    await doSend();
+  };
+
+  const canSend = !isContentEmpty && selectedGroupIds.length > 0 && !isPending;
 
   return (
     <Box className="page-enter" maxWidth={600} mx="auto">
+      {isPending && <LinearProgress sx={{ mb: 2 }} />}
       <Button
         startIcon={<ArrowBackRounded />}
         onClick={() => navigate("/mensajes/bandeja")}
@@ -121,10 +141,16 @@ const EnviarMensajeGrupo = () => {
           rows={5}
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          onBlur={() => setContentTouched(true)}
           fullWidth
           inputProps={{ maxLength: 2000 }}
           placeholder="Escribe el mensaje para el grupo..."
-          helperText={`${content.length}/2000`}
+          error={contentTouched && isContentEmpty}
+          helperText={
+            contentTouched && isContentEmpty
+              ? "El mensaje no puede estar vacío"
+              : `${content.length}/2000`
+          }
         />
 
         <FormControlLabel
@@ -153,6 +179,29 @@ const EnviarMensajeGrupo = () => {
           {isPending ? "Enviando..." : "Enviar al grupo"}
         </Button>
       </Stack>
+
+      <Dialog open={confirmUrgentOpen} onClose={() => setConfirmUrgentOpen(false)}>
+        <DialogTitle>¿Enviar como urgente?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Este mensaje se marcará como urgente y generará una notificación inmediata para
+            todos los miembros del grupo. ¿Confirmas el envío?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmUrgentOpen(false)}>Cancelar</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => {
+              setConfirmUrgentOpen(false);
+              doSend();
+            }}
+          >
+            Enviar urgente
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

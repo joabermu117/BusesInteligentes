@@ -55,7 +55,7 @@ export interface GroupMessageRead {
 }
 
 export interface InboxItem {
-  inbox_type: "personal" | "group";
+  inbox_type: "personal" | "group" | "mass_alert";
   recipient_id?: number;
   group_read_id?: number | null;
   read_at?: string | null;
@@ -108,4 +108,10 @@ export interface CitizenSearchResult {
   person_id: string;
   name?: string;
   isActive: boolean;
+}
+
+export interface ReadReceipt {
+  person_id: string;
+  name?: string | null;
+  read_at?: string | null;
 }

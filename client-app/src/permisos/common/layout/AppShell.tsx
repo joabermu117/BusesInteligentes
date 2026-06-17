@@ -56,8 +56,10 @@ import {
   getUserNameFromToken,
 } from "../../../config/httpClient";
 import { useRoleStore } from "../../stores/useRoleStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { useUnreadCount } from "../../../mensajes/stores/useMessagesStore";
 import { useFirebaseMessaging } from "../../../mensajes/hooks/useFirebaseMessaging";
+import { useSocket } from "../../../mensajes/hooks/useSocket";
 import GlobalNotificationListener from "../components/GlobalProximityListener";
 import { AssignmentRounded, EventAvailableRounded, FeedbackRounded, ManageSearchRounded } from "@mui/icons-material";
 
@@ -458,6 +460,14 @@ const AppShell = () => {
   const userRoleIds = getAuthRoles();
   const userId = getAuthUserId();
   const { data: unreadCounts } = useUnreadCount(userId ?? "");
+
+  // Mantiene el badge de no leídos al día en tiempo real (no solo por polling)
+  const queryClient = useQueryClient();
+  useSocket({
+    "new-message": () => queryClient.invalidateQueries({ queryKey: ["unread-count"] }),
+    "new-group-message": () => queryClient.invalidateQueries({ queryKey: ["unread-count"] }),
+    "mass-alert": () => queryClient.invalidateQueries({ queryKey: ["unread-count"] }),
+  });
 
   const firstRoleName = useMemo(() => {
     if (userRoleIds.length === 0) return null;

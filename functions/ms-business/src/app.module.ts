@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AlertsModule } from './alerts/alerts.module';
 import { AddressModule } from './address/address.module';
@@ -38,13 +39,17 @@ import { WeatherModule } from './weather/weather.module';
 import { PqrsModule } from './pqrs/pqrs.module';
 
 @Module({
-  providers: [{ provide: APP_GUARD, useClass: SecurityGuard }],
+  providers: [
+    { provide: APP_GUARD, useClass: SecurityGuard },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+  ],
   imports: [
     WeatherModule,
     TrackingModule,
     FcmModule,
     NotificationsModule,
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     AlertsModule,
     ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync({

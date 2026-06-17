@@ -6,7 +6,7 @@ export class FcmController {
   constructor(private readonly fcmService: FcmService) {}
 
   @Post('register')
-  async registerToken(@Body() dto: { userId: string; fcmToken: string }) {
-    return this.fcmService.registerToken(dto.userId, dto.fcmToken);
+  async registerToken(@Body() dto: { personId: string; fcmToken: string }) {
+    return this.fcmService.registerToken(dto.personId, dto.fcmToken);
   }
 }

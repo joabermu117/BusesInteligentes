@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { Citizen } from '../citizen/entities/citizen.entity';
 import { NotificationsGateway } from '../gateways/notifications/notifications.gateway';
+import { FcmService } from '../notifications-fcm/fcm.service';
 import { RecipientPerson } from '../recipient-person/entities/recipient-person.entity';
 import { Message } from '../message/entities/message.entity';
 import { CreateAlertDto } from './dto/create-alert.dto';
@@ -18,6 +19,7 @@ export class AlertsService {
     private readonly recipientPersonRepo: Repository<RecipientPerson>,
     private readonly dataSource: DataSource,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly fcmService: FcmService,
   ) {}
 
   async create(dto: CreateAlertDto): Promise<{ message: Message; recipients: number }> {
@@ -82,6 +84,13 @@ export class AlertsService {
             content: msg.content,
           });
         }
+
+        this.fcmService.sendPushToMany(
+          recipientIds,
+          dto.is_urgent ? 'ALERTA URGENTE' : 'Alerta',
+          msg.content ?? '',
+          { type: 'mass_alert', messageId: String(msg.id), is_urgent: String(!!dto.is_urgent) },
+        );
       }
 
       return { message: msg, recipients: count };

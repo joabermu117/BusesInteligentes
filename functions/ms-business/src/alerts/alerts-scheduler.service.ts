@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LessThanOrEqual, Repository } from 'typeorm';
 import { NotificationsGateway } from '../gateways/notifications/notifications.gateway';
+import { FcmService } from '../notifications-fcm/fcm.service';
 import { Message } from '../message/entities/message.entity';
 import { RecipientPerson } from '../recipient-person/entities/recipient-person.entity';
 
@@ -16,6 +17,7 @@ export class AlertsSchedulerService {
     @InjectRepository(RecipientPerson)
     private readonly recipientPersonRepo: Repository<RecipientPerson>,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly fcmService: FcmService,
   ) {}
 
   @Cron('*/30 * * * * *')
@@ -58,6 +60,13 @@ export class AlertsSchedulerService {
             content: alert.content,
           });
         }
+
+        this.fcmService.sendPushToMany(
+          recipientIds,
+          alert.is_urgent ? 'ALERTA URGENTE' : 'Alerta',
+          alert.content ?? '',
+          { type: 'mass_alert', messageId: String(alert.id), is_urgent: String(!!alert.is_urgent) },
+        );
 
         alert.is_dispatched = true;
         await this.messageRepo.save(alert);

@@ -1,23 +1,19 @@
 import { getMessaging, getToken, onMessage, type Messaging } from "firebase/messaging";
-import { firebaseAuth } from "../../config/firebase";
-import httpClient from "../../config/httpClient";
+import { firebaseApp } from "../../config/firebase";
+import httpClient, { getAuthUserId } from "../../config/httpClient";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 let messaging: Messaging | null = null;
-let tokenRefreshed = false;
+let swRegistrationRef: ServiceWorkerRegistration | null = null;
 
-/**
- * Obtiene la instancia de Firebase Messaging.
- * Solo disponible en navegadores que soporten service workers.
- */
 const getMessagingInstance = (): Messaging | null => {
   if (typeof window === "undefined" || !("Notification" in window)) {
     return null;
   }
   if (!messaging) {
     try {
-      messaging = getMessaging();
+      messaging = getMessaging(firebaseApp);
     } catch {
       return null;
     }
@@ -26,9 +22,39 @@ const getMessagingInstance = (): Messaging | null => {
 };
 
 /**
- * Solicita permiso para notificaciones push y registra el token FCM.
- * @returns El token FCM o null si no se pudo obtener.
+ * Registra el Service Worker manualmente con un timeout corto
+ * para evitar el error "Service worker not registered after 10000 ms".
  */
+const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
+  if (swRegistrationRef) return swRegistrationRef;
+
+  // Ya existe un SW registrado?
+  const existing = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+  if (existing) {
+    swRegistrationRef = existing;
+    return existing;
+  }
+
+  // Timeout para no bloquear la app
+  const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000));
+
+  try {
+    const reg = await Promise.race([
+      navigator.serviceWorker.register("/firebase-messaging-sw.js"),
+      timeoutPromise,
+    ]);
+
+    if (reg) {
+      swRegistrationRef = reg;
+      // No esperar a que esté ready para no demorar
+      navigator.serviceWorker.ready.catch(() => {});
+    }
+    return reg;
+  } catch {
+    return null;
+  }
+};
+
 export const requestPushPermission = async (): Promise<string | null> => {
   try {
     const permission = await Notification.requestPermission();
@@ -43,9 +69,17 @@ export const requestPushPermission = async (): Promise<string | null> => {
       return null;
     }
 
+    // Intentar registrar el SW (no crítico si falla)
+    const swRegistration = await registerServiceWorker();
+
     const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+    if (!vapidKey) {
+      console.warn("[FCM] VITE_FIREBASE_VAPID_KEY no configurada");
+    }
+
     const token = await getToken(instance, {
       vapidKey: vapidKey || undefined,
+      serviceWorkerRegistration: swRegistration || undefined,
     });
 
     if (token) {
@@ -54,21 +88,21 @@ export const requestPushPermission = async (): Promise<string | null> => {
 
     return token;
   } catch (err) {
-    console.error("[FCM] Error al obtener token:", err);
+    console.warn("[FCM] No se pudieron activar notificaciones push:", err);
     return null;
   }
 };
 
-/**
- * Registra el token FCM en el backend para recibir notificaciones push.
- */
 const registerTokenOnServer = async (token: string): Promise<void> => {
   try {
-    const user = firebaseAuth.currentUser;
-    if (!user?.uid) return;
+    // Se registra con el person_id del sistema (no el uid de Firebase Auth):
+    // las notificaciones se despachan por person_id (sender/recipient de mensajes),
+    // así que el backend necesita esa correlación para poder enviar el push.
+    const personId = getAuthUserId();
+    if (!personId) return;
 
     await httpClient.post(`${API_URL}/api/notifications/fcm/register`, {
-      userId: user.uid,
+      personId,
       fcmToken: token,
     });
   } catch (err) {
@@ -76,10 +110,6 @@ const registerTokenOnServer = async (token: string): Promise<void> => {
   }
 };
 
-/**
- * Escucha mensajes entrantes mientras la app está en foreground.
- * @param callback Función que se ejecuta al recibir un mensaje.
- */
 export const onForegroundMessage = (
   callback: (payload: { title?: string; body?: string; data?: Record<string, string> }) => void,
 ): (() => void) => {
@@ -99,20 +129,16 @@ export const onForegroundMessage = (
   return unsubscribe;
 };
 
-/**
- * Inicializa la escucha de mensajes en foreground.
- * Debe llamarse al cargar la app.
- */
 export const initForegroundListener = (): (() => void) => {
   return onForegroundMessage(({ title, body, data }) => {
-    // Los mensajes entrantes en foreground se manejan a través del toast de WebSocket
-    // Esta función se mantiene como respaldo
-    if (data?.is_urgent === "true" && Notification.permission === "granted") {
-      new Notification(title ?? "Alerta urgente", {
-        body: body ?? "",
-        icon: "/favicon.ico",
-        tag: "urgent-alert",
-      });
-    }
+    if (Notification.permission !== "granted") return;
+
+    const isUrgent = data?.is_urgent === "true";
+    new Notification(title ?? (isUrgent ? "Alerta urgente" : "Nuevo mensaje"), {
+      body: body ?? "",
+      icon: "/favicon.ico",
+      tag: isUrgent ? "urgent-alert" : "normal-message",
+      silent: !isUrgent,
+    });
   });
 };

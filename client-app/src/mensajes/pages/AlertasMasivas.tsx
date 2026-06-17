@@ -10,6 +10,11 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   FormControlLabel,
   LinearProgress,
@@ -18,16 +23,15 @@ import {
   Stack,
   Switch,
   TextField,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
 import { useState } from "react";
 import { getAuthUserId } from "../../config/httpClient";
 import { extractErrorMessage } from "../../shared/utils/errorHandler";
+import { formatMessageDateMedium as formatDate } from "../../shared/utils/dateFormat";
 import { useAlertStats, useAlerts, useSendMassAlert } from "../stores/useMessagesStore";
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
 
 const AlertStatsCard = ({ alertId }: { alertId: number }) => {
   const { data: stats } = useAlertStats(alertId);
@@ -53,16 +57,19 @@ const AlertasMasivas = () => {
   const personId = getAuthUserId() ?? "";
 
   const [content, setContent] = useState("");
+  const [contentTouched, setContentTouched] = useState(false);
   const [scope, setScope] = useState<"all" | "route" | "zone">("all");
   const [isUrgent, setIsUrgent] = useState(false);
   const [scheduledAt, setScheduledAt] = useState("");
   const [lastResult, setLastResult] = useState<{ recipients: number } | null>(null);
+  const [confirmUrgentOpen, setConfirmUrgentOpen] = useState(false);
 
   const { data: alerts, isLoading } = useAlerts();
   const { mutateAsync: sendAlert, isPending } = useSendMassAlert();
 
-  const handleSend = async () => {
-    if (!content.trim()) return;
+  const isContentEmpty = content.trim().length === 0;
+
+  const doSend = async () => {
     try {
       const result = await sendAlert({
         content: content.trim(),
@@ -73,6 +80,7 @@ const AlertasMasivas = () => {
       });
       setLastResult({ recipients: result.recipients });
       setContent("");
+      setContentTouched(false);
       setScheduledAt("");
       enqueueSnackbar(
         scheduledAt
@@ -85,10 +93,21 @@ const AlertasMasivas = () => {
     }
   };
 
-  const canSend = content.trim().length > 0 && !isPending;
+  const handleSend = async () => {
+    setContentTouched(true);
+    if (isContentEmpty) return;
+    if (isUrgent) {
+      setConfirmUrgentOpen(true);
+      return;
+    }
+    await doSend();
+  };
+
+  const canSend = !isContentEmpty && !isPending;
 
   return (
     <Box className="page-enter">
+      {isPending && <LinearProgress sx={{ mb: 2 }} />}
       <Stack direction="row" spacing={1} alignItems="center" mb={1}>
         <NotificationsActiveRounded color="error" />
         <Typography variant="h4" fontWeight={700}>
@@ -111,9 +130,15 @@ const AlertasMasivas = () => {
                   rows={4}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
+                  onBlur={() => setContentTouched(true)}
                   fullWidth
                   inputProps={{ maxLength: 1000 }}
-                  helperText={`${content.length}/1000`}
+                  error={contentTouched && isContentEmpty}
+                  helperText={
+                    contentTouched && isContentEmpty
+                      ? "El contenido no puede estar vacío"
+                      : `${content.length}/1000`
+                  }
                   placeholder="Mensaje de la alerta..."
                 />
 
@@ -128,8 +153,16 @@ const AlertasMasivas = () => {
                     size="small"
                   >
                     <MenuItem value="all">Todos los ciudadanos</MenuItem>
-                    <MenuItem value="route">Por ruta (próximamente)</MenuItem>
-                    <MenuItem value="zone">Por zona (próximamente)</MenuItem>
+                    <MenuItem value="route" disabled>
+                      <Tooltip title="Próximamente disponible" placement="right">
+                        <span style={{ pointerEvents: "auto" }}>Por ruta (próximamente)</span>
+                      </Tooltip>
+                    </MenuItem>
+                    <MenuItem value="zone" disabled>
+                      <Tooltip title="Próximamente disponible" placement="right">
+                        <span style={{ pointerEvents: "auto" }}>Por zona (próximamente)</span>
+                      </Tooltip>
+                    </MenuItem>
                   </Select>
                 </Box>
 
@@ -232,6 +265,29 @@ const AlertasMasivas = () => {
           )}
         </Box>
       </Stack>
+
+      <Dialog open={confirmUrgentOpen} onClose={() => setConfirmUrgentOpen(false)}>
+        <DialogTitle>¿Enviar alerta urgente?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Esta alerta se enviará como urgente a todos los destinatarios del alcance
+            seleccionado, generando una notificación inmediata. ¿Confirmas el envío?
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmUrgentOpen(false)}>Cancelar</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => {
+              setConfirmUrgentOpen(false);
+              doSend();
+            }}
+          >
+            Enviar urgente
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

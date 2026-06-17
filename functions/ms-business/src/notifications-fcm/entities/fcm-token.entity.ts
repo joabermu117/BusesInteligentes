@@ -5,8 +5,12 @@ export class FcmToken {
   @PrimaryGeneratedColumn()
   id?: number;
 
-  @Column({ type: 'varchar', length: 255 })
+  /** @deprecated usar personId. Se mantiene por compatibilidad con tokens ya registrados. */
+  @Column({ type: 'varchar', length: 255, nullable: true })
   userId?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  personId?: string;
 
   @Column({ type: 'text' })
   fcmToken?: string;

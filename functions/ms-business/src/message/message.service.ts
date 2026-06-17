@@ -1,11 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, IsNull, Repository } from 'typeorm';
+import axios from 'axios';
 import { Citizen } from '../citizen/entities/citizen.entity';
 import { GroupMessageRead } from '../group-message-read/entities/group-message-read.entity';
 import { GroupPerson } from '../group-person/entities/group-person.entity';
 import { Group } from '../group/entities/group.entity';
 import { NotificationsGateway } from '../gateways/notifications/notifications.gateway';
+import { FcmService } from '../notifications-fcm/fcm.service';
 import { RecipientGroup } from '../recipient-group/entities/recipient-group.entity';
 import { RecipientPerson } from '../recipient-person/entities/recipient-person.entity';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -16,6 +18,8 @@ import { Message } from './entities/message.entity';
 
 @Injectable()
 export class MessageService {
+  private readonly logger = new Logger(MessageService.name);
+
   constructor(
     @InjectRepository(Message)
     private readonly messageRepo: Repository<Message>,
@@ -33,6 +37,7 @@ export class MessageService {
     private readonly groupReadRepo: Repository<GroupMessageRead>,
     private readonly dataSource: DataSource,
     private readonly notificationsGateway: NotificationsGateway,
+    private readonly fcmService: FcmService,
   ) {}
 
   // ─── Basic CRUD ──────────────────────────────────────────────────────────────
@@ -84,16 +89,60 @@ export class MessageService {
 
   // ─── Envío personal (transaccional) ──────────────────────────────────────────
 
-  async sendPersonal(dto: SendPersonalMessageDto): Promise<Message> {
+  private async fetchNameFromSecurity(personId: string, jwtToken?: string): Promise<string | null> {
+    if (!jwtToken) return null;
+    try {
+      const msSecurityUrl = process.env.MS_SECURITY || 'http://localhost:8081';
+      const { data } = await axios.get(`${msSecurityUrl}/api/users/${personId}`, {
+        headers: { Authorization: `Bearer ${jwtToken}` },
+        timeout: 5000,
+      });
+      return data?.name ?? null;
+    } catch (err) {
+      this.logger.warn(
+        `No se pudo resolver el nombre de ${personId} desde ms-security: ${(err as Error).message}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Garantiza que exista un Citizen local para personId. Si no existe o existe
+   * sin nombre (creado antes "a ciegas" por un envío anterior), lo resuelve
+   * contra ms-security para que sender/recipient siempre muestren el nombre real.
+   */
+  private async ensureCitizen(qr: any, personId: string, jwtToken?: string): Promise<Citizen> {
+    let citizen = await qr.manager.findOne(Citizen, { where: { person_id: personId } });
+
+    if (!citizen) {
+      const name = await this.fetchNameFromSecurity(personId, jwtToken);
+      citizen = qr.manager.create(Citizen, { person_id: personId, name, isActive: true });
+      citizen = await qr.manager.save(Citizen, citizen);
+    } else if (!citizen.name) {
+      const name = await this.fetchNameFromSecurity(personId, jwtToken);
+      if (name) {
+        citizen.name = name;
+        citizen = await qr.manager.save(Citizen, citizen);
+      }
+    }
+
+    return citizen;
+  }
+
+  async sendPersonal(dto: SendPersonalMessageDto, jwtToken?: string): Promise<Message> {
+    const recipientIds = [...new Set(dto.recipient_person_ids)].filter(
+      (id) => id !== dto.sender_person_id,
+    );
+    if (recipientIds.length === 0) {
+      throw new BadRequestException('No puedes enviarte un mensaje a ti mismo');
+    }
+
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
 
     try {
-      const sender = await qr.manager.findOne(Citizen, {
-        where: { person_id: dto.sender_person_id },
-      });
-      if (!sender) throw new NotFoundException(`Sender ${dto.sender_person_id} not found`);
+      const sender = await this.ensureCitizen(qr, dto.sender_person_id, jwtToken);
 
       const msg = await qr.manager.save(Message,
         qr.manager.create(Message, {
@@ -107,11 +156,8 @@ export class MessageService {
         }),
       );
 
-      for (const recipientId of dto.recipient_person_ids) {
-        const recipient = await qr.manager.findOne(Citizen, {
-          where: { person_id: recipientId },
-        });
-        if (!recipient) throw new NotFoundException(`Recipient ${recipientId} not found`);
+      for (const recipientId of recipientIds) {
+        const recipient = await this.ensureCitizen(qr, recipientId, jwtToken);
 
         await qr.manager.save(RecipientPerson,
           qr.manager.create(RecipientPerson, {
@@ -125,6 +171,7 @@ export class MessageService {
         this.notificationsGateway.sendToUser(recipientId, 'new-message', {
           type: 'personal',
           messageId: msg.id,
+          senderId: sender.person_id,
           senderName: sender.name,
           preview: msg.content?.substring(0, 100),
           is_urgent: msg.is_urgent,
@@ -132,6 +179,14 @@ export class MessageService {
       }
 
       await qr.commitTransaction();
+
+      this.fcmService.sendPushToMany(
+        recipientIds,
+        msg.is_urgent ? `Mensaje urgente de ${sender.name ?? 'un usuario'}` : `Nuevo mensaje de ${sender.name ?? 'un usuario'}`,
+        msg.content?.substring(0, 150) ?? '',
+        { type: 'personal', messageId: String(msg.id), is_urgent: String(!!msg.is_urgent) },
+      );
+
       return msg;
     } catch (err) {
       await qr.rollbackTransaction();
@@ -143,16 +198,13 @@ export class MessageService {
 
   // ─── Envío grupal (transaccional) ────────────────────────────────────────────
 
-  async sendToGroup(dto: SendGroupMessageDto): Promise<Message> {
+  async sendToGroup(dto: SendGroupMessageDto, jwtToken?: string): Promise<Message> {
     const qr = this.dataSource.createQueryRunner();
     await qr.connect();
     await qr.startTransaction();
 
     try {
-      const sender = await qr.manager.findOne(Citizen, {
-        where: { person_id: dto.sender_person_id },
-      });
-      if (!sender) throw new NotFoundException(`Sender ${dto.sender_person_id} not found`);
+      const sender = await this.ensureCitizen(qr, dto.sender_person_id, jwtToken);
 
       const msg = await qr.manager.save(Message,
         qr.manager.create(Message, {
@@ -205,6 +257,13 @@ export class MessageService {
           preview: msg.content?.substring(0, 100),
           is_urgent: msg.is_urgent,
         });
+
+        this.fcmService.sendPushToMany(
+          memberIds,
+          msg.is_urgent ? `Urgente en ${group.name}` : `Nuevo mensaje en ${group.name}`,
+          msg.content?.substring(0, 150) ?? '',
+          { type: 'group', messageId: String(msg.id), groupId: String(groupId), is_urgent: String(!!msg.is_urgent) },
+        );
       }
 
       await qr.commitTransaction();
@@ -241,7 +300,9 @@ export class MessageService {
       const personal = await qb.getMany();
       results.push(
         ...personal.map((rp) => ({
-          inbox_type: 'personal' as const,
+          inbox_type: (rp.message?.message_type === 'mass_alert' ? 'mass_alert' : 'personal') as
+            | 'personal'
+            | 'mass_alert',
           recipient_id: rp.id,
           read_at: rp.read_at ?? null,
           message: {
@@ -308,12 +369,19 @@ export class MessageService {
 
   // ─── Mensajes enviados ────────────────────────────────────────────────────────
 
-  async getSent(personId: string): Promise<Message[]> {
-    return this.messageRepo.find({
+  async getSent(
+    personId: string,
+    page = 1,
+    limit = 50,
+  ): Promise<{ items: Message[]; total: number; page: number; limit: number }> {
+    const [items, total] = await this.messageRepo.findAndCount({
       where: { sender_person_id: personId },
       relations: ['recipientPersons', 'recipientPersons.recipient', 'recipientGroups', 'recipientGroups.group'],
       order: { sent_at: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
     });
+    return { items, total, page, limit };
   }
 
   // ─── Contador de no leídos ────────────────────────────────────────────────────
@@ -335,15 +403,13 @@ export class MessageService {
         select: ['message_id', 'group_id'],
       });
 
+      const reads = await this.groupReadRepo.find({
+        where: { group_id: In(groupIds), person_id: personId },
+      });
+      const readKeys = new Set(reads.map((r) => `${r.message_id}:${r.group_id}`));
+
       for (const rg of recipGroups) {
-        const read = await this.groupReadRepo.findOne({
-          where: {
-            message_id: rg.message_id,
-            group_id: rg.group_id,
-            person_id: personId,
-          },
-        });
-        if (!read?.read_at) group++;
+        if (!readKeys.has(`${rg.message_id}:${rg.group_id}`)) group++;
       }
     }
 
@@ -352,11 +418,34 @@ export class MessageService {
 
   // ─── Recibos de lectura de mensaje grupal ─────────────────────────────────────
 
-  async getReadReceipts(messageId: number): Promise<GroupMessageRead[]> {
-    return this.groupReadRepo.find({
+  async getReadReceipts(messageId: number): Promise<
+    { person_id: string; name?: string | null; read_at: Date | null }[]
+  > {
+    const recipGroups = await this.recipientGroupRepo.find({
       where: { message_id: messageId },
+      select: ['group_id'],
+    });
+    const groupIds = [...new Set(recipGroups.map((rg) => rg.group_id!).filter(Boolean))];
+    if (groupIds.length === 0) return [];
+
+    const members = await this.groupPersonRepo.find({
+      where: { group_id: In(groupIds), is_blocked: false },
       relations: ['person'],
     });
+    const uniqueMembers = new Map(
+      members.map((m) => [m.person_id!, m.person]),
+    );
+
+    const reads = await this.groupReadRepo.find({
+      where: { message_id: messageId, group_id: In(groupIds) },
+    });
+    const readByPerson = new Map(reads.map((r) => [r.person_id!, r.read_at ?? null]));
+
+    return [...uniqueMembers.entries()].map(([person_id, person]) => ({
+      person_id,
+      name: person?.name ?? null,
+      read_at: readByPerson.get(person_id) ?? null,
+    }));
   }
 
   // ─── Marcar lectura grupal ────────────────────────────────────────────────────

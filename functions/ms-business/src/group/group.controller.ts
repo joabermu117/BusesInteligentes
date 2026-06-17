@@ -47,6 +47,14 @@ export class GroupController {
     return this.groupPersonService.create({ ...dto, group_id: +id });
   }
 
+  @Post(':id/persons/add-by-admin')
+  addMemberByAdmin(
+    @Param('id') id: string,
+    @Body() body: { person_id: string; action_by: string },
+  ) {
+    return this.groupPersonService.addByAdmin(+id, body.person_id, body.action_by);
+  }
+
   @Get(':id/persons')
   findPersons(@Param('id') id: string) {
     return this.groupPersonService.findByGroup(+id);

@@ -1,6 +1,7 @@
 import EmailRounded from "@mui/icons-material/EmailRounded";
 import GroupsRounded from "@mui/icons-material/GroupsRounded";
 import MarkEmailReadRounded from "@mui/icons-material/MarkEmailReadRounded";
+import NotificationsActiveRounded from "@mui/icons-material/NotificationsActiveRounded";
 import ReplyRounded from "@mui/icons-material/ReplyRounded";
 import SendRounded from "@mui/icons-material/SendRounded";
 import WarningAmberRounded from "@mui/icons-material/WarningAmberRounded";
@@ -26,10 +27,10 @@ import {
   Typography,
 } from "@mui/material";
 import { useSnackbar } from "notistack";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthUserId } from "../../config/httpClient";
-import { extractErrorMessage } from "../../shared/utils/errorHandler";
+import { formatMessageDate } from "../../shared/utils/dateFormat";
 import type { InboxItem } from "../models/message";
 import {
   useInbox,
@@ -41,16 +42,11 @@ import { useSocket } from "../hooks/useSocket";
 import { useQueryClient } from "@tanstack/react-query";
 
 const PAGE_SIZE = 20;
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString("es-CO", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
+const BATCH_WINDOW_MS = 2000;
 
 const BandejaEntrada = () => {
   const navigate = useNavigate();
-  const { enqueueSnackbar } = useSnackbar();
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const qc = useQueryClient();
   const personId = getAuthUserId() ?? "";
 
@@ -58,6 +54,7 @@ const BandejaEntrada = () => {
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
   const [page, setPage] = useState(1);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
 
   const type = tab === "all" ? undefined : tab;
   const { data: inboxData, isLoading } = useInbox(personId, {
@@ -74,26 +71,72 @@ const BandejaEntrada = () => {
   const total = inboxData?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  // Tiempo real
-  useSocket({
-    "new-message": () => {
-      qc.invalidateQueries({ queryKey: ["inbox"] });
-      qc.invalidateQueries({ queryKey: ["unread-count"] });
-      enqueueSnackbar("Nuevo mensaje recibido", { variant: "info" });
-    },
-    "new-group-message": () => {
-      qc.invalidateQueries({ queryKey: ["inbox"] });
-      qc.invalidateQueries({ queryKey: ["unread-count"] });
-      enqueueSnackbar("Nuevo mensaje en grupo", { variant: "info" });
-    },
-    "mass-alert": (data: any) => {
+  const refreshInbox = () => {
+    qc.invalidateQueries({ queryKey: ["inbox"] });
+    setHasNewMessages(false);
+  };
+
+  // Agrupa notificaciones de "nuevo mensaje" que llegan en una ventana corta
+  // para no saturar con una snackbar por cada mensaje.
+  const batchRef = useRef<{ count: number; lastSender?: string; timer?: ReturnType<typeof setTimeout> }>(
+    { count: 0 },
+  );
+  const queueMessageNotification = (senderName?: string) => {
+    const batch = batchRef.current;
+    batch.count += 1;
+    batch.lastSender = senderName;
+    if (batch.timer) clearTimeout(batch.timer);
+    batch.timer = setTimeout(() => {
       enqueueSnackbar(
-        data.is_urgent ? `ALERTA URGENTE: ${data.content}` : `Alerta: ${data.content}`,
-        { variant: data.is_urgent ? "error" : "warning", persist: data.is_urgent },
+        batch.count > 1
+          ? `${batch.count} nuevos mensajes`
+          : `Nuevo mensaje${batch.lastSender ? ` de ${batch.lastSender}` : ""}`,
+        { variant: "info" },
       );
+      batchRef.current = { count: 0 };
+    }, BATCH_WINDOW_MS);
+  };
+
+  const handleNewMessage = (data?: { senderName?: string }) => {
+    qc.invalidateQueries({ queryKey: ["unread-count"] });
+    queueMessageNotification(data?.senderName);
+    // No saltar de página si el usuario está navegando resultados anteriores:
+    // solo refrescar automáticamente en la página 1.
+    if (page === 1) {
       qc.invalidateQueries({ queryKey: ["inbox"] });
+    } else {
+      setHasNewMessages(true);
+    }
+  };
+
+  // Tiempo real
+  useSocket(
+    {
+      "new-message": (data: any) => handleNewMessage({ senderName: data?.senderName }),
+      "new-group-message": (data: any) =>
+        handleNewMessage({ senderName: data?.groupName ?? data?.senderName }),
+      "mass-alert": (data: any) => {
+        enqueueSnackbar(
+          data.is_urgent ? `ALERTA URGENTE: ${data.content}` : `Alerta: ${data.content}`,
+          { variant: data.is_urgent ? "error" : "warning", persist: data.is_urgent },
+        );
+        if (page === 1) qc.invalidateQueries({ queryKey: ["inbox"] });
+        else setHasNewMessages(true);
+        qc.invalidateQueries({ queryKey: ["unread-count"] });
+      },
     },
-  });
+    (connected) => {
+      if (!connected) {
+        enqueueSnackbar("Desconectado del servidor de notificaciones", {
+          variant: "warning",
+          key: "socket-disconnected",
+          persist: true,
+        });
+      } else {
+        closeSnackbar("socket-disconnected");
+      }
+    },
+  );
 
   const handleOpen = async (item: InboxItem) => {
     setSelectedItem(item);
@@ -122,8 +165,7 @@ const BandejaEntrada = () => {
     if (!selectedItem) return;
     const senderId = selectedItem.message.sender_person_id;
     const senderName = selectedItem.message.sender?.name ?? senderId;
-    // Navegar a nuevo mensaje con el destinatario pre-seleccionado
-    navigate(`/mensajes/nuevo?replyTo=${encodeURIComponent(senderId)}&replyName=${encodeURIComponent(senderName)}`);
+    navigate("/mensajes/nuevo", { state: { replyTo: senderId, replyName: senderName } });
     setSelectedItem(null);
   };
 
@@ -198,6 +240,20 @@ const BandejaEntrada = () => {
         />
       </Stack>
 
+      {hasNewMessages && (
+        <Alert
+          severity="info"
+          sx={{ mb: 2 }}
+          action={
+            <Button color="inherit" size="small" onClick={refreshInbox}>
+              Ver nuevos mensajes
+            </Button>
+          }
+        >
+          Hay mensajes nuevos. Tu posición actual no se actualizará automáticamente.
+        </Alert>
+      )}
+
       {isLoading ? (
         <Box display="flex" justifyContent="center" py={6}>
           <CircularProgress />
@@ -211,6 +267,7 @@ const BandejaEntrada = () => {
           {inbox.map((item, idx) => {
             const isUnread = !item.read_at;
             const isUrgent = item.message.is_urgent;
+            const isMassAlert = item.inbox_type === "mass_alert";
             return (
               <Card
                 key={`${item.inbox_type}-${item.message.id}-${idx}`}
@@ -226,6 +283,8 @@ const BandejaEntrada = () => {
                       <Box pt={0.25}>
                         {item.inbox_type === "group" ? (
                           <GroupsRounded color={isUnread ? "primary" : "disabled"} />
+                        ) : isMassAlert ? (
+                          <NotificationsActiveRounded color={isUrgent ? "error" : "warning"} />
                         ) : isUrgent ? (
                           <WarningAmberRounded color="error" />
                         ) : (
@@ -241,12 +300,12 @@ const BandejaEntrada = () => {
                           {item.inbox_type === "group" && item.group && (
                             <Chip label={item.group.name} size="small" variant="outlined" />
                           )}
-                          {item.message.message_type === "mass_alert" && (
+                          {isMassAlert && (
                             <Chip label="Alerta masiva" size="small" color="warning" />
                           )}
                           <Box flex={1} />
                           <Typography variant="caption" color="text.secondary" whiteSpace="nowrap">
-                            {formatDate(item.message.sent_at)}
+                            {formatMessageDate(item.message.sent_at)}
                           </Typography>
                         </Stack>
                         <Typography
@@ -297,8 +356,13 @@ const BandejaEntrada = () => {
                 <Typography variant="h6" fontWeight={700}>
                   {selectedItem.inbox_type === "group"
                     ? `Grupo: ${selectedItem.group?.name}`
+                    : selectedItem.inbox_type === "mass_alert"
+                    ? "Alerta masiva"
                     : "Mensaje directo"}
                 </Typography>
+                {selectedItem.inbox_type === "mass_alert" && (
+                  <Chip label="Solo lectura" size="small" color="warning" />
+                )}
               </Stack>
             </DialogTitle>
             <DialogContent dividers>
@@ -306,7 +370,7 @@ const BandejaEntrada = () => {
                 De: {selectedItem.message.sender?.name ?? selectedItem.message.sender_person_id}
               </Typography>
               <Typography variant="caption" color="text.secondary" display="block" mb={2}>
-                {formatDate(selectedItem.message.sent_at)}
+                {formatMessageDate(selectedItem.message.sent_at)}
               </Typography>
               <Divider sx={{ mb: 2 }} />
               <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>

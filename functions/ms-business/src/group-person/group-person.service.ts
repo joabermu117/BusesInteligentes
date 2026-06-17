@@ -36,6 +36,48 @@ export class GroupPersonService {
     );
   }
 
+  async addByAdmin(
+    groupId: number,
+    personId: string,
+    actionBy: string,
+  ): Promise<GroupPerson> {
+    const group = await this.groupRepository.findOne({ where: { id: groupId } });
+    if (!group) throw new NotFoundException(`Group #${groupId} not found`);
+
+    // Verificar que quien agrega es admin del grupo
+    const adminMember = await this.groupPersonRepository.findOne({
+      where: { group_id: groupId, person_id: actionBy, role: 'admin' },
+    });
+    if (!adminMember) {
+      throw new BadRequestException('Solo los administradores pueden agregar miembros');
+    }
+
+    const person = await this.citizenRepository.findOne({ where: { person_id: personId } });
+    if (!person) throw new NotFoundException(`Citizen #${personId} not found`);
+
+    // Verificar si ya es miembro o está bloqueado
+    const existing = await this.groupPersonRepository.findOne({
+      where: { group_id: groupId, person_id: personId },
+    });
+    if (existing?.is_blocked) {
+      throw new BadRequestException('Este usuario está bloqueado y no puede unirse al grupo');
+    }
+    if (existing) {
+      throw new BadRequestException('El usuario ya es miembro del grupo');
+    }
+
+    const groupPerson = this.groupPersonRepository.create({
+      group_id: groupId,
+      person_id: personId,
+      role: 'member',
+      group,
+      person,
+    });
+    const saved = await this.groupPersonRepository.save(groupPerson);
+    await this.log(groupId, personId, 'joined', actionBy);
+    return saved;
+  }
+
   async create(dto: CreateGroupPersonDto): Promise<GroupPerson> {
     const group = await this.groupRepository.findOne({ where: { id: dto.group_id } });
     if (!group) throw new NotFoundException(`Group #${dto.group_id} not found`);

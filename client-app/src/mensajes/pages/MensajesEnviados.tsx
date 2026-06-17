@@ -16,17 +16,18 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
+  Pagination,
   Stack,
   Typography,
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getAuthUserId } from "../../config/httpClient";
+import { formatMessageDate as formatDate } from "../../shared/utils/dateFormat";
 import type { Message } from "../models/message";
 import { useSent, useReadReceipts } from "../stores/useMessagesStore";
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" });
+const PAGE_SIZE = 20;
 
 const ReadReceiptsDialog = ({
   messageId,
@@ -49,9 +50,9 @@ const ReadReceiptsDialog = ({
         ) : (
           <Stack spacing={1}>
             {receipts.map((r) => (
-              <Stack key={r.id} direction="row" justifyContent="space-between">
-                <Typography variant="body2">{r.person?.name ?? r.person_id}</Typography>
-                <Typography variant="caption" color="text.secondary">
+              <Stack key={r.person_id} direction="row" justifyContent="space-between">
+                <Typography variant="body2">{r.name ?? r.person_id}</Typography>
+                <Typography variant="caption" color={r.read_at ? "text.secondary" : "warning.main"}>
                   {r.read_at ? formatDate(r.read_at) : "No leído"}
                 </Typography>
               </Stack>
@@ -66,9 +67,14 @@ const ReadReceiptsDialog = ({
 const MensajesEnviados = () => {
   const navigate = useNavigate();
   const personId = getAuthUserId() ?? "";
-  const { data: sent, isLoading } = useSent(personId);
+  const [page, setPage] = useState(1);
+  const { data: sentData, isLoading } = useSent(personId, { page, limit: PAGE_SIZE });
   const [selectedMsg, setSelectedMsg] = useState<Message | null>(null);
   const [receiptsMsg, setReceiptsMsg] = useState<number | null>(null);
+
+  const sent = sentData?.items ?? [];
+  const total = sentData?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
     <Box className="page-enter">
@@ -95,7 +101,7 @@ const MensajesEnviados = () => {
         <Box display="flex" justifyContent="center" py={6}>
           <CircularProgress />
         </Box>
-      ) : !sent || sent.length === 0 ? (
+      ) : sent.length === 0 ? (
         <Alert severity="info">No has enviado mensajes aún.</Alert>
       ) : (
         <Stack spacing={1.5}>
@@ -153,6 +159,21 @@ const MensajesEnviados = () => {
               </CardActionArea>
             </Card>
           ))}
+
+          {totalPages > 1 && (
+            <Box display="flex" justifyContent="center" py={2}>
+              <Pagination
+                count={totalPages}
+                page={page}
+                onChange={(_, v) => {
+                  setPage(v);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                color="primary"
+                size="small"
+              />
+            </Box>
+          )}
         </Stack>
       )}
 

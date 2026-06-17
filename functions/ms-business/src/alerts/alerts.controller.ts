@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { AlertsService } from './alerts.service';
 import { CreateAlertDto } from './dto/create-alert.dto';
 
@@ -6,6 +7,7 @@ import { CreateAlertDto } from './dto/create-alert.dto';
 export class AlertsController {
   constructor(private readonly alertsService: AlertsService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post()
   create(@Body() dto: CreateAlertDto) {
     return this.alertsService.create(dto);
